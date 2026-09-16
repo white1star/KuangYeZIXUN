@@ -71,20 +71,6 @@ def price_series(conn, commodity, days=30, price_type=None) -> list:
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
 
-def price_overview(conn, commodities=None, limit=6) -> list:
-    sql = ("SELECT p.*, (SELECT s.name FROM sources s WHERE s.key=p.source_key) AS source_name "
-           "FROM prices p JOIN (SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity "
-           "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices")
-    params = []
-    if commodities:
-        marks = ",".join("?" for _ in commodities)
-        sql += f" WHERE commodity IN ({marks})"
-        params.extend(commodities)
-    sql += ") r ON r.id=p.id WHERE r.rn=1 ORDER BY p.commodity LIMIT ?"
-    params.append(limit)
-    return [dict(r) for r in conn.execute(sql, params).fetchall()]
-
-
 def source_dots(conn) -> list:
     rows = conn.execute(
         "SELECT s.key, s.name, r.status, r.finished_at FROM sources s LEFT JOIN crawl_runs r "

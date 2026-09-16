@@ -52,18 +52,6 @@
         <div class="stat-value">{{ sources_ok }}/{{ sources_total }}<span>正常</span></div>
       </div>
     </div>
-    <div class="section-title">今日行情</div>
-    <div class="price-grid">
-      {% for p in cards %}
-      <a class="card price-card" href="/prices">
-        <div class="pc-name">{{ p.commodity }}</div>
-        <div class="pc-value">{{ p.value|num }}</div>
-        <div class="pc-unit">{{ p.unit }}</div>
-        <div class="pc-pct">{{ ui.price_cell(p) }}</div>
-        <div class="pc-src">{{ p.source_label }}</div>
-      </a>
-      {% endfor %}
-    </div>
     <div class="entry-grid">
       <a class="card entry-card" href="/news">
         <div class="ec-head"><span>新闻资讯</span><span class="ec-arrow">→</span></div>

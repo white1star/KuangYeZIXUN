@@ -1,7 +1,7 @@
 key: hebei_zrzy
-name: 河北省自然资源厅厅动态
+name: 河北省自然资源厅·矿权市场
 board: policy
-url: http://zrzy.hebei.gov.cn/heb/xinwen/stdt/
+url: https://zrzy.hebei.gov.cn/heb/zhuanlan/kqsc/
 encoding: utf-8
 list:
   item: "div.p_list li"

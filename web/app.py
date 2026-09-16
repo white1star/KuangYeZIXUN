@@ -16,9 +16,7 @@ from web import queries
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
 
-HOME_COMMODITIES = ["动力煤", "焦煤", "铁矿石", "铜", "黄金", "磷矿石"]
-
-NEWS_TYPES = {"行情": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
+NEWS_TYPES = {"新矿山": ["新矿"], "行情": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
 
 
 def _fmt_num(value) -> str:
@@ -87,15 +85,6 @@ def create_app(db_path=None) -> FastAPI:
             stats = queries.today_stats(conn)
             dots = queries.source_dots(conn)
             ok_count = sum(1 for d in dots if d["status"] == "ok")
-            cards = [_decorate_price(r) for r in queries.price_overview(conn, commodities=HOME_COMMODITIES)]
-            if len(cards) < 6:
-                seen = {c["commodity"] for c in cards}
-                for row in queries.price_overview(conn, limit=10):
-                    if row["commodity"] in seen:
-                        continue
-                    cards.append(_decorate_price(row))
-                    if len(cards) == 6:
-                        break
             ctx = {
                 "q": q.strip(),
                 "results": queries.search_articles(conn, q=q, limit=60) if q.strip() else [],
@@ -105,7 +94,6 @@ def create_app(db_path=None) -> FastAPI:
                 "sources_total": len(dots),
                 "fail_count": queries.today_fail_count(conn),
                 "last_fetch": queries.last_fetch_time(conn),
-                "cards": cards,
                 "commodity_count": len(queries.distinct_commodities(conn)),
             }
         finally:
