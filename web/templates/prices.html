@@ -43,7 +43,7 @@
           <tr>
             <td>{{ p.commodity }}</td>
             <td>{{ p.price_type }}</td>
-            <td class="num">{{ p.value|num }}</td>
+            <td class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
             <td class="num">{{ ui.change_cell(p) }}</td>
             <td class="num">{{ ui.price_cell(p) }}</td>
             <td>{{ p.price_date }}</td>
@@ -111,13 +111,14 @@ async function load() {
     return dir > 0 ? Math.ceil(v / mag) * mag : Math.floor(v / mag) * mag;
   }
   const lastIndex = points.length - 1;
+  const unit = points[lastIndex].unit || '';
   chart.setOption({
     tooltip: {
       trigger: 'axis',
       formatter: function (items) {
         if (!items || !items.length) return '';
         const it = items[0];
-        return it.axisValue + '<br/>' + fmtNum(it.value);
+        return it.axisValue + '<br/>' + fmtNum(it.value) + (unit ? ' ' + unit : '');
       }
     },
     grid: { left: 64, right: 32, top: 32, bottom: 40 },
@@ -157,7 +158,9 @@ async function load() {
         color: '#111418',
         fontSize: 12,
         formatter: function (params) {
-          return params.dataIndex === lastIndex ? fmtNum(params.value) : '';
+          return params.dataIndex === lastIndex
+            ? fmtNum(params.value) + (unit ? ' ' + unit : '')
+            : '';
         }
       }
     }]

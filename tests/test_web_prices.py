@@ -62,6 +62,7 @@ def test_prices_page(tmp_path):
     assert "矿价行情" in resp.text
     assert "铜" in resp.text
     assert "最新报价" in resp.text
+    assert "元/吨" in resp.text
     assert 'id="chart-title"' in resp.text
     assert 'id="chart"' in resp.text
 
@@ -77,6 +78,7 @@ def test_price_api(tmp_path):
     expected_days = [(datetime.now() - timedelta(days=delta)).strftime("%Y-%m-%d") for delta in (2, 1, 0)]
     assert [p["price_date"] for p in data["points"]] == expected_days
     assert data["points"][0]["value"] == 71000
+    assert data["points"][0]["unit"] == "元/吨"
 
 
 def test_price_api_same_day_multi_source_latest(tmp_path):

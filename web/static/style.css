@@ -582,3 +582,4 @@ table.prices td.err { max-width: 260px; overflow: hidden; text-overflow: ellipsi
   .feedback-fab { right: 14px; bottom: 14px; padding: 10px 17px; font-size: 13px; }
   .feedback-list li { line-height: 1.6; }
 }
+.prices .unit { margin-left: 5px; font-size: 11px; color: #98A1AC; }
