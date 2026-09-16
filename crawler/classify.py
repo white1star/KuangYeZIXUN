@@ -1,7 +1,14 @@
+def _match(text: str, keyword: str) -> bool:
+    if "+" in keyword:
+        parts = [p for p in keyword.split("+") if p]
+        return bool(parts) and all(p in text for p in parts)
+    return keyword in text
+
+
 def detect_keywords(text: str, mapping: dict) -> list:
     hits = []
     for key, words in mapping.items():
-        if any(w in text for w in words):
+        if any(_match(text, w) for w in words):
             hits.append(key)
     return hits
 

@@ -20,6 +20,12 @@ def test_classify_tech_news():
     assert "技术" in cls["types"]
 
 
+def test_classify_keyword_and_combo():
+    tags = {"minerals": {}, "regions": [], "types": {"技术": ["无人机+矿", "智能分选"]}}
+    assert "技术" not in classify("全国无人机应用挑战赛落幕", "", "news", tags)["types"]
+    assert "技术" in classify("矿区无人机巡检系统正式上线", "", "news", tags)["types"]
+
+
 def test_normalize_url_strips_tracking():
     a = dedup.normalize_url("https://e.com/a?utm_source=x&id=1#frag")
     assert a == "https://e.com/a?id=1"
