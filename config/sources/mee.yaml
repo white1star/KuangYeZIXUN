@@ -1,12 +1,13 @@
 key: mee
-name: 生态环境部新闻发布
+name: 生态环境部·中央生态环境保护督察
 board: policy
-url: https://www.mee.gov.cn/ywdt/xwfb/
+url: https://www.mee.gov.cn/ywgz/zysthjbhdc/dcjl/
 encoding: utf-8
+filter_keywords: ["矿", "尾矿", "矿山", "重金属", "生态修复", "督察", "固体废物"]
 list:
-  item: "ul.cjcx_danduimg_list li"
-  title: "dt a"
-  date: "dt span"
+  item: "div.bd.mobile_list li"
+  title: "a"
+  date: "span.date"
 detail:
   enabled: true
   content: "div.TRS_Editor"

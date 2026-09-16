@@ -1,34 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1">
-<title>新闻发布_中华人民共和国生态环境部</title>
+<title>督察管理_中华人民共和国生态环境部</title>
 <meta name="SiteName" content="中华人民共和国生态环境部" />
 <meta name="SiteDomain" content="www.mee.gov.cn" />
 <meta name="SiteIDCode" content="bm17000009" />
-<meta name="ColumnName" content="新闻发布" />
-<meta name="ColumnType" content="新闻发布" />
-<meta name="ColumnDescription" content="新闻发布" />
-<meta name="ColumnKeywords" content="新闻发布,中华人民共和国生态环境部" />
+<meta name="ColumnName" content="督察管理" />
+<meta name="ColumnType" content="督察管理" />
+<meta name="ColumnDescription" content="督察管理" />
+<meta name="ColumnKeywords" content="督察管理,中华人民共和国生态环境部" />
 <script type="text/javascript" src="/images/jquery-3.7.1.min.js"></script>
-<script type="text/javascript" src="/images/jquery-migrate-3.4.0.min.js"></script>
 <script type="text/javascript" src="/images/MEPC_mobile_v2020.js"></script>
 
 <link class="stylefile" rel="stylesheet" type="text/css" href="/images/MEPC_base_pc_v2019.css" />
 <link class="stylefile" rel="stylesheet" type="text/css" href="/images/MEPC_cj_pc_v2019.css" />
 
+<link class="mobileStyle" rel="stylesheet" type="text/css" href="/images/swiper.min_v2019.css" />
 <link class="mobileStyle" rel="stylesheet" type="text/css" href="/images/MEPC_base_mobile_v2019.css" />
-<link class="mobileStyle" rel="stylesheet" type="text/css" href="/images/MEPC_cj_mobile_v2019.css" />
+<link class="mobileStyle" rel="stylesheet" type="text/css" href="/images/MEPC_zlp_mobile_v2019.css" />
 
 <script class="stylefile" src="/images/respond.src_v2019.js"></script>
 <script type="text/javascript" src="/images/jquery.SuperSlide.2.1.1.js"></script>
+<script type="text/javascript" src="/images/swiper.min_v2019.js"></script>
+
 <script>
-    var isPC = IsPC();//获取是否为PC端
-    if (isPC) {//如果是PC端加载PC的js和css
+    var isPC = IsPC(); //获取是否为PC端
+    if (isPC) { //如果是PC端加载PC的js和css
         $(".mobileStyle").remove();
         dynamicLoadJs('/images/MEPC_base_pc_v2019.js')
-    } else {//如果是移动端加载移动端的js和css
+        dynamicLoadJs('/images/MEPC_cj_pc_v2019.js')
+    } else { //如果是移动端加载移动端的js和css
         if(window.sessionStorage.getItem("isPc")=="true"){
             var oMeta = document.createElement('meta');
             oMeta.content = '';
@@ -36,6 +39,7 @@
             document.getElementsByTagName('head')[0].appendChild(oMeta);
             $(".mobileStyle").remove();
             dynamicLoadJs('/images/MEPC_base_pc_v2019.js')
+            dynamicLoadJs('/images/MEPC_cj_pc_v2019.js')
             $(function(){
                 $(".AppBtn").css('display','block');
                 $(".style_App").css('display','block');
@@ -43,6 +47,7 @@
         }else{
         $(".stylefile").remove();
         dynamicLoadJs('/images/MEPC_base_mobile_v2019.js')
+        dynamicLoadJs('/images/MEPC_zlp_mobile_v2019.js')
         }
         $(function(){
             //切换pc移动
@@ -68,23 +73,29 @@
         })
     }
 
-    function dynamicLoadCss(url) {//加载css方法
-        var head = document.getElementsByTagName('head')[0];
-        var link = document.createElement('link');
-        link.type = 'text/css';
-        link.rel = 'stylesheet';
+    function dynamicLoadCss(url) {
+        //加载css方法
+        var head = document.getElementsByTagName("head")[0];
+        var link = document.createElement("link");
+        link.type = "text/css";
+        link.rel = "stylesheet";
         link.href = url;
         head.appendChild(link);
     }
 
-    function dynamicLoadJs(url, callback) {//加载js方法
-        var head = document.getElementsByTagName('head')[0];
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
+    function dynamicLoadJs(url, callback) {
+        //加载js方法
+        var head = document.getElementsByTagName("head")[0];
+        var script = document.createElement("script");
+        script.type = "text/javascript";
         script.src = url;
-        if (typeof(callback) == 'function') {
+        if (typeof callback == "function") {
             script.onload = script.onreadystatechange = function () {
-                if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
+                if (
+                    !this.readyState ||
+                    this.readyState === "loaded" ||
+                    this.readyState === "complete"
+                ) {
                     callback();
                     script.onload = script.onreadystatechange = null;
                 }
@@ -240,10 +251,10 @@ document.getElementById("searchword").addEventListener("keyup", function (){
 	</div>
 </div>
 <div class="innerBaseBanner">
-	<img class="innerBaseBannerImg" src="/images/MEPC_base_innerBanner_v2019_02.jpg" />
-	<div class="center">
-		<h2><script>
-    var url="http://www.mee.gov.cn/ywdt/xwfb/";
+    <img class="innerBaseBannerImg" src="/images/MEPC_base_innerBanner_v2019_02.jpg" />
+    <div class="center">
+        <h2><script>
+    var url="http://www.mee.gov.cn/ywgz/zysthjbhdc/dcjl/";
     if(url.indexOf(".cn/ywdt/")>0)
     {document.write("要闻动态");}
     if(url.indexOf(".cn/zjhb/")>0)
@@ -278,104 +289,76 @@ document.getElementById("searchword").addEventListener("keyup", function (){
     if(url.indexOf(".cn/gzfw_13107/")>0)
     {document.write("办事服务");}
 </script></h2>
-		<div class="crumbsNav">
-			当前位置：<a href="../../" target="_self" title="首页" class="CurrChnlCls">首页</a>&nbsp;>&nbsp;<a href="../" target="_self" title="要闻动态" class="CurrChnlCls">要闻动态</a>&nbsp;>&nbsp;<a href="./" target="_self" title="新闻发布" class="CurrChnlCls">新闻发布</a>
-		</div>
-	</div>
+        <div class="crumbsNav">
+            当前位置：<a href="../../../" target="_self" title="首页" class="CurrChnlCls">首页</a>&nbsp;>&nbsp;<a href="../../" target="_self" title="业务工作" class="CurrChnlCls">业务工作</a>&nbsp;>&nbsp;<a href="../" target="_self" title="中央生态环境保护督察" class="CurrChnlCls">中央生态环境保护督察</a>&nbsp;>&nbsp;<a href="./" target="_self" title="督察管理" class="CurrChnlCls">督察管理</a>
+        </div>
+    </div>
 </div>
 
 <div class="cjcs_dqwz_wai">
-	<div class="cjcs_con">
-		<div class="cjcs_kong cjcs_quan50" >
-			<div class="cjcs_com_tt">
-				<h2>新闻发布</h2>
-			</div>
-			<ul class="cjcx_danduimg_list" id="div">
-				
-				<li>
-					<div class="cjcs_dtxx_list"><strong>16</strong><span>2026-09</span></div>
-					<dl>
-						<dt><a class="cjcx_biaobnan" href="./202609/t20260916_1166543.shtml" target="_blank">生态环境部发布9月下半月全国空气质量预报会商结果</a><span class="cjcx_shijian">2026-09-16</span></dt>
-						<dd>
-							<a class="cjcx_biaob" href="./202609/t20260916_1166543.shtml" target="_blank">生态环境部发布9月下半月全国空气质量预报会商结果</a>
-							<p style="text-indent: 2em;"><br/>　　2026年9月15日，中国环境监测总站联合中央气象台、大气污染防治攻关联合中心，东北、华南、西南、西北、长三角区域空气质量预测预报中心和北京市生态环境监测中心，开展9月下半月（9月16日—30日）全国空气质量预报会商。<br/>　　9月下半月，全国大部地区扩散条件总体较好，空气质量以优良至轻度污染为主，河北中南部...</p>
-							<div class="cjcx_biadi"><a href="./202609/t20260916_1166543.shtml" target="_blank">查看详细></a></div>
-						</dd>
-					</dl>
-				</li>
-				
-				<li>
-					<div class="cjcs_dtxx_list"><strong>06</strong><span>2026-09</span></div>
-					<dl>
-						<dt><a class="cjcx_biaobnan" href="./202609/t20260906_1165222.shtml" target="_blank">生态环境部发布9月上半月全国空气质量预报会商结果</a><span class="cjcx_shijian">2026-09-06</span></dt>
-						<dd>
-							<a class="cjcx_biaob" href="./202609/t20260906_1165222.shtml" target="_blank">生态环境部发布9月上半月全国空气质量预报会商结果</a>
-							<p style="text-indent: 2em;">　　2026年8月31日，中国环境监测总站联合中央气象台、大气污染防治攻关联合中心，东北、华南、西南、西北、长三角区域空气质量预测预报中心和北京市生态环境监测中心，开展9月上半月（9月1日—15日）全国空气质量预报会商。<br/>　　9月上半月，全国大部地区扩散条件总体较好，空气质量以优良为主，局地可能出现轻度污染。...</p>
-							<div class="cjcx_biadi"><a href="./202609/t20260906_1165222.shtml" target="_blank">查看详细></a></div>
-						</dd>
-					</dl>
-				</li>
-				
-				<li>
-					<div class="cjcs_dtxx_list"><strong>27</strong><span>2026-08</span></div>
-					<dl>
-						<dt><a class="cjcx_biaobnan" href="./202608/t20260827_1164599.shtml" target="_blank">生态环境部公布2026年7月全国环境空气质量状况</a><span class="cjcx_shijian">2026-08-27</span></dt>
-						<dd>
-							<a class="cjcx_biaob" href="./202608/t20260827_1164599.shtml" target="_blank">生态环境部公布2026年7月全国环境空气质量状况</a>
-							<p style="text-indent: 2em;"><br/>　　生态环境部今日向媒体公布了2026年7月全国环境空气质量状况。<br/>　　空气质量<br/>　　总体情况<br/>　　7月，全国339个地级及以上城市PM2.5平均浓度为13.9微克/立方米，同比下降4.1%；PM10平均浓度为26微克/立方米，同比下降7.1%；O3平均浓度为132微克/立方米，同比下降4.3%；SO2平均浓度为6微克/立方米，同比持平；NO2平均...</p>
-							<div class="cjcx_biadi"><a href="./202608/t20260827_1164599.shtml" target="_blank">查看详细></a></div>
-						</dd>
-					</dl>
-				</li>
-				
-				<li>
-					<div class="cjcs_dtxx_list"><strong>15</strong><span>2026-08</span></div>
-					<dl>
-						<dt><a class="cjcx_biaobnan" href="./202608/t20260815_1164064.shtml" target="_blank">生态环境部发布8月下半月全国空气质量预报会商结果</a><span class="cjcx_shijian">2026-08-15</span></dt>
-						<dd>
-							<a class="cjcx_biaob" href="./202608/t20260815_1164064.shtml" target="_blank">生态环境部发布8月下半月全国空气质量预报会商结果</a>
-							<p style="text-indent: 2em;"><br/>　　2026年8月15日，中国环境监测总站联合中央气象台、大气污染防治攻关联合中心，东北、华南、西南、西北、长三角区域空气质量预测预报中心和北京市生态环境监测中心，开展8月下半月（8月16日—31日）全国空气质量预报会商。<br/>　　8月下半月，全国大部地区扩散条件总体较好，空气质量以优良为主，局地可能出现轻度污染...</p>
-							<div class="cjcx_biadi"><a href="./202608/t20260815_1164064.shtml" target="_blank">查看详细></a></div>
-						</dd>
-					</dl>
-				</li>
-				
-				<li>
-					<div class="cjcs_dtxx_list"><strong>31</strong><span>2026-07</span></div>
-					<dl>
-						<dt><a class="cjcx_biaobnan" href="./202607/t20260731_1163302.shtml" target="_blank">生态环境部发布8月上半月全国空气质量预报会商结果</a><span class="cjcx_shijian">2026-07-31</span></dt>
-						<dd>
-							<a class="cjcx_biaob" href="./202607/t20260731_1163302.shtml" target="_blank">生态环境部发布8月上半月全国空气质量预报会商结果</a>
-							<p style="text-indent: 2em;">　　2026年7月31日，中国环境监测总站联合中央气象台、大气污染防治攻关联合中心，东北、华南、西南、西北、长三角区域空气质量预测预报中心和北京市生态环境监测中心，开展8月上半月（8月1日—15日）全国空气质量预报会商。<br/>　　8月上半月，全国大部扩散条件一般至较好，空气质量以优良至轻度污染为主，受高温影响，长...</p>
-							<div class="cjcx_biadi"><a href="./202607/t20260731_1163302.shtml" target="_blank">查看详细></a></div>
-						</dd>
-					</dl>
-				</li>
-				
-				<li>
-					<div class="cjcs_dtxx_list"><strong>30</strong><span>2026-07</span></div>
-					<dl>
-						<dt><a class="cjcx_biaobnan" href="./202607/t20260730_1163186.shtml" target="_blank">生态环境部公布2026年第二季度和1—6月全国地表水环境质量状况</a><span class="cjcx_shijian">2026-07-30</span></dt>
-						<dd>
-							<a class="cjcx_biaob" href="./202607/t20260730_1163186.shtml" target="_blank">生态环境部公布2026年第二季度和1—6月全国地表水环境质量状况</a>
-							<p style="text-indent: 2em;"><br/>　　生态环境部今日公布了2026年第二季度（4—6月）和1—6月全国地表水环境质量状况。<br/>　　地 表 水<br/>　　总体情况<br/>　　第二季度，全国地表水Ⅰ—Ⅲ类水质比例为82.5%，同比上升2.3个百分点；劣Ⅴ类断面比例为1.1%，同比下降1.3个百分点。主要超标指标为化学需氧量、高锰酸盐指数和总磷。<br/>　　1—6月，全国地表水Ⅰ—Ⅲ...</p>
-							<div class="cjcx_biadi"><a href="./202607/t20260730_1163186.shtml" target="_blank">查看详细></a></div>
-						</dd>
-					</dl>
-				</li>
-				
-			</ul>
-			<div class="badoo1">
+    <div class="cjcs_con">
+        <div class="cjcs_kong ywgz_xj">
+            <div class="slideTxtBoxgsf">
+                <div class="hd cjcs_gaibiana7">
+                    <h2 class="cjcs_baoguang">督察管理</h2>
+                </div>
+                <div class="bd mobile_list">
+                    <div>
+                        <ul id="div">
+                        
+                            
+                                <li><span class="date">2026-06-02</span><a href="./202606/t20260602_1157667.shtml" target="_blank" title="">中央生态环境保护督察集中通报典型案例</a></li>
+                            
+                                <li><span class="date">2026-06-02</span><a href="./202606/t20260602_1157665.shtml" target="_blank" title="">辽宁省葫芦岛市生活污水收集处理短板明显</a></li>
+                            
+                                <li><span class="date">2026-06-02</span><a href="./202606/t20260602_1157658.shtml" target="_blank" title="">吉林省四平市农村人居环境整治仍有短板</a></li>
+                            
+                                <li><span class="date">2026-06-02</span><a href="./202606/t20260602_1157655.shtml" target="_blank" title="">黑龙江省牡丹江市农村环境整治滞后</a></li>
+                            
+                            
+                                <li class="miaob"><span class="date">2026-06-02</span><a href="./202606/t20260602_1157646.shtml" target="_blank" title="">广东省肇庆潮州等地固体废物非法倾倒填埋问题突出</a></li>
+                            
+                        
+                            
+                                <li><span class="date">2026-05-26</span><a href="./202605/t20260526_1156110.shtml" target="_blank" title="">中央生态环境保护督察集中通报典型案例</a></li>
+                            
+                                <li><span class="date">2026-05-26</span><a href="./202605/t20260526_1156107.shtml" target="_blank" title="">广东省惠州阳江等地海洋生态保护仍有差距</a></li>
+                            
+                                <li><span class="date">2026-05-26</span><a href="./202605/t20260526_1156104.shtml" target="_blank" title="">广西北海钦州等地海洋生态保护短板明显</a></li>
+                            
+                                <li><span class="date">2026-05-19</span><a href="./202605/t20260519_1154770.shtml" target="_blank" title="">中央生态环境保护督察集中通报典型案例</a></li>
+                            
+                            
+                                <li class="miaob"><span class="date">2026-05-19</span><a href="./202605/t20260519_1154769.shtml" target="_blank" title="">辽宁省抚顺营口两市大气污染防治工作推进不力</a></li>
+                            
+                        
+                            
+                                <li><span class="date">2026-05-19</span><a href="./202605/t20260519_1154600.shtml" target="_blank" title="">吉林省延边州生态破坏问题多发</a></li>
+                            
+                                <li><span class="date">2026-05-19</span><a href="./202605/t20260519_1154499.shtml" target="_blank" title="">黑龙江省齐齐哈尔市湿地破坏问题严重</a></li>
+                            
+                                <li><span class="date">2026-05-19</span><a href="./202605/t20260519_1154427.shtml" target="_blank" title="">广西玉林市违法违规采矿破坏生态</a></li>
+                            
+                                <li><span class="date">2026-05-07</span><a href="./202605/t20260507_1150940.shtml" target="_blank" title="">中央生态环境保护督察工作领导小组办公室致函要求精准科学依法推进边督边改 严禁“一刀切” 切实减轻基层负担</a></li>
+                            
+                            
+                                <li class="miaob"><span class="date">2026-05-07</span><a href="./202605/t20260507_1150910.shtml" target="_blank" title="">第三轮第六批中央生态环境保护督察全面启动</a></li>
+                            
+                        
+                        </ul>
+                    </div>
+                </div>
+                <div class="badoo1">
     <div class="badoo1_nr1">
         <div class="badoo1_nr2">
     <script language="javascript">
-        //createPageHTML(84, 0, "index", "shtml");
+        //createPageHTML(31, 0, "index", "shtml");
         var currentPage = 0;//所在页从0开始
         //var headPage = "index"+"."+"shtml";//首页
         //var tailPage = "index_" + (countPage-1) + ".shtml"//尾页
         var prevPage = currentPage-1//上一页
         var nextPage = currentPage+1//下一页
-        var countPage = 84//共多少页
+        var countPage = 31//共多少页
 
         //document.write("共"+countPage+"页&nbsp;&nbsp;");
         //设置上一页代码
@@ -434,79 +417,67 @@ document.getElementById("searchword").addEventListener("keyup", function (){
         </div>
     </div>
 </div>
-			<div class="cjcs_mov_gengduo"><a id='anniu' onclick="goto()" >查看更多</a></div>
-			<script>
-				var countPage = 84;
-				//console.log(countPage)
-				if(countPage<2){
-					$('#anniu').hide();
-				}
-				/*$.ajax({
-                    url:'index_8555_1.shtml',
-                    success: function(html){
-                        data_html_N = html;
-                    },
-                    error: function(error){
-                        data_html_N = 'error';
-                        $('#anniu').hide();
+                <div class="pc_none seeMore">
+                    <a id='anniu' onclick="goto()" >查看更多</a>
+                </div>
+                <script>
+                    var countPage = 31;
+                    //console.log(countPage)
+                    if(countPage<2){
+                       $('#anniu').hide();
                     }
-                });*/
-
-				var page = 1;
-				function goto(){
-					//console.log('aaaaaa');
-					//console.log(page);
-					$.ajax({
-						url:'index_8555_' + page + '.shtml',
-						success: function(html){
-							data_html = html;
-							page = page + 1;
-							$('#div').append('<sun style="display:none;">' + data_html + '</sun>');
-							$('sun').eq(-1).slideDown("slow");
-							var htm=$(".cjcx_danduimg_list").html();
-							htm=htm.replace(/<br>/ig, "");
-							htm=htm.replace(/　　/ig,'');
-							$(".cjcx_danduimg_list").html(htm);
-						},
-						error: function(error){
-							data_html = 'error';
-						}
-					});
-					page_N = page + 1;
-					if(page_N>=countPage){
-						$('#anniu').hide();
-					}
-					/* $.ajax({
-                         url:'index_8555_' + page_N + '.shtml',
-                         success: function(html){
-                             data_html_N = html;
-                         },
-                         error: function(error){
-                             data_html_N = 'error';
-                             $('#anniu').hide();
+                    /*$.ajax({
+                        url:'index_8597_1.shtml',
+                        success: function(html){
+                            data_html_N = html;
+                        },
+                        error: function(error){
+                            data_html_N = 'error';
+                            $('#anniu').hide();
+                        }
+                    });*/
+                    
+                    var page = 1;
+                    function goto(){
+                        //console.log('aaaaaa');
+                        //console.log(page);
+                        $.ajax({
+                            url:'index_8597_' + page + '.shtml',
+                            success: function(html){
+                                data_html = html;
+                                page = page + 1;
+                                $('#div').append('<sun style="display:none;">' + data_html + '</sun>');
+                                $('sun').eq(-1).slideDown("slow");
+                                dynamicLoadJs("/images/hrefclickdate.js");
+                            },
+                            error: function(error){
+                                data_html = 'error';
+                            }
+                        });
+                        page_N = page + 1;
+                        if(page_N>=countPage){
+                           $('#anniu').hide();
                          }
-                     });*/
+                       /* $.ajax({
+                            url:'index_8597_' + page_N + '.shtml',
+                            success: function(html){
+                                data_html_N = html;
+                            },
+                            error: function(error){
+                                data_html_N = 'error';
+                                $('#anniu').hide();
+                            }
+                        });*/
 
-					//console.log('bbbbbb');
-					//console.log(page);
-				};
-			</script>
-		</div>
-	</div>
+                        //console.log('bbbbbb');
+                        //console.log(page);
+                    };
+                </script>
+            </div>
+        </div>
+
+    </div>
 </div>
-<script>
-	var htm=$(".cjcx_danduimg_list").html();
-	htm=htm.replace(/<br>/ig, "");
-	htm=htm.replace(/　　/ig,'');
-	$(".cjcx_danduimg_list").html(htm);
-
-	$('.cjcs_buyiyang').each(function(){
-		if($(this).find('img').length){
-		} else{
-			$(this).hide()
-		}
-	});
-</script>
 <div class="footer">
 	<div class="footerTopUl">
 		<div class="center">
@@ -956,9 +927,5 @@ var isPC = IsPC();//获取是否为PC端
 		</div>
 	</div>
 </div>
-
-
-
-
 </body>
 </html>
