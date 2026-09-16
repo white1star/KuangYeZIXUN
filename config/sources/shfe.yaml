@@ -1,0 +1,17 @@
+key: shfe
+enabled: false
+name: 上期所日行情
+board: price
+parser: shfe_daily
+url: "https://www.shfe.com.cn/data/dailydata/kx/kx20260916.dat"
+fixture_ext: json
+unit: 元/吨
+close_field: CLOSEPRICE
+commodity_map:
+  cu: 铜
+  al: 铝
+  zn: 锌
+  pb: 铅
+  sn: 锡
+  au: 黄金
+  ag: 白银

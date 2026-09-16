@@ -1,0 +1,22 @@
+key: eastmoney_futures
+name: 东方财富期货（备用）
+board: price
+parser: eastmoney_futures
+url: "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:113&fields=f2,f3,f4,f12,f14"
+fixture_ext: json
+unit: 元/吨
+field_map: {name: f14, last: f2, change: f4, change_pct: f3}
+scale: {}
+commodity_map:
+  焦煤连续: 焦煤
+  焦炭连续: 焦炭
+  铁矿石连续: 铁矿石
+  沪铜连续: 铜
+  沪铝连续: 铝
+  沪锌连续: 锌
+  沪铅连续: 铅
+  沪锡连续: 锡
+  沪金连续: 黄金
+  沪银连续: 白银
+  锰硅连续: 锰硅
+  硅铁连续: 硅铁

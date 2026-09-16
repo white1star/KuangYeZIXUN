@@ -1,0 +1,23 @@
+key: sina_futures
+name: 新浪期货行情
+board: price
+parser: sina_futures
+url: "https://hq.sinajs.cn/list=nf_JM0,nf_J0,nf_I0,nf_CU0,nf_AL0,nf_ZN0,nf_PB0,nf_SN0,nf_AU0,nf_AG0,nf_SM0,nf_SF0"
+referer: "https://finance.sina.com.cn"
+encoding: gb18030
+fixture_ext: txt
+unit: 元/吨
+field_map: {name: 0, last: 8, prev_settle: 10}
+commodity_map:
+  JM0: 焦煤
+  J0: 焦炭
+  I0: 铁矿石
+  CU0: 铜
+  AL0: 铝
+  ZN0: 锌
+  PB0: 铅
+  SN0: 锡
+  AU0: 黄金
+  AG0: 白银
+  SM0: 锰硅
+  SF0: 硅铁
