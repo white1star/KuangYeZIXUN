@@ -83,6 +83,9 @@ def parse_list(html: str, cfg: dict, base_url: str) -> list:
             if m:
                 published_at = parse_date("".join(g for g in m.groups() if g))
         items.append(ParsedItem(title=title, url=url, published_at=published_at))
+    keywords = cfg.get("filter_keywords") or []
+    if keywords:
+        items = [i for i in items if any(k in i.title for k in keywords)]
     return items
 
 

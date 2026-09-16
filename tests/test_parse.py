@@ -35,6 +35,25 @@ def test_parse_list_dates():
     assert items[4].published_at == ""
 
 
+def test_parse_list_filter_keywords_keeps_hits():
+    cfg = {"list": CFG["list"], "filter_keywords": ["矿", "地热"]}
+    items = parse_list(LIST_HTML, cfg, "https://www.mnr.gov.cn/")
+    assert [i.title for i in items] == [
+        "河北开展磷矿安全生产整治",
+        "关于开展矿山安全监察的通知",
+    ]
+
+
+def test_parse_list_filter_keywords_no_hit_returns_empty():
+    cfg = {"list": CFG["list"], "filter_keywords": ["石油"]}
+    assert parse_list(LIST_HTML, cfg, "https://www.mnr.gov.cn/") == []
+
+
+def test_parse_list_without_filter_keywords_unchanged():
+    items = parse_list(LIST_HTML, dict(CFG), "https://www.mnr.gov.cn/")
+    assert len(items) == 5
+
+
 def test_parse_date_variants():
     assert parse_date("2026/09/15") == "2026-09-15"
     assert parse_date("2026年9月5日") == "2026-09-05"
