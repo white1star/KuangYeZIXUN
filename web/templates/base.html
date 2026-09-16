@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}矿业资讯站{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="top">
+  <div class="brand">矿业资讯站 <span class="sub">像素智能 · 内部</span></div>
+  <nav>
+    <a href="/">首页</a>
+    <a href="/prices">行情</a>
+    <a href="/policy">政策</a>
+    <a href="/search">搜索</a>
+    <a href="/sources">源健康</a>
+  </nav>
+</header>
+<main>{% block content %}{% endblock %}</main>
+<footer class="foot">仅存标题与摘要 · 点击标题跳转原文</footer>
+</body>
+</html>

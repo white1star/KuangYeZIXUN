@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Microsoft YaHei", system-ui, sans-serif; color: #1f2430; background: #f5f6f8; }
+.top { display: flex; align-items: center; gap: 24px; padding: 10px 20px; background: #17324d; color: #fff; flex-wrap: wrap; }
+.brand { font-size: 18px; font-weight: 700; }
+.brand .sub { font-size: 12px; font-weight: 400; opacity: .7; margin-left: 6px; }
+nav a { color: #cfe1f5; text-decoration: none; margin-right: 14px; }
+nav a:hover { color: #fff; }
+main { padding: 14px 20px 40px; max-width: 1200px; margin: 0 auto; }
+.statusbar { background: #fff; border: 1px solid #e3e6eb; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+.runs { margin-left: 12px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+.dot.ok { background: #2e9e5b; }
+.dot.err { background: #d64545; }
+.cols { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+.feed article { background: #fff; border: 1px solid #e3e6eb; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.title { font-size: 16px; font-weight: 600; color: #17324d; text-decoration: none; }
+.title:hover { text-decoration: underline; }
+.repost { color: #b07d2b; font-size: 12px; margin-left: 8px; }
+.meta { color: #6b7280; font-size: 12px; margin-top: 4px; }
+.summary { color: #374151; font-size: 13px; margin: 6px 0 0; }
+aside h2, .feed h2 { font-size: 15px; margin: 10px 0 8px; }
+.prices { width: 100%; background: #fff; border-collapse: collapse; border: 1px solid #e3e6eb; border-radius: 8px; overflow: hidden; }
+.prices td, .prices th { padding: 6px 8px; border-bottom: 1px solid #eef0f3; font-size: 13px; }
+.prices .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ptype { font-size: 11px; color: #9aa1ad; margin-left: 4px; }
+.up { color: #c0322b; }
+.down { color: #1f7a45; }
+.policies { list-style: none; padding: 0; }
+.policies li { margin-bottom: 6px; font-size: 13px; }
+.muted { color: #9aa1ad; }
+.foot { text-align: center; color: #9aa1ad; font-size: 12px; padding: 16px; }
+@media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }

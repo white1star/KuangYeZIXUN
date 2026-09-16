@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="statusbar">
+  今日新增 <b>{{ stats.total }}</b> 条（新闻 {{ stats.by_board.get('news', 0) }} · 政策 {{ stats.by_board.get('policy', 0) }} · 价格源更新见行情页）
+  <span class="runs">{% for r in runs %}<span class="dot {{ 'ok' if r.status == 'ok' else 'err' }}" title="{{ r.source_key }} {{ r.finished_at }} {{ r.status }}"></span>{% endfor %}</span>
+</div>
+<div class="cols">
+  <section class="feed">
+    <h2>最新动态</h2>
+    {% for a in articles %}
+    <article>
+      <a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+      {% if a.member_count and a.member_count > 1 %}<span class="repost">另有 {{ a.member_count - 1 }} 家转载</span>{% endif %}
+      <div class="meta">{{ a.source_key }} · {{ a.published_at or a.fetched_at }} · {{ a.minerals|join('、') }} {{ a.types|join('、') }}</div>
+      {% if a.summary %}<p class="summary">{{ a.summary }}</p>{% endif %}
+    </article>
+    {% else %}
+    <p class="muted">暂无数据，请先运行：python -m crawler.main --once</p>
+    {% endfor %}
+  </section>
+  <aside>
+    <h2>矿价速览</h2>
+    <table class="prices">
+      {% for p in prices %}
+      <tr><td>{{ p.commodity }}<span class="ptype">{{ p.price_type }}</span></td>
+      <td class="num">{{ p.value }}</td>
+      <td class="{{ 'up' if (p.change_pct or 0) > 0 else 'down' }}">{{ '%+.2f%%'|format(p.change_pct or 0) }}</td></tr>
+      {% endfor %}
+    </table>
+    <h2>最新政策</h2>
+    <ul class="policies">{% for a in policies %}<li><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></li>{% endfor %}</ul>
+  </aside>
+</div>
+{% endblock %}
