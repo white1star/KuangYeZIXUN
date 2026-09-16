@@ -7,6 +7,9 @@ referer: "https://finance.sina.com.cn"
 encoding: gb18030
 fixture_ext: txt
 unit: 元/吨
+unit_map:
+  黄金: 元/克
+  白银: 元/千克
 field_map: {name: 0, last: 8, prev_settle: 10}
 commodity_map:
   JM0: 焦煤

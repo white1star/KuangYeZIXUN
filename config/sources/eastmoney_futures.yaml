@@ -5,6 +5,9 @@ parser: eastmoney_futures
 url: "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:113&fields=f2,f3,f4,f12,f14"
 fixture_ext: json
 unit: 元/吨
+unit_map:
+  黄金: 元/克
+  白银: 元/千克
 field_map: {name: f14, last: f2, change: f4, change_pct: f3}
 scale: {}
 commodity_map:

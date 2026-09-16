@@ -19,6 +19,7 @@ def test_sina_futures_real_sample():
     text = (FIXTURES / "sina_futures_list.txt").read_text(encoding="utf-8")
     cfg = _cfg("sina_futures",
                field_map={"name": 0, "last": 8, "prev_settle": 10},
+               unit_map={"黄金": "元/克", "白银": "元/千克"},
                commodity_map={"JM0": "焦煤", "J0": "焦炭", "I0": "铁矿石", "CU0": "铜",
                               "AL0": "铝", "ZN0": "锌", "PB0": "铅", "SN0": "锡",
                               "AU0": "黄金", "AG0": "白银", "SM0": "锰硅", "SF0": "硅铁"})
@@ -27,6 +28,16 @@ def test_sina_futures_real_sample():
     assert all(r["value"] > 0 for r in rows)
     assert all(re.match(r"^\d{4}-\d{2}-\d{2}$", r["price_date"]) for r in rows)
     assert {r["commodity"] for r in rows} <= set(cfg["commodity_map"].values())
+    by = {r["commodity"]: r for r in rows}
+    assert by["黄金"]["unit"] == "元/克"
+    assert by["白银"]["unit"] == "元/千克"
+    assert by["焦煤"]["unit"] == "元/吨"
+
+
+def test_match_commodity_fallbacks():
+    assert price_sources._match_commodity("cu2610", {"cu2610": "铜"}) == "铜"
+    assert price_sources._match_commodity("磷矿石（30%品位）", {"磷矿石": ["磷矿石"]}) == "磷矿石"
+    assert price_sources._match_commodity("焦煤2601", {"焦煤连续": "焦煤"}) == "焦煤"
 
 
 def test_eastmoney_futures_contract():

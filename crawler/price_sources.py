@@ -32,11 +32,12 @@ def _today() -> str:
 
 def _make_row(commodity, price_type, value, cfg, raw_label,
               change=None, change_pct=None, price_date=None):
+    unit = (cfg.get("unit_map") or {}).get(commodity) or cfg.get("unit", "")
     return {
         "commodity": commodity,
         "price_type": price_type,
         "value": value,
-        "unit": cfg.get("unit", ""),
+        "unit": unit,
         "change": change,
         "change_pct": change_pct,
         "price_date": price_date or cfg.get("price_date") or _today(),
@@ -50,10 +51,12 @@ def _match_commodity(label, mapping):
     label = (label or "").strip()
     if label in mapping:
         return mapping[label]
-    for commodity, keywords in mapping.items():
-        words = keywords if isinstance(keywords, list) else [keywords]
-        if any(w and w in label for w in words):
-            return commodity
+    for key, value in mapping.items():
+        if isinstance(value, list):
+            if any(w and w in label for w in value):
+                return key
+        elif isinstance(value, str) and value and value in label:
+            return value
     return None
 
 
