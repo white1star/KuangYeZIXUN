@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>政策法规</h2>
+<form method="get" class="filterbar">
+  <select name="source">
+    <option value="">全部机关</option>
+    {% for s in sources %}<option value="{{ s.key }}" {{ 'selected' if s.key == source else '' }}>{{ s.name }}</option>{% endfor %}
+  </select>
+  <input name="region" value="{{ region }}" placeholder="地区（如 河北）">
+  <button type="submit">筛选</button>
+</form>
+{% for a in articles %}
+<article class="card">
+  <a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+  {% if a.member_count and a.member_count > 1 %}<span class="repost">另有 {{ a.member_count - 1 }} 家转载</span>{% endif %}
+  <div class="meta">{{ a.source_key }} · {{ a.published_at or a.fetched_at }} · {{ a.regions|join('、') }} {{ a.types|join('、') }}</div>
+  {% if a.summary %}<p class="summary">{{ a.summary }}</p>{% endif %}
+</article>
+{% else %}
+<p class="muted">没有符合条件的政策。</p>
+{% endfor %}
+{% endblock %}

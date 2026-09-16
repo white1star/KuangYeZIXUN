@@ -64,6 +64,36 @@ def create_app(db_path=None) -> FastAPI:
             conn.close()
         return {"commodity": commodity, "days": days, "points": points}
 
+    @app.get("/policy", response_class=HTMLResponse)
+    def policy_page(request: Request, region: str = "", source: str = ""):
+        conn = get_conn()
+        try:
+            articles = queries.search_articles(conn, board="policy",
+                                               source=source or None, limit=200)
+            if region:
+                articles = [a for a in articles if region in (a.get("regions") or [])]
+            health = queries.source_health(conn)
+            sources = [h for h in health if h["board"] == "policy"]
+        finally:
+            conn.close()
+        return templates.TemplateResponse(request, "policy.html", {
+            "articles": articles, "region": region, "source": source, "sources": sources})
+
+    @app.get("/search", response_class=HTMLResponse)
+    def search_page(request: Request, q: str = "", mineral: str = "",
+                    board: str = "", source: str = ""):
+        conn = get_conn()
+        try:
+            results = queries.search_articles(conn, q=q, mineral=mineral or None,
+                                              board=board or None, source=source or None,
+                                              limit=100)
+            ctx = {"results": results, "q": q, "mineral": mineral, "board": board,
+                   "source": source, "commodities": queries.distinct_commodities(conn),
+                   "sources": queries.source_health(conn)}
+        finally:
+            conn.close()
+        return templates.TemplateResponse(request, "search.html", ctx)
+
     return app
 
 
