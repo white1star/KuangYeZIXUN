@@ -129,7 +129,7 @@ def distinct_minerals(conn) -> list:
 
 
 def search_articles(conn, q="", mineral=None, board=None, source=None,
-                    date_from=None, date_to=None, limit=100) -> list:
+                    date_from=None, date_to=None, types=None, limit=100) -> list:
     where = ["a.is_primary=1"]
     params = []
     sql = ("SELECT a.*, (SELECT member_count FROM article_clusters c WHERE c.id=a.cluster_id) AS member_count, "
@@ -152,6 +152,9 @@ def search_articles(conn, q="", mineral=None, board=None, source=None,
     if mineral:
         where.append("a.minerals LIKE ?")
         params.append(f'%"{mineral}"%')
+    if types:
+        where.append("(" + " OR ".join("a.types LIKE ?" for _ in types) + ")")
+        params.extend(f'%"{t}"%' for t in types)
     if date_from:
         where.append("a.fetched_at>=?")
         params.append(date_from)

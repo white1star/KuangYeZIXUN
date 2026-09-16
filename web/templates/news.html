@@ -7,8 +7,8 @@
     <h1 class="page-title">新闻资讯</h1>
     <p class="page-sub">每日矿业行业动态与市场快讯</p>
     <div class="pills">
-      <a class="pill {{ 'active' if not mineral else '' }}" href="/news">全部</a>
-      {% for m in minerals %}<a class="pill {{ 'active' if m == mineral else '' }}" href="/news?mineral={{ m }}">{{ m }}</a>{% endfor %}
+      <a class="pill {{ 'active' if not active_type else '' }}" href="/news">全部</a>
+      {% for t in types %}<a class="pill {{ 'active' if t == active_type else '' }}" href="/news?type={{ t }}">{{ t }}</a>{% endfor %}
     </div>
     <div class="card feed-card">
       {% for a in articles %}{{ ui.entry(a) }}{% else %}

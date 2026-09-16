@@ -10,13 +10,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from crawler import store
-from crawler.config import load_settings, load_tags
+from crawler.config import load_settings
 from web import queries
 
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
 
 HOME_COMMODITIES = ["动力煤", "焦煤", "铁矿石", "铜", "黄金", "磷矿石"]
+
+NEWS_TYPES = {"行情": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
 
 
 def _fmt_num(value) -> str:
@@ -68,7 +70,6 @@ def create_app(db_path=None) -> FastAPI:
     templates.env.filters["num"] = _fmt_num
     templates.env.filters["pct"] = _fmt_pct
     templates.env.filters["hhmm"] = _fmt_time
-    minerals = list(load_tags().get("minerals", {}).keys())
 
     def get_conn():
         conn = store.connect(db_file)
@@ -112,15 +113,17 @@ def create_app(db_path=None) -> FastAPI:
         return templates.TemplateResponse(request, "index.html", ctx)
 
     @app.get("/news", response_class=HTMLResponse)
-    def news_page(request: Request, mineral: str = ""):
+    def news_page(request: Request, mineral: str = "", type: str = ""):
+        types = NEWS_TYPES.get(type)
         conn = get_conn()
         try:
             articles = queries.search_articles(conn, board="news",
-                                               mineral=mineral or None, limit=120)
+                                               mineral=mineral or None, types=types, limit=120)
         finally:
             conn.close()
         return templates.TemplateResponse(request, "news.html", {
-            "articles": articles, "mineral": mineral, "minerals": minerals})
+            "articles": articles, "active_type": type if types else "",
+            "types": list(NEWS_TYPES.keys())})
 
     @app.get("/prices", response_class=HTMLResponse)
     def prices_page(request: Request, commodity: str = "", price_type: str = "", days: int = 30):
