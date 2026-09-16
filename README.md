@@ -19,6 +19,7 @@ E:\矿_news\
 ├── config\
 │   ├── settings.yaml            全局参数（端口/阈值/超时）
 │   ├── tags.yaml                矿种/类型/地区关键词词典
+│   ├── notify.example.yaml      反馈邮件通知示例（真实配置 notify.local.yaml 不入库）
 │   └── sources\*.yaml           每个信息源一份配置
 ├── crawler\
 │   ├── config.py                配置加载
@@ -33,6 +34,7 @@ E:\矿_news\
 ├── db\schema.sql                建表 + FTS5 + 触发器
 ├── web\
 │   ├── app.py                   FastAPI 应用（python -m web.app 启动）
+│   ├── notify.py                反馈邮件通知（QQ 邮箱 SMTP）
 │   ├── queries.py               页面查询
 │   ├── templates\*.html         Jinja2 模板
 │   └── static\                  样式/style.css、vendor/echarts.min.js
@@ -107,6 +109,22 @@ python -m pytest                   # 跑全部离线测试（源站改版时先�
 ```
 
 备份文件位置：`data\backup\`（每日 19:00 自动备份，保留最近 30 天）。
+
+### 4.1 反馈邮件通知（可选）
+
+网站在收到"意见反馈"（悬浮按钮提交）后，可自动给管理员 QQ 邮箱发一封通知邮件，默认仅本机配置、不入库：
+
+1. 复制 `config\notify.example.yaml` 为 `config\notify.local.yaml`
+2. 填上收发的 QQ 邮箱地址与 **SMTP 授权码**（QQ 邮箱网页版 → 设置 → 账户 → 开启 SMTP 服务后生成，不是登录密码）
+3. 保存后重启网站即生效；单发验证：
+
+```powershell
+python -c "from web import notify; print(notify.send_feedback_email('测试邮件：反馈通知链路验证'))"
+```
+
+关闭方式：把 `config\notify.local.yaml` 里的 `enabled` 改为 `false`，或直接删除该文件。
+
+说明：`notify.local.yaml` 含授权码，已加入 `.gitignore`，不会提交入库，仓库内只保留占位示例 `config\notify.example.yaml`；发送过程在后台线程执行，不阻塞反馈提交，发送失败只写一行日志到 `logs\notify_YYYYMMDD.log`。
 
 ---
 

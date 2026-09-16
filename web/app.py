@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from crawler import store
 from crawler.config import load_settings
-from web import queries
+from web import notify, queries
 
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
@@ -198,6 +199,17 @@ def create_app(db_path=None) -> FastAPI:
             conn.commit()
         finally:
             conn.close()
+        try:
+            notify_config = notify.load_notify_config()
+        except Exception:
+            notify_config = None
+        if notify_config:
+            threading.Thread(
+                target=notify.send_feedback_email,
+                kwargs={"content": content, "contact": contact, "page": page,
+                        "config": notify_config},
+                daemon=True,
+            ).start()
         return {"ok": True}
 
     @app.post("/admin/run_crawl")

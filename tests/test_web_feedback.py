@@ -1,7 +1,38 @@
+import threading
+
+import pytest
 from fastapi.testclient import TestClient
 
 from crawler import store
+from web import notify
 from web.app import create_app
+
+FAKE_CONFIG = {
+    "enabled": True,
+    "smtp_host": "smtp.example.com",
+    "smtp_port": 465,
+    "sender": "a@example.com",
+    "password": "x",
+    "recipient": "b@example.com",
+}
+
+
+@pytest.fixture(autouse=True)
+def fake_notify(monkeypatch):
+    calls = []
+    done = threading.Event()
+
+    def fake_load(path=None):
+        return FAKE_CONFIG
+
+    def fake_send(content, contact="", page="", config=None):
+        calls.append({"content": content, "contact": contact, "page": page, "config": config})
+        done.set()
+        return True
+
+    monkeypatch.setattr(notify, "load_notify_config", fake_load)
+    monkeypatch.setattr(notify, "send_feedback_email", fake_send)
+    return calls, done
 
 
 def make_client(tmp_path):
@@ -34,6 +65,19 @@ def test_feedback_saved_and_shown(tmp_path):
     assert "用户反馈" in page.text
     assert "希望增加铜价走势图" in page.text
     assert "老王" in page.text
+
+
+def test_feedback_triggers_notify(tmp_path, fake_notify):
+    calls, done = fake_notify
+    _, client = make_client(tmp_path)
+    resp = client.post("/feedback", json={
+        "content": "通知测试", "contact": "小张", "page": "/news"})
+    assert resp.status_code == 200
+    assert done.wait(5)
+    assert calls[0]["content"] == "通知测试"
+    assert calls[0]["contact"] == "小张"
+    assert calls[0]["page"] == "/news"
+    assert calls[0]["config"]["enabled"] is True
 
 
 def test_feedback_anonymous_shown(tmp_path):

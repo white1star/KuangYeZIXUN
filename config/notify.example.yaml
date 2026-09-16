@@ -1,0 +1,6 @@
+enabled: true
+smtp_host: smtp.qq.com
+smtp_port: 465
+sender: your@qq.com
+password: 你的QQ邮箱SMTP授权码
+recipient: your@qq.com
