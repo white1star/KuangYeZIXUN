@@ -36,6 +36,23 @@ def seed_same_day_multi_source(db):
     conn.close()
 
 
+def seed_mixed_types(db):
+    conn = store.connect(db)
+    store.init_db(conn)
+    days = [(datetime.now() - timedelta(days=delta)).strftime("%Y-%m-%d") for delta in (2, 1, 0)]
+    for i, day in enumerate(days):
+        conn.execute(
+            "INSERT INTO prices(commodity,price_type,value,unit,change,change_pct,price_date,source_key,raw_label,fetched_at) "
+            "VALUES('铜','期货',?,'元/吨',NULL,NULL,?,'sina','cu',?)",
+            (71000 + i * 100, day, store.now_iso()))
+        conn.execute(
+            "INSERT INTO prices(commodity,price_type,value,unit,change,change_pct,price_date,source_key,raw_label,fetched_at) "
+            "VALUES('铜','现货',?,'元/吨',NULL,NULL,?,'smm','cu_spot',?)",
+            (60000 + i * 100, day, store.now_iso()))
+    conn.commit()
+    conn.close()
+
+
 def test_prices_page(tmp_path):
     db = tmp_path / "t.db"
     seed(db)
@@ -68,3 +85,25 @@ def test_price_api_same_day_multi_source_latest(tmp_path):
     data = resp.json()
     assert len(data["points"]) == 1
     assert data["points"][0]["value"] == 2140.0
+
+
+def test_price_api_filters_by_price_type(tmp_path):
+    db = tmp_path / "t.db"
+    seed_mixed_types(db)
+    client = TestClient(create_app(db))
+    resp = client.get("/api/prices/铜?days=7&price_type=现货")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert [p["value"] for p in data["points"]] == [60000, 60100, 60200]
+
+
+def test_prices_page_embeds_type_selector(tmp_path):
+    db = tmp_path / "t.db"
+    seed_mixed_types(db)
+    client = TestClient(create_app(db))
+    resp = client.get("/prices")
+    assert resp.status_code == 200
+    assert 'id="ptype"' in resp.text
+    assert "TYPE_MAP" in resp.text
+    assert "期货" in resp.text
+    assert "现货" in resp.text

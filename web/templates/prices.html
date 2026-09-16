@@ -4,6 +4,7 @@
 <h2>矿价行情</h2>
 <div class="chart-controls">
   <select id="commodity">{% for c in commodities %}<option>{{ c }}</option>{% endfor %}</select>
+  <select id="ptype"></select>
   <select id="days"><option value="7">近7天</option><option value="30" selected>近30天</option><option value="90">近90天</option></select>
 </div>
 <div id="chart" style="width:100%;height:360px;background:#fff;border:1px solid #e3e6eb;border-radius:8px"></div>
@@ -22,10 +23,23 @@
 </table>
 <script>
 const chart = echarts.init(document.getElementById('chart'));
+const TYPE_MAP = {{ type_map|tojson }};
+const ptype = document.getElementById('ptype');
+function syncTypes() {
+  const c = document.getElementById('commodity').value;
+  ptype.innerHTML = '';
+  for (const t of (TYPE_MAP[c] || [])) {
+    const opt = document.createElement('option');
+    opt.textContent = t;
+    ptype.appendChild(opt);
+  }
+}
 async function load() {
   const c = document.getElementById('commodity').value;
   const d = document.getElementById('days').value;
-  const resp = await fetch('/api/prices/' + encodeURIComponent(c) + '?days=' + d);
+  let url = '/api/prices/' + encodeURIComponent(c) + '?days=' + d;
+  if (ptype.value) url += '&price_type=' + encodeURIComponent(ptype.value);
+  const resp = await fetch(url);
   const data = await resp.json();
   chart.setOption({
     title: { text: c + ' 近' + d + '天走势' },
@@ -36,8 +50,10 @@ async function load() {
     series: [{ type: 'line', smooth: true, data: data.points.map(p => p.value) }]
   });
 }
-document.getElementById('commodity').addEventListener('change', load);
+document.getElementById('commodity').addEventListener('change', function () { syncTypes(); load(); });
+ptype.addEventListener('change', load);
 document.getElementById('days').addEventListener('change', load);
+syncTypes();
 load();
 </script>
 {% endblock %}

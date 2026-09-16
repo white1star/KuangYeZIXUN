@@ -53,6 +53,7 @@ def create_app(db_path=None) -> FastAPI:
         conn = get_conn()
         try:
             ctx = {"commodities": queries.distinct_commodities(conn),
+                   "type_map": queries.commodity_types(conn),
                    "prices": queries.price_latest(conn, limit=80)}
         finally:
             conn.close()

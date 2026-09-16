@@ -69,6 +69,15 @@ def price_series(conn, commodity, days=30, price_type=None) -> list:
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
 
+def commodity_types(conn) -> dict:
+    rows = conn.execute(
+        "SELECT DISTINCT commodity, price_type FROM prices ORDER BY commodity, price_type").fetchall()
+    result = {}
+    for r in rows:
+        result.setdefault(r["commodity"], []).append(r["price_type"])
+    return result
+
+
 def distinct_commodities(conn) -> list:
     return [r["commodity"] for r in
             conn.execute("SELECT DISTINCT commodity FROM prices ORDER BY commodity").fetchall()]
