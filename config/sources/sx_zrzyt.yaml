@@ -1,0 +1,12 @@
+key: sx_zrzyt
+name: 山西省自然资源厅·矿权公告
+board: policy
+url: https://zrzyt.shanxi.gov.cn/zwgk/tzgg/
+encoding: utf-8
+filter_keywords: ["矿", "煤"]
+list:
+  item: "ul.zwgk_right_content li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

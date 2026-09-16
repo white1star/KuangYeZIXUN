@@ -1,0 +1,11 @@
+key: hn_zrzyt
+name: 湖南省自然资源厅·矿业权出让转让
+board: policy
+url: http://zrzyt.hunan.gov.cn/zrzyt/xxgk/kyqcrzr/list_tylb_dst_zczlm.html
+encoding: utf-8
+list:
+  item: "ul.list_text li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

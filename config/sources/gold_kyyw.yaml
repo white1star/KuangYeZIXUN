@@ -1,0 +1,11 @@
+key: gold_kyyw
+name: 中国黄金网·矿业要闻
+board: news
+url: https://www.gold.org.cn/ky1227/kyyw/
+encoding: utf-8
+list:
+  item: "div.right_main ul li"
+  title: "a"
+  date: "p"
+detail:
+  enabled: false

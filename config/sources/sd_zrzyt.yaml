@@ -1,0 +1,11 @@
+key: sd_zrzyt
+name: 山东省自然资源厅·矿业权市场
+board: policy
+url: http://dnr.shandong.gov.cn/zwgk_324/xxgkml/dzkcgl/kyqsc/
+encoding: utf-8
+list:
+  item: "ul.info_fileList li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

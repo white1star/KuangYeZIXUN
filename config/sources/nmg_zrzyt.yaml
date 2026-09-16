@@ -1,0 +1,11 @@
+key: nmg_zrzyt
+name: 内蒙古自治区自然资源厅·矿业权市场
+board: policy
+url: https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/index.html
+encoding: utf-8
+list:
+  item: "div.list li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

@@ -1,0 +1,11 @@
+key: xj_zrzyt
+name: 新疆维吾尔自治区自然资源厅·矿业权市场
+board: policy
+url: https://zrzyt.xinjiang.gov.cn/xjgtzy/kyqsc/common_list.shtml
+encoding: utf-8
+list:
+  item: "ul.list li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

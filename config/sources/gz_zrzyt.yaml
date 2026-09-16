@@ -1,0 +1,11 @@
+key: gz_zrzyt
+name: 贵州省自然资源厅·矿业权出让公告
+board: policy
+url: https://zrzy.guizhou.gov.cn/wzgb/zwgk/zdlyxxgk/kyqgl/kyqcrgg1/
+encoding: utf-8
+list:
+  item: "ul.NewsList li"
+  title: "h1"
+  date: "span"
+detail:
+  enabled: false

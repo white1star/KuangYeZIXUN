@@ -7,7 +7,10 @@ from crawler.config import load_sources
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 ARTICLE_SOURCES = ["mnr", "chinamine", "ndrc", "mee", "nea", "hebei_zrzy", "tangshan_zygh",
-                   "cwestc", "ccoalnews", "cnmn", "kyb"]
+                   "cwestc", "ccoalnews", "cnmn", "kyb",
+                   "sx_zrzyt", "nmg_zrzyt", "yn_zrzyt", "sd_zrzyt",
+                   "gz_zrzyt", "hn_zrzyt", "xj_zrzyt", "gx_zrzyt",
+                   "gold_kyyw", "worldmr"]
 
 
 @pytest.mark.parametrize("key", ARTICLE_SOURCES)

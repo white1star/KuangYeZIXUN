@@ -1,0 +1,11 @@
+key: yn_zrzyt
+name: 云南省自然资源厅·矿业市场
+board: policy
+url: https://dnr.yn.gov.cn/html/shichangxinxi/kuangyeshichang/
+encoding: utf-8
+list:
+  item: "div.list-text li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

@@ -1,0 +1,11 @@
+key: worldmr
+name: 全球矿产资源网·矿业新闻
+board: news
+url: https://www.worldmr.net/Industry/index.shtml
+encoding: utf-8
+list:
+  item: "td.ljheizi12"
+  title: "a"
+  date_regex: '(\d{4}-\d{2}-\d{2})'
+detail:
+  enabled: false

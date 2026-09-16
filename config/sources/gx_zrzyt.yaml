@@ -1,0 +1,11 @@
+key: gx_zrzyt
+name: 广西壮族自治区自然资源厅·矿业权交易
+board: policy
+url: https://dnr.gxzf.gov.cn/zfxxgk/fdzdgknr/jysc/kyqjy/
+encoding: utf-8
+list:
+  item: "ul.more-list li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

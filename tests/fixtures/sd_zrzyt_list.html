@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="stylesheet" href="../../../../images/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="../../../../images/bootstrap.min.css" />
+    <link rel="stylesheet" href="../../../../images/normalize.css" />
+    <link rel="stylesheet" href="../../../../images/iconfont.css" />
+    <title>信息公开目录</title>
+    <meta name="SiteName" content="山东省自然资源厅新版" />
+    <meta name="SiteDomain" content="http://dnr.shandong.gov.cn/" />
+    <meta name="SiteIDCode" content="3700000066" />
+    <meta name="ColumnName" content="矿业权市场" />
+    <meta name="ColumnDescription" content="矿业权市场" />
+    <meta name="ColumnKeywords" content="矿业权市场" />
+    <meta name="ColumnType" content="矿业权市场" />
+    <link rel="stylesheet" href="../../../../images/dnr.css" />
+    <!-- 当前页面css -->
+    <link rel="stylesheet" href="../../../../images/file.css" />
+<link href="/reslib/barrierfree/css/barrierfree.css" rel="stylesheet" />
+	</head>
+
+	<body><div id="wzacontainer">
+    <!-- 公共头部 start -->
+    <nav class="navbar navbar-inverse z-index10">
+        <div class="search-wrap">
+        <div class="container">
+            <div class="search fr" style="margin-top:-5px;">
+                <form name="searchform"   id="conditionForm" target="_blank">
+                
+                	<input type="text" id="searchWord" name="searchWord" onmouseout="changesearchword()" onfocus="if(this.value=='请输入关键词'){this.value='';}" onblur="if(this.value==''||this.value==' '){this.value='请输入关键词';}" value="" />
+                	<button class="search-button" type="submit" onclick="chkSearch()">
+                		<i class="iconfont">&#xe617;</i>
+                	</button>
+                </form>
+            </div>
+    
+
+<div class="top-linkinfo fr" style="top:-4px;">
+                                       <a href="http://60.208.61.183/ids/sdsfjis/ssoLoginPage_sddnr.jsp" target="_blank" title="个人空间登录">
+						<i class="iconfont"><img src="http://dnr.shandong.gov.cn/tplj_30790/material/denglu.png" style="height:20px;" /></i>
+					</a>
+					<a href="http://mail.shandong.cn" target="_blank">
+						<i class="iconfont">&#xe639;</i>
+					</a>
+					<!--a  href="http://124.128.19.248" target="_self"-->
+					<a id="wza2-enable"  href="javascript:;" onclick="toggleToolBar();" title="无障碍浏览">
+						<i class="iconfont">&#xe665;</i>
+					</a>
+					<!--a onClick="javascript:ClickObject2();"  href="#" target="_self"-->
+                                        <a href="javascript:StranBody()" id="StranLink" title="點擊浏覽繁體中文網頁">
+						<i class="iconfont">繁</i>
+					</a>
+                                       <!--
+					
+					<a href="../../../../wzxx/mobile/201606/t20160613_2498486.html" target="_blank">
+						<i class="iconfont">&#xe627;</i>
+					</a>
+					
+                                        -->
+					
+					<a href="../../../../wzxx/wechat/201606/t20160601_2498479.html" target="_blank">
+						<i class="iconfont">&#xe65c;</i>
+					</a>
+					
+				</div>
+
+
+
+        </div>
+    </div><div class="container position-relative">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false"
+                    aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="../../../../">
+                    <img src="../../../../images/logo.png" />
+                </a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="../../../../" target="_self">
+                            <i class="iconfont mr5">&#xe638;</i>首页</a>
+                    </li>
+                    <li>
+                        <a href="../../../../xwdt_324/" target="_self">
+                            <i class="iconfont mr5">&#xe6a2;</i>动态</a>
+                    </li>
+                    <li>
+                        <a href="../../../../jggk/" target="_self">
+                            <i class="iconfont mr5">&#xe6a7;</i>机构</a>
+                    </li>
+                    <li>
+                        <a href="../../../" target="_self">
+                            <i class="iconfont mr5">&#xe658;</i>公开</a>
+                    </li>
+                    <li>
+                        <a href="../../../../bsfw_324/" target="_self">
+                            <i class="iconfont mr5">&#xe628;</i>服务</a>
+                    </li>
+                    <li>
+                        <a href="../../../../online_30077/" target="_self">
+                            <i class="iconfont mr5">&#xe633;</i>互动</a>
+                    </li>
+                    <li>
+                        <a href="../../../../zxzt/" target="_self">
+                            <i class="iconfont mr5">&#xe77d;</i>专题</a>
+                    </li>
+            </div>
+        </div>
+    </nav>
+ <!-- 检索 -->
+    
+    <!-- 面包屑 -->
+    <div class="container route mt20 mb20">
+        <a href="../../../../" target="_self" title="首页" class="CurrChnlCls">首页</a>&nbsp;&gt;&nbsp;<a href="../../../" target="_self" title="政务公开" class="CurrChnlCls">政务公开</a>&nbsp;&gt;&nbsp;<a href="../" target="_self" title="地质矿产" class="CurrChnlCls">地质矿产</a>&nbsp;&gt;&nbsp;<a href="./" target="_self" title="矿业权市场" class="CurrChnlCls">矿业权市场</a>
+    </div>
+	 <script>
+	 function checkWords() {
+	  var words = $('#conditionForm input').val();
+	  if (words == null || $.trim(words) == "") {
+		  alert('请输入搜索关键词!');
+		  return false;
+	  }
+	  return true;
+}
+
+ var $textfield = $('#searchWord'); 
+ function chkSearch(){
+	 var searchVal =$('#searchWord').val();
+	 if (searchVal == null || $.trim(searchVal) == "") {
+		 doFileSearch('');
+		  //alert('请输入搜索关键词!');
+		//return true;
+	 }else {
+		doSearch(searchVal);
+	 }
+	 
+ }
+ function doSearch(searchWord) {
+	 $url = 'http://dnr.shandong.gov.cn/irs-c-web/search.shtml?code=18d8112db78&codes=&configCode=&searchWord=' + encodeURI(searchWord)+ '&dataTypeId=165';
+     window.open($url, '_blank');
+ }
+ 
+$('#searchWord').on('keypress', function (event) {
+     if (event.keyCode === 13){
+         chkSearch();
+     }
+ });
+ 
+ 
+ var $fileTextfield = $('#fileSearchWord'); 
+ function chkFileSearch(){
+	 var searchVal = $fileTextfield.val();
+	 if (searchVal == null || $.trim(searchVal) == "") {
+		  alert('请输入搜索关键词!');
+		  return false;
+	 }
+	 doFileSearch(searchVal);
+ }
+ 
+ function doFileSearch(searchWord) {
+	 $url = 'http://dnr.shandong.gov.cn/irs-c-web/search.shtml?code=18d8112db78&codes=&configCode=&searchWord=' + encodeURI(searchWord)+ '&dataTypeId=165';
+     window.open($url, '_blank');
+ }
+ 
+ $fileTextfield.on('keypress', function (event) {
+     if (event.keyCode === 13){
+    	 chkFileSearch();
+     }
+ });
+         </script>
+    <!-- 公共头部 end-->
+    <!-- 内容 start  -->
+    <div class="container">
+        <div class="row con clearfix">
+            <!-- pc 导航 start -->
+            <div class="col-md-3 col-sm-12">
+                <div class="bg-gray pl20 pr20 pt20">
+                    <div class="classification-title">
+                        <i class="iconfont">&#xe66c;</i>
+                        <span>主题分类</span>
+                    </div>
+                    <div class="tab-content clearfix pdall10">
+                        <div class="tab-pane active visible-xs-block visible-sm-block">
+                            <ul class="pl10">
+                                
+                                    <li class="col-xs-4 text-overflow-one-line pl0 pr0">
+                                        <span class="dot"></span>
+                                        <a href="./kyqpg/">矿业权评估</a>
+                                    </li>
+                                
+                                    <li class="col-xs-4 text-overflow-one-line pl0 pr0">
+                                        <span class="dot"></span>
+                                        <a href="./kyqcrzr/">矿业权出让转让</a>
+                                    </li>
+                                
+                            </ul>
+                        </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29252" alt="机构职能">
+                                    <img src="../../jgzn/images/P020191220329869263876.png" class="icon-img" />
+                                    机构职能
+                                </a>
+                                <div id="29252" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29253" href="../../jgzn/zyzz/" alt=" 机关简介">
+                                                <i class="iconfont">&#xe609;</i>机关简介
+                                            </a>
+                                            
+                                            <div id="29253" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29254" href="../../jgzn/ldxx/" alt=" 领导信息">
+                                                <i class="iconfont">&#xe609;</i>领导信息
+                                            </a>
+                                            
+                                            <div id="29254" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29255" href="../../jgzn/jgsz/" alt=" 机构设置">
+                                                <i class="iconfont">&#xe609;</i>机构设置
+                                            </a>
+                                            
+                                            <div id="29255" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29256" alt="法规文件">
+                                    <img src="../../fgwj/images/P020191220350290091247.png" class="icon-img" />
+                                    法规文件
+                                </a>
+                                <div id="29256" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#36239" href="http://dnr.shandong.gov.cn/zwgk_324/zcfgk/ywlx/bhql/" alt=" 法律法规">
+                                                <i class="iconfont">&#xe609;</i>法律法规
+                                            </a>
+                                            
+                                            <div id="36239" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29258" href="../../fgwj/gfxwj/" alt=" 规范性文件">
+                                                <i class="iconfont">&#xe609;</i>规范性文件
+                                            </a>
+                                            
+                                            <div id="29258" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29259" href="../../fgwj/gfxwjqljg/" alt=" 规范性文件清理结果">
+                                                <i class="iconfont">&#xe609;</i>规范性文件清理结果
+                                            </a>
+                                            
+                                            <div id="29259" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29260" href="../../fgwj/zcjd/" alt=" 政策解读">
+                                                <i class="iconfont">&#xe609;</i>政策解读
+                                            </a>
+                                            
+                                            <div id="29260" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29261" alt="政府会议">
+                                    <img src="../../zfhy/images/P020191220350456886612.png" class="icon-img" />
+                                    政府会议
+                                </a>
+                                <div id="29261" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29262" href="../../zfhy/bmbghy/" alt=" 部门办公会议">
+                                                <i class="iconfont">&#xe609;</i>部门办公会议
+                                            </a>
+                                            
+                                            <div id="29262" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#35415" href="../../zfhy/bmqtzyhy/" alt=" 其它重要会议">
+                                                <i class="iconfont">&#xe609;</i>其它重要会议
+                                            </a>
+                                            
+                                            <div id="35415" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29263" alt="规划计划">
+                                    <img src="../../ghjh/images/P020191220350587270481.png" class="icon-img" />
+                                    规划计划
+                                </a>
+                                <div id="29263" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29264" href="../../ghjh/gtkjgh/" alt=" 国土空间规划">
+                                                <i class="iconfont">&#xe609;</i>国土空间规划
+                                            </a>
+                                            
+                                            <div id="29264" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#39225" href="../../ghjh/zxgh/" alt=" 专项规划">
+                                                <i class="iconfont">&#xe609;</i>专项规划
+                                            </a>
+                                            
+                                            <div id="39225" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#39226" href="../../ghjh/ghgl/" alt=" 规划管理">
+                                                <i class="iconfont">&#xe609;</i>规划管理
+                                            </a>
+                                            
+                                            <div id="39226" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29267" href="../../ghjh/tdgyjh/" alt=" 土地供应计划">
+                                                <i class="iconfont">&#xe609;</i>土地供应计划
+                                            </a>
+                                            
+                                            <div id="29267" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29272" href="../../ghjh/ndjh/" alt=" 年度计划">
+                                                <i class="iconfont">&#xe609;</i>年度计划
+                                            </a>
+                                            
+                                            <div id="29272" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29275" alt="财政预决算">
+                                    <img src="../../czyjs/images/P020191220350926035019.png" class="icon-img" />
+                                    财政预决算
+                                </a>
+                                <div id="29275" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29276" href="../../czyjs/bmys/" alt=" 部门预算">
+                                                <i class="iconfont">&#xe609;</i>部门预算
+                                            </a>
+                                            
+                                            <div id="29276" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29277" href="../../czyjs/bmjs/" alt=" 部门决算">
+                                                <i class="iconfont">&#xe609;</i>部门决算
+                                            </a>
+                                            
+                                            <div id="29277" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#30462" href="../../czyjs/czxx/" alt=" 财政信息">
+                                                <i class="iconfont">&#xe609;</i>财政信息
+                                            </a>
+                                            
+                                            <div id="30462" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#43143" href="../../czyjs/zfcg/" alt=" 政府采购">
+                                                <i class="iconfont">&#xe609;</i>政府采购
+                                            </a>
+                                            
+                                            <div id="43143" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29278" alt="行政权力">
+                                    <img src="../../xzql/images/P020191220351457646908.png" class="icon-img" />
+                                    行政权力
+                                </a>
+                                <div id="29278" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#31049" href="http://www.shandong.gov.cn/api-gateway/jpaas-jiq-web-sdywtb/front/item/qzqd_index?divisionCode=SD370000GT" alt=" 权责清单">
+                                                <i class="iconfont">&#xe609;</i>权责清单
+                                            </a>
+                                            
+                                            <div id="31049" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29295" alt="建议提案">
+                                    <img src="../../jyta/images/P020191220351867191754.png" class="icon-img" />
+                                    建议提案
+                                </a>
+                                <div id="29295" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29296" href="../../jyta/rddbjyblqk/" alt=" 人大代表建议办理情况">
+                                                <i class="iconfont">&#xe609;</i>人大代表建议办理情况
+                                            </a>
+                                            
+                                            <div id="29296" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29297" href="../../jyta/zxwytablqk/" alt=" 政协委员提案办理情况">
+                                                <i class="iconfont">&#xe609;</i>政协委员提案办理情况
+                                            </a>
+                                            
+                                            <div id="29297" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29298" href="../../jyta/jyhtaztqk/" alt=" 建议和提案总体情况">
+                                                <i class="iconfont">&#xe609;</i>建议和提案总体情况
+                                            </a>
+                                            
+                                            <div id="29298" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29299" alt="人事信息">
+                                    <img src="../../rsxx/images/P020191220351645083052.png" class="icon-img" />
+                                    人事信息
+                                </a>
+                                <div id="29299" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29300" href="../../rsxx/rsrm/" alt=" 人事任免">
+                                                <i class="iconfont">&#xe609;</i>人事任免
+                                            </a>
+                                            
+                                            <div id="29300" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29301" href="../../rsxx/rykl/" alt=" 公务员招录">
+                                                <i class="iconfont">&#xe609;</i>公务员招录
+                                            </a>
+                                            
+                                            <div id="29301" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#40069" href="../../rsxx/rsrm_40069/" alt=" 事业单位招聘">
+                                                <i class="iconfont">&#xe609;</i>事业单位招聘
+                                            </a>
+                                            
+                                            <div id="40069" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29280" alt="重点领域">
+                                    <img src="../../zdly/images/P020191220351544320911.png" class="icon-img" />
+                                    重点领域
+                                </a>
+                                <div id="29280" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29281" href="../../zdly/ssjygkjg/" alt=" “双随机、一公开”监管">
+                                                <i class="iconfont">&#xe609;</i>“双随机、一公开”监管
+                                            </a>
+                                            
+                                            <div id="29281" class="collapse pl20">
+                                                
+                                                    
+                                                    <a href="../../zdly/ssjygkjg/ccsxqd/" alt=" 抽查事项清单、计划" data-target="#40071">
+                                                        <span class="dot"></span>
+                                                        抽查事项清单、计划
+                                                    </a>
+                                                    
+                                                
+                                                    
+                                                    <a href="../../zdly/ssjygkjg/ccjg/" alt=" 抽查结果" data-target="#40072">
+                                                        <span class="dot"></span>
+                                                        抽查结果
+                                                    </a>
+                                                    
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#31614" href="http://credit.shandong.gov.cn/" alt=" 信用信息">
+                                                <i class="iconfont">&#xe609;</i>信用信息
+                                            </a>
+                                            
+                                            <div id="31614" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29292" href="../../zdly/zhsgjy/" alt=" 灾害事故救援">
+                                                <i class="iconfont">&#xe609;</i>灾害事故救援
+                                            </a>
+                                            
+                                            <div id="29292" class="collapse pl20">
+                                                
+                                                    
+                                                    <a href="../../zdly/zhsgjy/dzzhyjyb/" alt=" 地质灾害预警预报" data-target="#29293">
+                                                        <span class="dot"></span>
+                                                        地质灾害预警预报
+                                                    </a>
+                                                    
+                                                
+                                                    
+                                                    <a href="../../zdly/zhsgjy/lyyhswzhyjyb/" alt=" 林业有害生物灾害预警预报" data-target="#29294">
+                                                        <span class="dot"></span>
+                                                        林业有害生物灾害预警预报
+                                                    </a>
+                                                    
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#30496" href="../../zdly/fgfwj/" alt=" 行政审批制度改革">
+                                                <i class="iconfont">&#xe609;</i>行政审批制度改革
+                                            </a>
+                                            
+                                            <div id="30496" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#52189" href="../../zdly/tjsj/" alt=" 统计数据">
+                                                <i class="iconfont">&#xe609;</i>统计数据
+                                            </a>
+                                            
+                                            <div id="52189" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29302" alt="业务动态">
+                                    <img src="../../ywdt/images/P020191220352085310962.png" class="icon-img" />
+                                    业务动态
+                                </a>
+                                <div id="29302" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29303" href="../../ywdt/tzgg_29303/" alt=" 通知公告">
+                                                <i class="iconfont">&#xe609;</i>通知公告
+                                            </a>
+                                            
+                                            <div id="29303" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#30468" alt="土地">
+                                    <img src="../../tdgll/images/P020191220352198730091.png" class="icon-img" />
+                                    土地
+                                </a>
+                                <div id="30468" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#30470" href="../../tdgll/zdxx/" alt=" 土地管理">
+                                                <i class="iconfont">&#xe609;</i>土地管理
+                                            </a>
+                                            
+                                            <div id="30470" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#30474" href="../../tdgll/gdbh/" alt=" 耕地保护">
+                                                <i class="iconfont">&#xe609;</i>耕地保护
+                                            </a>
+                                            
+                                            <div id="30474" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#30476" href="../../tdgll/djxx/" alt=" 地价信息">
+                                                <i class="iconfont">&#xe609;</i>地价信息
+                                            </a>
+                                            
+                                            <div id="30476" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29314" alt="地质矿产">
+                                    <img src="../images/P020191220352285852978.png" class="icon-img" />
+                                    地质矿产
+                                </a>
+                                <div id="29314" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29290" href="../kczycl/" alt=" 矿产资源储量">
+                                                <i class="iconfont">&#xe609;</i>矿产资源储量
+                                            </a>
+                                            
+                                            <div id="29290" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29315" href="./" alt=" 矿业权市场">
+                                                <i class="iconfont">&#xe609;</i>矿业权市场
+                                            </a>
+                                            
+                                            <div id="29315" class="collapse pl20">
+                                                
+                                                    
+                                                    <a href="./kyqpg/" alt=" 矿业权评估" data-target="#29289">
+                                                        <span class="dot"></span>
+                                                        矿业权评估
+                                                    </a>
+                                                    
+                                                
+                                                    
+                                                    <a href="./kyqcrzr/" alt=" 矿业权出让转让" data-target="#29288">
+                                                        <span class="dot"></span>
+                                                        矿业权出让转让
+                                                    </a>
+                                                    
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29319" href="../dzkc/" alt=" 地质矿产管理">
+                                                <i class="iconfont">&#xe609;</i>地质矿产管理
+                                            </a>
+                                            
+                                            <div id="29319" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29320" alt="测绘地理信息">
+                                    <img src="../../chdlxxgl/images/P020191220352409469532.png" class="icon-img" />
+                                    测绘地理信息
+                                </a>
+                                <div id="29320" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29321" href="../../chdlxxgl/jcch/" alt=" 基础测绘">
+                                                <i class="iconfont">&#xe609;</i>基础测绘
+                                            </a>
+                                            
+                                            <div id="29321" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29322" href="../../chdlxxgl/chxygl/" alt=" 测绘行业管理">
+                                                <i class="iconfont">&#xe609;</i>测绘行业管理
+                                            </a>
+                                            
+                                            <div id="29322" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29323" href="../../chdlxxgl/dlxxgl/" alt=" 地理信息管理">
+                                                <i class="iconfont">&#xe609;</i>地理信息管理
+                                            </a>
+                                            
+                                            <div id="29323" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29324" alt="生态修复">
+                                    <img src="../../stxf/images/P020191220352480732777.png" class="icon-img" />
+                                    生态修复
+                                </a>
+                                <div id="29324" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29326" href="../../stxf/tdfk/" alt=" 土地复垦">
+                                                <i class="iconfont">&#xe609;</i>土地复垦
+                                            </a>
+                                            
+                                            <div id="29326" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29327" alt="自然保护地、野生动植物保护">
+                                    <img src="../../zrbhdysdzwbh/images/P020191220352567480533.png" class="icon-img" />
+                                    自然保护地、野生动植物保护
+                                </a>
+                                <div id="29327" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29328" href="../../zrbhdysdzwbh/zrbhd/" alt=" 自然保护地">
+                                                <i class="iconfont">&#xe609;</i>自然保护地
+                                            </a>
+                                            
+                                            <div id="29328" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29329" href="../../zrbhdysdzwbh/ysdzwbh/" alt=" 野生动植物保护">
+                                                <i class="iconfont">&#xe609;</i>野生动植物保护
+                                            </a>
+                                            
+                                            <div id="29329" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29330" alt="林草湿地">
+                                    <img src="../../lcsdgl/images/P020191220352645472229.png" class="icon-img" />
+                                    林草湿地
+                                </a>
+                                <div id="29330" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29332" href="../../lcsdgl/sdgl/" alt=" 湿地管理">
+                                                <i class="iconfont">&#xe609;</i>湿地管理
+                                            </a>
+                                            
+                                            <div id="29332" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29334" href="../../lcsdgl/zllh/" alt=" 造林绿化">
+                                                <i class="iconfont">&#xe609;</i>造林绿化
+                                            </a>
+                                            
+                                            <div id="29334" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29335" href="../../lcsdgl/zmgl/" alt=" 种苗管理">
+                                                <i class="iconfont">&#xe609;</i>种苗管理
+                                            </a>
+                                            
+                                            <div id="29335" class="collapse pl20">
+                                                
+                                                    
+                                                    <a href="../../lcsdgl/zmgl/zylcpzsd/" alt=" 主要林草品种审定" data-target="#51652">
+                                                        <span class="dot"></span>
+                                                        主要林草品种审定
+                                                    </a>
+                                                    
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29336" href="../../lcsdgl/lcgl/" alt=" 林场管理">
+                                                <i class="iconfont">&#xe609;</i>林场管理
+                                            </a>
+                                            
+                                            <div id="29336" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29337" href="../../lcsdgl/lycy/" alt=" 林业产业">
+                                                <i class="iconfont">&#xe609;</i>林业产业
+                                            </a>
+                                            
+                                            <div id="29337" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29338" alt="防灾减灾">
+                                    <img src="../../fzjz/images/P020191220352765072724.png" class="icon-img" />
+                                    防灾减灾
+                                </a>
+                                <div id="29338" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29342" href="../../fzjz/slfh/" alt=" 森林防火">
+                                                <i class="iconfont">&#xe609;</i>森林防火
+                                            </a>
+                                            
+                                            <div id="29342" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29343" href="../../fzjz/dzzh/" alt=" 地质灾害">
+                                                <i class="iconfont">&#xe609;</i>地质灾害
+                                            </a>
+                                            
+                                            <div id="29343" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29344" href="../../fzjz/lyyhswgl/" alt=" 林业有害生物管理">
+                                                <i class="iconfont">&#xe609;</i>林业有害生物管理
+                                            </a>
+                                            
+                                            <div id="29344" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29345" alt="自然资源确权登记">
+                                    <img src="../../zrzyqqdj_29345/images/P020191220353109471500.png" class="icon-img" />
+                                    自然资源确权登记
+                                </a>
+                                <div id="29345" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29287" href="../../zrzyqqdj_29345/bdcdj/" alt=" 不动产登记">
+                                                <i class="iconfont">&#xe609;</i>不动产登记
+                                            </a>
+                                            
+                                            <div id="29287" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29286" href="../../zrzyqqdj_29345/zrzyqqdj/" alt=" 自然资源确权登记">
+                                                <i class="iconfont">&#xe609;</i>自然资源确权登记
+                                            </a>
+                                            
+                                            <div id="29286" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                            <div class="panel-body pdall0 mt10 hidden-xs hidden-sm">
+                                <a data-toggle="collapse" class="fz18" data-target="#29348" alt="科技培训">
+                                    <img src="../../kjpxgjhz/images/P020191220353175795897.png" class="icon-img" />
+                                    科技培训
+                                </a>
+                                <div id="29348" class="collapse xxgkml-list pl20">
+                                    
+                                            <a data-toggle="collapse"  data-target="#29349" href="../../kjpxgjhz/kjgl/" alt=" 科技管理">
+                                                <i class="iconfont">&#xe609;</i>科技管理
+                                            </a>
+                                            
+                                            <div id="29349" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                            <a data-toggle="collapse"  data-target="#29351" href="../../kjpxgjhz/pxjh/" alt=" 培训计划">
+                                                <i class="iconfont">&#xe609;</i>培训计划
+                                            </a>
+                                            
+                                            <div id="29351" class="collapse pl20">
+                                                
+                                            </div>
+                                            
+                                    
+                                </div>
+
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <!-- pc 导航 end -->
+
+            <div class="col-md-9 col-sm-12">
+                <div class="selectCon clearfix hidden-xs">
+	<!-- <div class="seletBox  pull-left">
+		<select class=" select">
+			<option>文件类型</option>
+			<option>2</option>
+		</select>
+		<i class="iconfont">&#xe616;</i>
+	</div> -->
+	<form name="searchform" action="/was5/web/search" method="get" onsubmit="return checkInput();" target="_blank">
+		<input type="hidden" name="channelid" value="207026" />
+		<input type="hidden" name="perpage" value="" />
+		<input type="hidden" name="token" value="64.1576745705194.74" />
+		<input type="hidden" name="templet" value="" />
+		<input class=" ipt  pull-left" type="text" id="textfield" name="searchword" onmouseout="changesearchword()" onfocus="if(this.value=='请输入关键词'){this.value='';}" onblur="if(this.value==''||this.value==' '){this.value='请输入关键词';}" value="" />
+		<div class="btnCon pull-left">
+			<button class="btn btnSearch" type="submit">检 索</button>
+			<button class="btn " type="reset">重置</button>
+		</div>
+	</form>
+</div>
+<script type="text/javascript">
+	function changesearchword(){
+		 if(document.searchform.searchword.value.search(/!|！|@|@|#|#|\$|￥|%|%|\^|……|&|&|\*|\*|\(|\（|\)|\）|\-|\_|\——|\=|\+|\+|\/|\\|、|、|\]|\[|\}|\{|\【|\】|\{|\}|\;|\’|\,|\.|\：|\“|\《|\》|\?|\||\？|\||\'|\:|\”|\<|\>|\"|\；|\‘|\，|\。|\`|\~|\·|\~/)!=-1){
+			 document.searchform.searchword.value=document.searchform.searchword.value.replace(/!|！|@|@|#|#|\$|￥|%|%|\^|……|&|&|\*|\*|\(|\（|\)|\）|\-|\_|\——|\=|\+|\+|\/|\\|、|、|\]|\[|\{|\}|\【|\】|\{|\}|\;|\’|\,|\.|\：|\“|\《|\》|\?|\||\？|\||\'|\:|\”|\<|\>|\"|\；|\‘|\，|\。|\`|\~|\·|\~/g,'');
+			 alert('检索条件请不要使用特殊字符');
+		 }
+	}
+</script>
+<script type="text/javascript">
+	function checkInput(){
+		if (document.searchform.searchword.value.trim()==''||document.searchform.searchword.value.trim()=='请输入关键词'){
+			alert('请输入关键词');
+			document.searchform.searchword.focus();
+			return false;
+		}			
+		else{			
+			return true;
+		}
+	}
+	function setAdvancedWords()
+	{
+		document.outlinesearchform.andsen.value = '';
+		document.outlinesearchform.total.value = '';
+		document.outlinesearchform.orsen.value = '';
+		document.outlinesearchform.exclude.value = '';
+	}
+	function setSearchScope() {
+		setAdvancedWords();
+		var type=document.getElementById("selectscope").value;
+		document.outlinesearchform.searchscope.value = type;
+		document.outlinesearchform.submit();
+	}
+	function setOrderBy() {
+		setAdvancedWords();
+		var type=document.getElementById("selectorder").value;
+		document.outlinesearchform.orderby.value = type;
+		document.outlinesearchform.submit();
+	}
+	function setTimeScope(column) {
+		setAdvancedWords();
+		var type=document.getElementById("selecttime").value;
+		document.outlinesearchform.timescope.value = type;
+		document.outlinesearchform.timescopecolumn.value = column;
+		document.outlinesearchform.submit();
+	}
+</script>
+                
+                <div class="infoCon">
+                    <div class="titleCon">
+                        <h4 class="title">
+                            <a href="./" target="_blank">矿业权市场</a>
+                        </h4>
+                    </div>
+                    
+                    <ul class="info_fileList">
+ 
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251223_4882227.html" target="_blank">
+                                    山东省烟台市福山区王家庄铜多金属矿详查探矿权招标出让成交结果公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-23
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251223_4882226.html" target="_blank">
+                                    山东省招远市洼孙家矿区外围金矿普查探矿权招标出让成交结果公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-23
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251223_4882225.html" target="_blank">
+                                    山东省招远市阜山矿区外围金矿详查探矿权招标出让成交结果公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-23
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251223_4882223.html" target="_blank">
+                                    山东省栖霞市西陡崖地区金矿普查探矿权招标出让成交结果公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-23
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251223_4882222.html" target="_blank">
+                                    山东省烟台市牟平区东直格庄金矿普查探矿权招标出让成交结果公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-23
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251217_4881019.html" target="_blank">
+                                    山东省烟台市福山区王家庄铜多金属矿详查探矿权招标出让中标候选人公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251217_4881016.html" target="_blank">
+                                    山东省招远市洼孙家矿区外围金矿普查探矿权招标出让中标候选人公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251217_4881013.html" target="_blank">
+                                    山东省招远市阜山矿区外围金矿详查探矿权招标出让中标候选人公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251217_4881011.html" target="_blank">
+                                    山东省栖霞市西陡崖地区金矿普查探矿权招标出让中标候选人公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251217_4881007.html" target="_blank">
+                                    山东省烟台市牟平区东直格庄金矿普查探矿权招标出让中标候选人公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251217_4880757.html" target="_blank">
+                                    关于济宁矿业集团花园井田资源开发有限公司花园煤矿开采方案等5个审查结果公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202512/t20251212_4880053.html" target="_blank">
+                                    山东金洲集团千岭矿业有限公司英格庄矿区金矿采矿权转让公示
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-12
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqpg/202512/t20251203_4866195.html" target="_blank">
+                                    矿业权出让收益评估报告公示（2025-1）
+                                </a>
+                                <span class="pull-left data">
+                                    2025-12-03
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862532.html" target="_blank">
+                                    山东省烟台市福山区王家庄铜多金属矿详查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862526.html" target="_blank">
+                                    山东省枣庄市市中区刘岭矿区外围铁矿普查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862520.html" target="_blank">
+                                    山东省招远市洼孙家矿区外围金矿普查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862517.html" target="_blank">
+                                    山东省招远市阜山矿区外围金矿详查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862509.html" target="_blank">
+                                    山东省枣庄市市中区东长汪-居家窝地区铁矿普查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862508.html" target="_blank">
+                                    山东省栖霞市西陡崖地区金矿普查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                       
+                       
+                            <li class="clearfix">
+                                <a class="pull-left" href="./kyqcrzr/202511/t20251117_4862504.html" target="_blank">
+                                    山东省招远市姜家窑矿区外围金矿普查探矿权招标出让公告
+                                </a>
+                                <span class="pull-left data">
+                                    2025-11-17
+                                </span>
+                            </li>
+                      
+                    </ul>
+                    <div class="pageCon mb20">
+                        <div class="pager">
+                            <span id='pagenav_0' class=on>1</span><a id='pagenav_1' target='_self' href='index_1.html'>2</a><a id='pagenav_2' target='_self' href='index_2.html'>3</a><a id='pagenav_3' target='_self' href='index_3.html'>4</a><a id='pagenav_4' target='_self' href='index_4.html'>5</a><a id='pagenav_1' target='_self' href='index_1.html'>&gt;</a><a id='pagenav_nextgroup' target='_self' href='index_9.html'>下5页</a><a id='pagenav_tail' target='_self' href='index_25.html'>尾页</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 内容 end -->
+   
+    <script src="../../../../images/jquery.min.js"></script>
+    <script src="../../../../images/bootstrap.js"></script>
+    <!--  当前页面 js -->
+    <script src="../../../../images/file.js"></script>
+<script>
+     var chnlparentId = "29314";
+    var chnlId = "29315";
+    deleteHref('.xxgkml-list > div','data-target');
+    treeList('29251',chnlparentId,chnlId,'color-red','in');
+</script>
+ <!-- 公共尾部 start -->
+    <footer class="footer-bg">
+        <div class="container">
+            <div class="row line">
+                <div class="col-md-8 hidden-sm" style="width:71%;padding-left:0px;padding-right:0px;">
+                    <!-- Collect the nav links, forms, and other content for toggling -->
+                    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                        <ul class="nav navbar-nav">
+                            <li class="active"><a href="http://www.gov.cn/">中央人民政府</a></li>
+                            <li class="active"><a href="http://www.shandong.gov.cn/">山东省人民政府</a></li>
+                            <li><a href="http://www.mnr.gov.cn">自然资源部</a></li>
+                            <li><a href="http://www.forestry.gov.cn/">国家林业和草原局</a></li>
+                            <li><a href="http://hyj.shandong.gov.cn/">山东省海洋局</a></li>
+                            <li class="dropup">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">山东省自然资源系统<span class="caret"></span><span class="sr-only">Toggle Dropdown</span></a>
+                                <ul class="dropdown-menu" style="height: 300px; overflow-y: scroll;">
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/jngt/" target="_blank">济南</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/qdgt/" target="_blank">青岛</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/zbgt/" target="_blank">淄博</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/zzgt/" target="_blank">枣庄</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/dygt/" target="_blank">东营</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/ytgt/" target="_blank">烟台</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/wfgt/" target="_blank">潍坊</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/jngt2/" target="_blank">济宁</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/tagt/" target="_blank">泰安</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/whgt/" target="_blank">威海</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/rzgt/" target="_blank">日照</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/lygt/" target="_blank">临沂</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/dzgt/" target="_blank">德州</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/lcgt/" target="_blank">聊城</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/bzgt/" target="_blank">滨州</a></li>	
+									
+										<li><a href="http://dnr.shandong.gov.cn/yqlj_30761/gtzyxt/sgt/hzgt/" target="_blank">菏泽</a></li>	
+									
+									
+										<li style="padding:3px 20px;"><a href="" target="_blank">省林业保护和发展服务中心</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.sdgtst.org.cn/" target="_blank">省国土空间生态修复中心（省地质灾害防治技术指导中心、山东省土地储备中心）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.shandongcehui.cn/" target="_blank">省国土测绘院</a></li>
+									
+										<li style="padding:3px 20px;"><a href="" target="_blank">省国土空间数据和遥感技术研究院（省海域动态监视监测中心）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="" target="_blank">省地图院</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.sdtspi.org.cn/" target="_blank">省国土空间规划院（省自然资源和不动产登记中心）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.sdsddy.ac.cn/" target="_blank">省地质调查院（省自然资源厅矿产勘查技术指导中心）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="https://www.sddky.cn/" target="_blank">省地质科学研究院</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.sdsdzbwg.com/" target="_blank">省自然资源资料档案馆（省地质博物馆）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.sdlky.cn/" target="_blank">省林业科学研究院</a></li>
+									
+										<li style="padding:3px 20px;"><a href="" target="_blank">省林草种质资源中心（省药乡林场）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="" target="_blank">省野生动植物保护站（省森林病虫害防治检疫站）</a></li>
+									
+										<li style="padding:3px 20px;"><a href="https://sdzhy.cn/" target="_blank">省海洋资源与环境研究院</a></li>
+									
+										<li style="padding:3px 20px;"><a href="http://www.sdocean.org.cn/" target="_blank">省海洋预报减灾中心</a></li>
+									
+									
+									
+                                </ul>
+                            </li>
+							<li class="dropup">
+							    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">全国自然资源系统<span class="caret"></span><span class="sr-only">Toggle Dropdown</span></a>
+							    <ul class="dropdown-menu" style="height: 300px; overflow-y: scroll;">
+									
+										<li><a href="http://zrzyt.xizang.gov.cn/" target="_blank">西藏</a></li>
+									
+										<li><a href="http://zrzyt.xinjiang.gov.cn/" target="_blank">新疆</a></li>
+									
+										<li><a href="http://zrzyt.nx.gov.cn/" target="_blank">宁夏</a></li>
+									
+										<li><a href="http://zrzyt.qinghai.gov.cn" target="_blank">青海</a></li>
+									
+										<li><a href="http://zrzy.gansu.gov.cn/" target="_blank">甘肃</a></li>
+									
+										<li><a href="http://zrzyt.shaanxi.gov.cn/" target="_blank">陕西</a></li>
+									
+										<li><a href="http://dnr.yn.gov.cn/" target="_blank">云南</a></li>
+									
+										<li><a href="http://zrzy.guizhou.gov.cn/" target="_blank">贵州</a></li>
+									
+										<li><a href="http://dnr.sc.gov.cn/" target="_blank">四川</a></li>
+									
+										<li><a href="http://lr.hainan.gov.cn/" target="_blank">海南</a></li>
+									
+										<li><a href="http://dnr.gxzf.gov.cn/" target="_blank">广西</a></li>
+									
+										<li><a href="http://nr.gd.gov.cn/" target="_blank">广东</a></li>
+									
+										<li><a href="http://zrzyt.hubei.gov.cn/html/index.html" target="_blank">湖北</a></li>
+									
+										<li><a href="http://zrzyt.hunan.gov.cn/" target="_blank">湖南</a></li>
+									
+										<li><a href="http://dnr.henan.gov.cn/" target="_blank">河南</a></li>
+									
+										<li><a href="http://dnr.shandong.gov.cn/" target="_blank">山东</a></li>
+									
+										<li><a href="http://bnr.jiangxi.gov.cn/" target="_blank">江西</a></li>
+									
+										<li><a href="http://zrzyt.fujian.gov.cn/" target="_blank">福建</a></li>
+									
+										<li><a href="http://zrzyt.ah.gov.cn/" target="_blank">安徽</a></li>
+									
+										<li><a href="http://zrzyt.zj.gov.cn/" target="_blank">浙江</a></li>
+									
+										<li><a href="http://zrzy.jiangsu.gov.cn/" target="_blank">江苏</a></li>
+									
+										<li><a href="http://zrzyt.hlj.gov.cn/" target="_blank">黑龙江</a></li>
+									
+										<li><a href="http://zrzy.jl.gov.cn/" target="_blank">吉林</a></li>
+									
+										<li><a href="http://zrzy.ln.gov.cn/" target="_blank">辽宁</a></li>
+									
+										<li><a href="http://zrzy.nmg.gov.cn/" target="_blank">内蒙古</a></li>
+									
+										<li><a href="http://zrzyt.shanxi.gov.cn/" target="_blank">山西</a></li>
+									
+										<li><a href="http://zrzy.hebei.gov.cn/" target="_blank">河北</a></li>
+									
+										<li><a href="http://ghzrzyj.cq.gov.cn/" target="_blank">重庆</a></li>
+									
+										<li><a href="http://ghzyj.sh.gov.cn/" target="_blank">上海</a></li>
+									
+										<li><a href="http://ghhzrzy.tj.gov.cn/" target="_blank">天津</a></li>
+									
+										<li><a href="http://ghzrzyw.beijing.gov.cn/" target="_blank">北京</a></li>
+									
+										<li><a href="http://www.cgs.gov.cn/" target="_blank">中国地质调查局</a></li>
+									
+							    </ul>
+							</li>
+							<!--li class="dropup">
+							    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">省直机关<span class="caret"></span><span class="sr-only">Toggle Dropdown</span></a>
+							    <ul class="dropdown-menu" style="height: 300px; overflow-y: scroll;">
+									
+										<li><a href="http://fgw.shandong.gov.cn/" target="_blank">山东省发展和改革委员会</a></li>
+									
+										<li><a href="http://edu.shandong.gov.cn/" target="_blank">山东省教育厅</a></li>
+									
+										<li><a href="http://kjt.shandong.gov.cn/" target="_blank">山东省科学技术厅</a></li>
+									
+										<li><a href="http://gxt.shandong.gov.cn/" target="_blank">山东省工业和信息化厅</a></li>
+									
+										<li><a href="http://mzw.shandong.gov.cn/" target="_blank">山东省民族宗教事务委员会</a></li>
+									
+										<li><a href="http://gat.shandong.gov.cn/" target="_blank">山东省公安厅</a></li>
+									
+										<li><a href="http://mzt.shandong.gov.cn/" target="_blank">山东省民政厅</a></li>
+									
+										<li><a href="http://sft.shandong.gov.cn/index.shtml" target="_blank">山东省司法厅</a></li>
+									
+										<li><a href="http://czt.shandong.gov.cn/" target="_blank">山东省财政厅</a></li>
+									
+										<li><a href="http://hrss.shandong.gov.cn/" target="_blank">山东省人力资源和社会保障厅</a></li>
+									
+										<li><a href="http://dnr.shandong.gov.cn/" target="_blank">山东省自然资源厅</a></li>
+									
+										<li><a href="http://sthj.shandong.gov.cn/" target="_blank">山东省生态环境厅</a></li>
+									
+										<li><a href="http://www.sdjs.gov.cn/" target="_blank">山东省住房和城乡建设厅</a></li>
+									
+										<li><a href="http://jtt.shandong.gov.cn/" target="_blank">山东省交通运输厅</a></li>
+									
+										<li><a href="http://wr.shandong.gov.cn/" target="_blank">山东省水利厅</a></li>
+									
+										<li><a href="http://nync.shandong.gov.cn/" target="_blank">山东省农业农村厅</a></li>
+									
+										<li><a href="http://commerce.shandong.gov.cn/" target="_blank">山东省商务厅</a></li>
+									
+										<li><a href="http://whhly.shandong.gov.cn/" target="_blank">山东省文化和旅游厅</a></li>
+									
+										<li><a href="http://wsjkw.shandong.gov.cn/" target="_blank">山东省卫生健康委员会</a></li>
+									
+										<li><a href="http://dva.shandong.gov.cn/" target="_blank">山东省退役军人事务厅</a></li>
+									
+										<li><a href="http://yjt.shandong.gov.cn/" target="_blank">山东省应急管理厅</a></li>
+									
+										<li><a href="http://audit.shandong.gov.cn/" target="_blank">山东省审计厅</a></li>
+									
+										<li><a href="http://wb.shandong.gov.cn/" target="_blank">山东省人民政府外事办公室</a></li>
+									
+										<li><a href="http://gzw.shandong.gov.cn/" target="_blank">山东省人民政府国有资产监督管理委员会</a></li>
+									
+										<li><a href="http://amr.shandong.gov.cn/" target="_blank">山东省市场监督管理局</a></li>
+									
+										<li><a href="http://gd.shandong.gov.cn/" target="_blank">山东省广播电视局</a></li>
+									
+										<li><a href="http://ty.shandong.gov.cn/" target="_blank">山东省体育局</a></li>
+									
+										<li><a href="http://tjj.shandong.gov.cn/" target="_blank">山东省统计局</a></li>
+									
+										<li><a href="http://ybj.shandong.gov.cn/" target="_blank">山东省医疗保障局</a></li>
+									
+										<li><a href="http://jgswj.shandong.gov.cn/" target="_blank">山东省机关事务管理局</a></li>
+									
+										<li><a href="http://www.sdrf.gov.cn/" target="_blank">山东省人民防空办公室</a></li>
+									
+										<li><a href="http://dfjrjgj.shandong.gov.cn/" target="_blank">山东省地方金融监督管理局</a></li>
+									
+										<li><a href="http://bdb.shandong.gov.cn/" target="_blank">山东省大数据局</a></li>
+									
+										<li><a href="http://xfj.shandong.gov.cn/" target="_blank">山东省信访局</a></li>
+									
+										<li><a href="http://nyj.shandong.gov.cn/" target="_blank">山东省能源局</a></li>
+									
+										<li><a href="http://lscb.shandong.gov.cn/" target="_blank">山东省粮食和物资储备局</a></li>
+									
+										<li><a href="http://jyj.shandong.gov.cn/" target="_blank">山东省监狱管理局</a></li>
+									
+										<li><a href="http://hyj.shandong.gov.cn/" target="_blank">山东省海洋局</a></li>
+									
+										<li><a href="http://xm.shandong.gov.cn/" target="_blank">山东省畜牧兽医局</a></li>
+									
+										<li><a href="http://mpa.shandong.gov.cn/" target="_blank">山东省药品监督管理局</a></li>
+									
+							    </ul>
+							</li-->
+							<!--li class="dropup">
+							    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">省部级链接<span class="caret"></span><span class="sr-only">Toggle Dropdown</span></a>
+							    <ul class="dropdown-menu" style="height: 300px; overflow-y: scroll;">
+									
+										<li><a href="http://www.nhfpc.gov.cn/" target="_blank">国家卫生和计划生育委员会</a></li>
+									
+										<li><a href="http://www.mohrss.gov.cn/" target="_blank">人力资源和社会保障部</a></li>
+									
+										<li><a href="http://www.seac.gov.cn/" target="_blank">国家民族事务委员会</a></li>
+									
+										<li><a href="http://www.most.gov.cn/" target="_blank">科技部</a></li>
+									
+										<li><a href="http://www.miit.gov.cn/" target="_blank">信息产业部</a></li>
+									
+										<li><a href="http://www.mof.gov.cn/index.htm" target="_blank">财政部</a></li>
+									
+										<li><a href="http://www.mohurd.gov.cn/" target="_blank">建设部</a></li>
+									
+										<li><a href="http://www.moc.gov.cn/" target="_blank">交通运输部</a></li>
+									
+										<li><a href="http://www.moa.gov.cn/" target="_blank">农业部</a></li>
+									
+										<li><a href="http://www.mofcom.gov.cn/" target="_blank">商务部</a></li>
+									
+										<li><a href="http://www.nhfpc.gov.cn/" target="_blank">卫生部</a></li>
+									
+										<li><a href="http://www.ccnt.gov.cn/" target="_blank">文化部</a></li>
+									
+										<li><a href="http://www.mwr.gov.cn/" target="_blank">水利部</a></li>
+									
+										<li><a href="http://www.mca.gov.cn/" target="_blank">民政部</a></li>
+									
+										<li><a href="http://www.mps.gov.cn/n16/index.html?_v=1387941227568" target="_blank">公安部</a></li>
+									
+										<li><a href="http://www.most.gov.cn/" target="_blank">科学技术部</a></li>
+									
+										<li><a href="http://www.moe.edu.cn/" target="_blank">教育部</a></li>
+									
+										<li><a href="http://www.ndrc.gov.cn/" target="_blank">国家发展和改革委员会</a></li>
+									
+										<li><a href="http://www.fmprc.gov.cn/chn/" target="_blank">外交部</a></li>
+									
+							    </ul>
+							</li-->
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4 hidden-sm" style="width:29%;">
+                     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                        <ul class="nav navbar-nav">
+                            <li class="active"><a href="http://dnr.shandong.gov.cn/wzxx/wzdt/" target="_blank">网站地图</a></li>
+                            <li><a href="http://dnr.shandong.gov.cn/wzxx/lxfs/201912/t20191219_2477989.html" target="_blank">关于我们</a></li>
+							
+                            <li><a href="http://dnr.shandong.gov.cn/wzxx/lxfs/201912/t20191219_2477989.html" target="_blank">联系我们</a></li>
+							
+                            <li><a href="http://dnr.shandong.gov.cn/wzxx/wzsm/201912/t20191219_2478195.html" target="_blank">网站声明</a></li>
+                        </ul>
+
+                    </div>
+                </div>
+            </div>
+            <div class="row mt20 mb20">
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-2 col-xs-2">
+                            <a href="http://bszs.conac.cn/sitename?method=show&id=0EDEBF4590FC4E17E053022819ACE39B" target="_blank">
+                                <img src="/images/red.png" />
+                            </a>
+                        </div>
+                        <div class="col-md-8 col-xs-8">
+                            <p>山东省自然资源厅主办<span class="blank"></span>山东省国土空间数据和遥感技术研究院承办</p>
+                            <p>山东省自然资源厅版权所有<span class="blank"></span>政府网站标识码：3700000066</p>
+                            <p><a target="_blank" href="http://beian.miit.gov.cn/" >鲁ICP备05057088号</a><span class="blank"></span><a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=37010202001383"><img src="/images/gonga.png" />鲁公网安备 37010202001383号</a>&nbsp;&nbsp;&nbsp;&nbsp;访问量：<span id='monitor_324' style=" color:#F00; font-weight:bold; font-size:15px;"></span><script>var siteId = 324;var countType = 'all'; </script>
+<script language='JavaScript' charset='utf-8' src='http://60.208.61.184:81/ubas/js/siteCounts.js'></script></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mt10  hidden-sm hidden-xs" style="width:320px;">
+                    <div class="row">
+                        <!--div class="col-md-3"></div-->
+                        <div class="col-md-4 " style="width:24%;">
+                            <a href="http://app.www.gov.cn/download/Chinese.html" target="_blank">
+                                <img src="/images/bottom-img01.png" alt="国务院客户端" />
+                            </a>
+                        </div>
+                        <div class="col-md-4" style="width:24%;">
+                            <a href="http://www.gov.cn/guowuyuan/gwykhdxcx/xiaochengxu.html?tdsourcetag=s_pcqq_aiomsg" target="_blank">
+                                <img src="/images/bottom-img02.png" alt="国务院小程序" />
+                            </a>
+                        </div>
+						<div class="col-md-4" style="width:24%;">
+                            <a href="https://tousu.www.gov.cn/dc/6wen6bao/index.htm" target="_blank">
+                                <img src="/images/6wlb_xiao.png" width="68" height="68" alt="六稳六保政策措施落实问题线索征集" />
+                            </a>
+                        </div>
+                        <div class="col-md-4" style="width:24%;">
+                            <script id="_jiucuo_" sitecode='3700000066' src='https://zfwzgl.www.gov.cn/exposure/jiucuo.js'></script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+<!--简繁体js-->
+
+<script src="/images/zhuanh_371.js"></script>
+
+<!-- Monitor Start -->
+<script language='JavaScript' charset='utf-8' src='http://60.208.61.184:81/ubas/js/count.js'></script>
+<script type='text/javascript'>
+params.docId='';
+params.doctitle='';
+params.siteId='324';
+params.channelId='';
+params.channelName='';
+params.siteName='山东省自然资源厅新版';
+</script>
+<script language='JavaScript' charset='utf-8' src='http://60.208.61.184:81/ubas/js/submit.js'></script>
+<!-- Monitor End -->
+
+<!--泰得利通无障碍-->
+<script src="http://bf.intertid.com/wza/wza2.min.js?appid=sWNOXVvtB10zQOT"></script>
+    <!-- 公共尾部 end --><script src="/reslib/barrierfree/js/barrierfree.js"></script>
+<script src="/reslib/barrierfree/js/barrierfreeYuyin.js"></script>
+    </div>
+</body>
+
+</html>
