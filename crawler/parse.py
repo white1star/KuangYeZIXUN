@@ -24,7 +24,7 @@ def _ymd_valid(y, mo, d) -> str:
     return f"{y:04d}-{mo:02d}-{d:02d}"
 
 
-def parse_date(text: str) -> str:
+def parse_date(text: str, today=None) -> str:
     text = (text or "").strip()
     if not text:
         return ""
@@ -36,7 +36,9 @@ def parse_date(text: str) -> str:
     if m:
         mo, d = int(m.group(1)), int(m.group(2))
         if 1 <= mo <= 12 and 1 <= d <= 31:
-            return f"{datetime.now().year:04d}-{mo:02d}-{d:02d}"
+            now = today or datetime.now()
+            year = now.year - 1 if (mo, d) > (now.month, now.day) else now.year
+            return f"{year:04d}-{mo:02d}-{d:02d}"
     return ""
 
 
@@ -94,5 +96,5 @@ def extract_summary(html: str, cfg: dict, max_chars: int) -> str:
         bad.decompose()
     text = re.sub(r"\s+", " ", node.get_text(" ", strip=True)).strip()
     if len(text) > max_chars:
-        text = text[:max_chars].rstrip() + "…"
+        text = text[: max_chars - 1].rstrip() + "…"
     return text

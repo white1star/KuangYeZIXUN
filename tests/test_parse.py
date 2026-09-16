@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from crawler.parse import ParsedItem, absolutize, extract_summary, parse_date, parse_list
 
 LIST_HTML = """
@@ -41,6 +43,11 @@ def test_parse_date_variants():
     assert parse_date("") == ""
 
 
+def test_parse_date_mmdd_rolls_back_across_year():
+    assert parse_date("12-31", today=datetime(2026, 1, 5)) == "2025-12-31"
+    assert parse_date("01-05", today=datetime(2026, 1, 5)) == "2026-01-05"
+
+
 def test_absolutize():
     assert absolutize("https://a.com/b/", "/c/d.html") == "https://a.com/c/d.html"
     assert absolutize("https://a.com/b/", "https://x.com/y") == "https://x.com/y"
@@ -62,7 +69,7 @@ def test_extract_summary_truncates_and_collapses():
     assert "河北省自然资源厅" in s
     assert "bad()" not in s
     assert s.endswith("…")
-    assert len(s) <= 41
+    assert len(s) <= 40
 
 
 def test_extract_summary_without_selector():
