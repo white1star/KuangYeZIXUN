@@ -1,0 +1,31 @@
+key: pp100
+name: 生意社现货报价
+board: price
+parser: table
+referer: https://www.100ppi.com/mprice/
+urls:
+  - https://www.100ppi.com/mprice/plist-1-300-1.html
+  - https://www.100ppi.com/mprice/plist-1-318-1.html
+  - https://www.100ppi.com/mprice/plist-1-320-1.html
+  - https://www.100ppi.com/mprice/plist-1-157-1.html
+  - https://www.100ppi.com/mprice/plist-1-1173-1.html
+  - https://www.100ppi.com/mprice/plist-1-995-1.html
+  - https://www.100ppi.com/mprice/plist-1-712-1.html
+  - https://www.100ppi.com/mprice/plist-1-870-1.html
+price_type: 现货
+unit: 元/吨
+table:
+  row: "table tr"
+  cell: "td"
+  columns: {name: 0, price: 3}
+commodity_map:
+  磷矿石: [磷矿石]
+  萤石: [萤石]
+  石英砂: [石英砂]
+  锰: [锰矿, 电解锰]
+  钨: [钨精矿, 黑钨, 白钨, 碳化钨粉]
+  钼: [钼精矿, 钼铁, 钼酸铵]
+  锑: [锑锭, 锑]
+  焦炭: [焦炭]
+  焦煤: [炼焦煤]
+  动力煤: [动力煤]

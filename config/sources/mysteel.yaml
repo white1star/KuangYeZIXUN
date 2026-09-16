@@ -1,0 +1,15 @@
+key: mysteel
+name: 我的钢铁网指数
+board: price
+parser: regex
+url: https://www.mysteel.com/
+encoding: utf-8
+price_type: 指数
+unit: 元/吨
+regex:
+  pattern: "(?P<name>[^\\s]{2,6})\\s+(?P<price>\\d{3,6}(?:\\.\\d+)?)\\s+[+-]?\\d"
+commodity_map:
+  铁矿石: [62%, 澳粉, 铁矿石, 铁矿, 进口矿, 国产矿]
+  焦煤: [焦煤, 主焦]
+  焦炭: [焦炭]
+  锰硅: [锰硅, 硅锰]

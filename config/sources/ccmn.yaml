@@ -1,0 +1,16 @@
+key: ccmn
+name: 长江有色金属网
+board: price
+parser: table
+url: https://www.ccmn.cn/priceinfo/
+price_type: 现货
+unit: 元/吨
+table:
+  row: "table tr:not(:-soup-contains(加工费))"
+  cell: "td"
+  columns: {name: 0, price: 5, change: 6}
+commodity_map:
+  铜: [铜]
+  铅锌: [铅, 锌]
+  铝: [铝]
+  锡: [锡]

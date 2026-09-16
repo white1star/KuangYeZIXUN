@@ -1,0 +1,13 @@
+key: sxcoal
+name: 中国煤炭资源网
+board: price
+parser: regex
+url: https://www.sxcoal.com/
+price_type: 指数
+unit: 元/吨
+regex:
+  pattern: "(?P<name>(?:[^\\s]{1,12} )?CCI[^\\s]{0,12}?指数)\\s+\\d{4}/\\d{1,2}/\\d{1,2}\\s+(?P<price>\\d{3,6}(?:\\.\\d+)?)"
+commodity_map:
+  焦煤: [主焦煤, 柳林, 气煤, 肥煤, 焦煤]
+  焦炭: [焦炭]
+  动力煤: ["5500", "5000", "4500", 动力煤]

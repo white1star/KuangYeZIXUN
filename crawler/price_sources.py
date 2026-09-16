@@ -50,10 +50,11 @@ def _make_row(commodity, price_type, value, cfg, raw_label,
 def _match_commodity(label, mapping):
     label = (label or "").strip()
     if label in mapping:
-        return mapping[label]
+        value = mapping[label]
+        return label if isinstance(value, list) else value
     for key, value in mapping.items():
         if isinstance(value, list):
-            if any(w and w in label for w in value):
+            if any(str(w) and str(w) in label for w in value if w is not None):
                 return key
         elif isinstance(value, str) and value and value in label:
             return value
@@ -152,3 +153,61 @@ def parse(parser: str, text: str, cfg: dict) -> list:
     if fn is None:
         raise ValueError(f"未知价格解析器: {parser}")
     return fn(text, cfg)
+
+
+def _cell_text(cells, idx):
+    if idx is None or idx >= len(cells):
+        return ""
+    return cells[idx]
+
+
+def _cell_float(cells, idx):
+    return _to_float(re.sub(r"[^\d.\-]", "", _cell_text(cells, idx)))
+
+
+def parse_table(html: str, cfg: dict) -> list:
+    t = cfg["table"]
+    soup = BeautifulSoup(html, "lxml")
+    rows = []
+    for tr in soup.select(t["row"]):
+        cells = [c.get_text(" ", strip=True) for c in tr.select(t.get("cell", "td"))]
+        cols = t.get("columns", {})
+        if "name" not in cols or "price" not in cols:
+            raise ValueError("表格价格源缺少 columns.name/price")
+        if len(cells) <= max(cols[k] for k in ("name", "price")):
+            continue
+        label = cells[cols["name"]]
+        commodity = _match_commodity(label, cfg.get("commodity_map", {}))
+        if not commodity:
+            continue
+        value = _to_float(re.sub(r"[^\d.\-]", "", cells[cols["price"]]))
+        if value is None or value <= 0:
+            continue
+        rows.append(_make_row(
+            commodity, cfg.get("price_type", "现货"), value, cfg, label,
+            change=_cell_float(cells, cols.get("change")),
+            change_pct=_cell_float(cells, cols.get("change_pct")),
+            price_date=parse_date(_cell_text(cells, cols.get("date"))) or None,
+        ))
+    return rows
+
+
+def parse_regex(html: str, cfg: dict) -> list:
+    r = cfg["regex"]
+    soup = BeautifulSoup(html, "lxml")
+    text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
+    rows = []
+    for m in re.finditer(r["pattern"], text):
+        label = (m.group(r.get("name_group", "name")) or "").strip()
+        commodity = _match_commodity(label, cfg.get("commodity_map", {}))
+        if not commodity:
+            continue
+        value = _to_float(m.group(r.get("price_group", "price")))
+        if value is None or value <= 0:
+            continue
+        rows.append(_make_row(commodity, cfg.get("price_type", "指数"), value, cfg, label))
+    return rows
+
+
+PARSERS["table"] = parse_table
+PARSERS["regex"] = parse_regex

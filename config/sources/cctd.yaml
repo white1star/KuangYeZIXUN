@@ -1,0 +1,12 @@
+key: cctd
+name: 中国煤炭市场网
+board: price
+parser: regex
+url: https://www.cctd.com.cn/
+encoding: gb18030
+price_type: 现货
+unit: 元/吨
+regex:
+  pattern: "(?P<name>秦皇岛\\s*动力煤|(?:综合交易|年度长协)(?:5500|5000|4500))\\s*(?P<price>\\d{3,4})"
+commodity_map:
+  动力煤: ["5500", "5000", "4500", 动力煤]
