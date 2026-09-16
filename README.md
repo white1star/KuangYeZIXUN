@@ -40,8 +40,11 @@ E:\矿_news\
 │   ├── backup.py                每日备份（保留30天）
 │   ├── watchdog.py              健康检查+自动拉起
 │   ├── install.py               一键安装（venv/计划任务/防火墙/关睡眠）
-│   └── acceptance.py            端到端自检（python -m scripts.acceptance）
+│   ├── acceptance.py            端到端自检（python -m scripts.acceptance）
+│   ├── ai_run.py                AI 巡检总入口：先抓一轮，再体检，给修复建议
+│   └── ai_check.py              巡检体检：源状态/失败快照/数据概览/建议报告
 ├── tools\snapshot.py            抓源站样本到 tests/fixtures（接入与修源用）
+├── docs\ai-maintenance.md       AI 巡检维护手册（修源四步法/重打标/备份恢复）
 ├── tests\                       pytest 测试 + fixtures 离线样本
 ├── data\                        运行时生成（gitignore）：news.db、web.pid、backup\
 ├── logs\                        运行时生成（gitignore）：crawler_YYYYMMDD.log、snapshots\
@@ -268,7 +271,20 @@ python -m scripts.acceptance
 
 ---
 
-## 9. 二期规划（v1 不做的）
+## 9. AI 巡检（巡检 = 启动爬虫 + 体检）
+
+```powershell
+python -m scripts.ai_run      # 一键巡检：先抓一轮，再体检，报告+建议，退出码 0/1
+python -m scripts.ai_check    # 只体检不抓取，报告写入 logs\ai_check_YYYYMMDD.md
+```
+
+- 巡检流程、报告读法、「修源四步法」、重打标、备份恢复、定时任务与 AI 提示词模板：见 [`docs/ai-maintenance.md`](docs/ai-maintenance.md)
+- 退出码：`0` 一切正常；`1` 有源失败或体检异常（按手册修复后复跑）
+- 建议每天定时调用一次 `python -m scripts.ai_run`，失败源由 AI/人工按手册处理
+
+---
+
+## 10. 二期规划（v1 不做的）
 
 1. **推送**：企业微信/钉钉每日摘要
 2. **AI 摘要与每日综述**
