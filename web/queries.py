@@ -37,7 +37,8 @@ def latest_articles(conn, limit=30, board=None) -> list:
     if board:
         sql += " AND a.board=?"
         params.append(board)
-    sql += " ORDER BY a.id DESC LIMIT ?"
+    sql += (" ORDER BY CASE WHEN a.published_at='' THEN substr(a.fetched_at,1,10) "
+            "ELSE a.published_at END DESC, a.id DESC LIMIT ?")
     params.append(limit)
     return [_decode(r) for r in conn.execute(sql, params).fetchall()]
 
@@ -53,7 +54,7 @@ def price_latest(conn, limit=20) -> list:
         "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type "
         "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices) r "
         "ON r.id=p.id WHERE r.rn=1 "
-        "ORDER BY p.commodity LIMIT ?", (limit,)).fetchall()
+        "ORDER BY p.price_date DESC, p.commodity LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -147,7 +148,8 @@ def search_articles(conn, q="", mineral=None, board=None, source=None,
     if date_to:
         where.append("a.fetched_at<=?")
         params.append(date_to + " 23:59:59")
-    sql += " WHERE " + " AND ".join(where) + " ORDER BY a.id DESC LIMIT ?"
+    sql += (" WHERE " + " AND ".join(where) + " ORDER BY CASE WHEN a.published_at='' "
+            "THEN substr(a.fetched_at,1,10) ELSE a.published_at END DESC, a.id DESC LIMIT ?")
     params.append(limit)
     return [_decode(r) for r in conn.execute(sql, params).fetchall()]
 
