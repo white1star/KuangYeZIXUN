@@ -1,0 +1,13 @@
+key: nea
+name: 国家能源局新闻中心
+board: policy
+url: https://www.nea.gov.cn/xwzx/
+encoding: utf-8
+list:
+  item: "div.xwzx-yw-box ul.list01 li"
+  title: "a"
+  date: "span.date"
+detail:
+  enabled: true
+  content: "div.article-content"
+  limit: 10

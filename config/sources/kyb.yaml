@@ -1,0 +1,11 @@
+key: kyb
+enabled: false
+name: 中国矿业报行业要闻
+board: news
+url: https://kyb.cgs.gov.cn/zhyw/hyyw/
+list:
+  item: "li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

@@ -1,0 +1,11 @@
+key: cwestc
+name: 中国煤炭新闻网矿业要闻
+board: news
+url: http://www.cwestc.com/MroeNews.aspx?gd=13
+encoding: utf-8
+list:
+  item: "table table tr"
+  title: "a"
+  date: "td:last-child"
+detail:
+  enabled: false

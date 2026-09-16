@@ -1,0 +1,11 @@
+key: ccoalnews
+name: 中国煤炭网要闻
+board: news
+url: http://www.ccoalnews.com/news/yaowen.html
+encoding: utf-8
+list:
+  item: "div.newlist02 div.cy-list"
+  title: "h2 a"
+  date: "div.cy-discuz:last-child"
+detail:
+  enabled: false

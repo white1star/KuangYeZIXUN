@@ -1,0 +1,13 @@
+key: mnr
+name: 自然资源部要闻
+board: policy
+url: https://www.mnr.gov.cn/dt/ywbb/
+encoding: utf-8
+list:
+  item: "ul.ky_open_list li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: true
+  content: "div.TRS_Editor"
+  limit: 10

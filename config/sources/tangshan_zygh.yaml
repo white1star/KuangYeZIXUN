@@ -1,0 +1,13 @@
+key: tangshan_zygh
+name: 唐山自然资源和规划局公告公示
+board: policy
+url: http://zygh.tangshan.gov.cn/ts/xxgk/gggs
+encoding: utf-8
+list:
+  item: "ul#lbUR li"
+  title: "a.titleBT"
+  date: "div.lis_date"
+detail:
+  enabled: true
+  content: "div#BodyLabel"
+  limit: 10

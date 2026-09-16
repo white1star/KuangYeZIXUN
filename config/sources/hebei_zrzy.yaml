@@ -1,0 +1,13 @@
+key: hebei_zrzy
+name: 河北省自然资源厅厅动态
+board: policy
+url: http://zrzy.hebei.gov.cn/heb/xinwen/stdt/
+encoding: utf-8
+list:
+  item: "div.p_list li"
+  title: "a"
+  date: "span.date"
+detail:
+  enabled: true
+  content: "div#BodyLabel"
+  limit: 10

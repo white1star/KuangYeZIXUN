@@ -1,0 +1,13 @@
+key: chinamine
+name: 国家矿山安全监察局要闻
+board: policy
+url: https://www.chinamine-safety.gov.cn/xw/mkaqjcxw/
+encoding: utf-8
+list:
+  item: "div.center_display_right tr"
+  title: "a"
+  date: "span"
+detail:
+  enabled: true
+  content: "div.TRS_Editor"
+  limit: 10

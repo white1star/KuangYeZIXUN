@@ -1,0 +1,13 @@
+key: ndrc
+name: 发改委发展改革工作
+board: policy
+url: https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/
+encoding: utf-8
+list:
+  item: "div.list ul.u-list > li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: true
+  content: "div.TRS_Editor"
+  limit: 10

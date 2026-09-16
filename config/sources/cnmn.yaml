@@ -1,0 +1,9 @@
+key: cnmn
+name: 中国有色网要闻
+board: news
+url: https://www.cnmn.com.cn/ShowNewsList.aspx?id=43
+list:
+  item: "div#tab11-1 h4"
+  title: "a"
+detail:
+  enabled: false

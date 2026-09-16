@@ -1,0 +1,385 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>
+
+要闻__中国煤炭网
+
+</title>
+<link href="http://www.aqsc.cn/css/base.css" rel="stylesheet" />
+<link href="http://www.aqsc.cn/css/style.css" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="http://www.aqsc.cn/css/page/css/common.css">
+<script type="text/javascript" src="http://www.aqsc.cn/css/jquery-1.8.2.min.js"></script>
+<script type="text/javascript" src="http://www.aqsc.cn/css/jquery.SuperSlide.js"></script>
+<script type="text/javascript" src="http://www.aqsc.cn/css/mobileHttp.js"></script>
+<script type="text/javascript" src="http://www.aqsc.cn/css/js.js"></script>
+
+<script type="text/javascript" src="http://www.aqsc.cn/template/script/NodeClick.js"></script>
+<style>
+.newsbox .ntitle span{font-size: 22px !important;color: #0f92d6;}
+.first .title{font-size:16px; font-weight:bold; line-height:32px;}
+.cy-list h2{font-weight:normal; font-size:22px;}
+</style>
+</head>
+<body>
+<link href="http://www.ccoalnews.cn/css/base.css" rel="stylesheet">
+<link rel="stylesheet" href="http://www.ccoalnews.cn/css/common.css">
+<link rel="stylesheet" href="http://www.ccoalnews.cn/common/css/page.css">
+
+<script type="text/javascript">
+function search_paper(){
+    document.searchform.siteID.value = "0";
+    gosearch();
+}
+
+function search_www(){
+    document.searchform.siteID.value = "2";
+    gosearch();
+}
+
+function gosearch(){
+    var flag = true;
+    if(document.searchform.contentKey.value == ""){
+        alert("请输入搜索内容");
+        return;
+    }
+    if( flag == true ) {
+        document.searchform.submit(); 
+        result_list.innerHTML="正在进行检索，请耐心等待结果...";
+    } 
+}
+</script>
+<style type="text/css">
+.usermsg ul {
+    list-style: none;
+}
+.usermsg ul li {
+    cursor:pointer;
+    text-decoration:underline;
+    display:inline-block;
+    padding:0 10px;
+    position:relative;
+}
+.nav i{
+position:absolute;
+font-size:12px;
+z-indent:2;
+top:0;
+}
+.nav ul li{width:133px; text-align:center;}
+</style>
+
+<script src ="http://www.ccoalnews.cn/demo/sso-login.js"></script>
+
+<div class="header">
+            <div class="header-t">
+                <div class="header-t-inner">
+                    <div class="header-t-inner-l fl">
+                        <a target="_blank" href="http://www.mem.gov.cn/">中华人民共和国应急管理部主管</a>
+                        <a target="_blank" href="https://www.chinamine-safety.gov.cn/">国家矿山安全监察局主管</a>
+                        <a href="javascript:void(0);">中国安全生产报社（中国煤炭报社）主办</a>
+                        <a target="_blank" href="http://www.cac.gov.cn/2021-10/20/c_1636326280912456.htm">中央新闻网站</a>
+                    </div>
+                    <div class="header-t-inner-r fr">
+                    <div class="usermsg fr">
+    <ul id="sso-active">
+        <li>
+            <a href="javascript:void(0);" onclick="ssoLogin()">登录 </a>
+        </li>
+        |<li>
+            <a href="javascript:void(0);" onclick="register()">注册</a>
+        </li>
+    </ul>
+    <ul id="sso-inactive" style="display:none;">
+        <li>
+            <a id="uname" href="javascript:void(0);"></a>
+        </li>
+        |<li>
+            <a href="javascript:void(0);" onclick="ssoLogout()">退出</a>
+        </li>
+    </ul>
+</div>
+                        
+                        <a href="http://paper.ccoalnews.com/">数字报</a>
+                        <a href="http://tg.aqsc.cn/newsedit/newsedit/batman/MainDoc.do" target="_blank" style="color:#d00;">投稿</a></div>
+                </div>
+            </div>
+            <div class="header-btm">
+                <div class="header-btm-inner">
+                    <div class="header-btm-l fl">
+                        <a href="http://www.ccoalnews.cn/"><img src="http://www.ccoalnews.cn/css/logo.jpg" alt="" border="0" style="float: left;"></a></div>
+
+                    <div class="header-btm-r fr" style="width: 520px;" >
+
+                        <div class="search-wrap fl">
+                            <div class="details" style="height:10px;"></div>
+
+
+
+                            <div class="search clearfix">
+                            <form name="searchform" action="http://www.ccoalnews.cn/msearch/servlet/SearchServlet.do" target="_blank" onSubmit="gosearch();" method="POST">
+                                <span class="sear-wrap fl"><span class="sear_icon"></span><input name="contentKey" id="contentKey" class="text" type="text" value="" style="width:220px;" autocomplete="off" /></span>
+                                <span class="btn-wrap fr">
+                                    <input name="search" onClick="javascript:search_www()" class="btn" type="button" value="搜索" />
+                                    <input name="advsearch" onClick="javascript:search_paper()" class="btn" type="button" value="搜报纸" style="margin-left:15px;" />
+                                </span><input type="hidden" name="op" value="single">
+                            <input type="hidden" name="siteID" value="2">
+                            <input type="hidden" name="sort" value="date"/>
+                            </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="nav-wrap">
+            <div class="nav">
+                <ul>
+                    
+<li><a href="http://www.ccoalnews.cn/index.html">首页</a></li>
+<li><a href="http://www.ccoalnews.cn/news/yaowen.html">要闻</a></li>
+<li><a href="http://www.ccoalnews.cn/news/qiye.html">企业新闻</a></li>
+<li><a href="http://www.ccoalnews.cn/dujia.html">独家</a></li>
+<li><a href="http://www.ccoalnews.cn/zhengce.html">政策</a></li>
+<li><a href="http://www.ccoalnews.cn/jingji.html">行情</a></li>
+<li><a href="http://www.ccoalnews.cn/special/index.html">特别策划</a></li>                    
+<li><a href="http://www.ccoalnews.cn/photo/index.html">图片</a></li>
+<li><a href="http://www.ccoalnews.cn/video/index.html">视频</a></li>
+</ul>
+            </div>
+</div>
+	<div class="wrap mb30" style="width:1200px;">
+		<div class="newsbox" style="width:1200px;">
+			<div class="list-leftbox" style="width:1200px; margin:0px auto;">
+            	
+                
+                <!--快速专题简易版 banner调用开始-->
+            	
+
+
+                <!--快速专题简易版 banner调用结束-->
+                
+				<div class="clumbox" style="height:60px; line-height:60px;">
+					<a href="http://www.aqsc.cn/index.html">中国煤炭网首页</a>
+					
+ > <a href="http://www.ccoalnews.cn/news/yaowen.html">要闻</a>
+
+				</div>
+				<div class="newlist02">
+                
+                
+                
+                
+
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/15/c205380.html" target="_blank" style="text-decoration:none;">1月—8月全国规模以上原煤产量30.6亿吨 同比下降3.3%</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">2.统计范围报告中的产量数据统计口径均为规模以上工业，其统计范围为年主营业务收入2000万元及以上的工业企业。二、电力生产情况规上工业电力生产基本平稳。附注1.指标解释日均产品产量：是以当月公布的规模以上工业企业总产量除以该月日历天数计算得到。<a href="http://www.ccoalnews.cn/news/202609/15/c205380.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-15 11:24</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/09/c205215.html" target="_blank" style="text-decoration:none;">国家矿山安全监察局关于进一步加强国有煤矿企业安全生产工作的意见</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">煤矿负责人接到报告后，应当于1小时内报告事故发生地县级及以上人民政府煤矿安全监管部门，同时报告国家矿山安全监察局省级局。国有煤矿企业应制定煤矿智能化发展行动计划，建立分级分类推进煤矿智能化建设工作机制，根据不同煤矿类型、生产规模、安全生产条件及灾害风险等级，科学制定可操作的智能化建设路径和阶段性实施方案。集团公司和煤矿上一级企业作出涉及煤矿安全生产的经营决策，应听取本企业安全生产管理机构的意见。<a href="http://www.ccoalnews.cn/news/202609/09/c205215.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-09 15:01</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="https://mp.weixin.qq.com/s/MMmuRh1KjPI9ZvIXjcXndw" target="_blank" style="text-decoration:none;">家底更加厚实！新一轮找矿突破战略行动取得重要进展</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">暂无摘要。<a href="https://mp.weixin.qq.com/s/MMmuRh1KjPI9ZvIXjcXndw" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-15 10:14</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/15/c205394.html" target="_blank" style="text-decoration:none;">煤电要“换角”？山西“十五五”能源转型路线图来了</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">“十五五”时期，随着碳排放双控制度全面实施，山西省能源转型进入爬坡过坎的关键期，其发展的逻辑锚定为以“集成融合、协同布局”为核心，加快建设新型能源体系，全力推动山西从煤炭大省向能源强省跨越。“十四五”期间，山西风光新能源发展势头强劲，累计新增装机4501万千瓦，年均增长18.8%。与煤炭产业的“稳中求进”形成呼应的，是“能源+”融合发展的全面铺开，发布会透露，融合的重点落在两个维度——多能源品种的融合。<a href="http://www.ccoalnews.cn/news/202609/15/c205394.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-15 16:15</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="https://mp.weixin.qq.com/s/8KoE3EeGxl_ZVLI8lP7yJw" target="_blank" style="text-decoration:none;">《煤矿企业安全生产许可证实施办法》公布</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">暂无摘要。<a href="https://mp.weixin.qq.com/s/8KoE3EeGxl_ZVLI8lP7yJw" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-11 11:37</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/11/c205297.html" target="_blank" style="text-decoration:none;">国家矿山安全监察局有关负责人就实施办法答记者问</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">依照新《办法》，煤层气地面开采企业应当向所在地省级煤矿安全监管部门申请办理煤矿安全生产许可证。同时，煤矿企业安全生产许可证颁发管理职责移交地方人民政府后，发证部门调整为省级煤矿安全监管部门，需要通过部门规章明确新发证主体权责。矿山安全监察机构在监督检查中发现取得安全生产许可证的煤矿企业不具备本实施办法规定的安全生产条件的，应当依法进行处理并移送安全生产许可证颁发管理机关暂扣或者吊销安全生产许可证，同时将相关情况抄报安全生产许可证颁发管理机关所在地省级人民政府。<a href="http://www.ccoalnews.cn/news/202609/11/c205297.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-11 11:39</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/16/c205422.html" target="_blank" style="text-decoration:none;">国家能源集团举办“光明同行·心愿之旅”中印尼文化研学活动</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">阿依娜说：“中国的美食太好吃了，我最爱吃饺子。他们还品尝了烤鸭、特色铜锅涮肉等中国美食。本次来华儿童中，有“安妮的心愿”助学基金首位帮扶对象安妮的儿子德西卡，以及11岁受助女孩阿依娜、齐法图。<a href="http://www.ccoalnews.cn/news/202609/16/c205422.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-16 11:08</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/15/c205382.html" target="_blank" style="text-decoration:none;">国家能源集团申报两项新工种成功纳入国家职业分类体系</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">9月9日，人力资源社会保障部等部门向社会发布11个新职业、23个新工种。其中，油渣萃取装置操作工、聚乙醇酸装置操作工2个新工种由国家能源集团自主申报，历经专家评估论证、多部门书面意见征询、社会公开征求意见等严谨程序，正式纳入国家职业分类体系。本次2个新工种成功获批，填补了化工行业细分赛道国家级技能评价领域的空白，进一步打通、拓宽化工操作技能人员职业成长通道，为该集团化工产业积聚、培育高素质专业化技能人才队伍筑牢坚实根基。<a href="http://www.ccoalnews.cn/news/202609/15/c205382.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-15 11:28</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/14/c205326.html" target="_blank" style="text-decoration:none;">向高向智 煤博会展现煤化工产业转型新风向</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">榆林中科洁净能源创新研究院相关负责人介绍，煤化工、炼油化工生产排放的二氧化碳、硫化氢等废气，可转化为生产原料，重新纳入工业生产链条。”……在陕西榆林，第二十届榆林国际煤炭暨高端能源化工产业博览会展台前，面对一连串井下安全问询，参观者通过人机交互提问，煤矿企业自主研发的“巴煤小智”AI智能体短短数秒就能给出精准答复，解决过去耗时数小时才能处理的难题。——智能装备上岗，产业迈向高端记者在现场看到，多款煤化工新技术、新装备集中亮相。<a href="http://www.ccoalnews.cn/news/202609/14/c205326.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-14 11:55</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="https://mp.weixin.qq.com/s/pTjFWWeG3AzOfK7Rwg7l1g" target="_blank" style="text-decoration:none;">市场监管总局批准发布一批矿山安全领域强制性国家标准</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">暂无摘要。<a href="https://mp.weixin.qq.com/s/pTjFWWeG3AzOfK7Rwg7l1g" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-10 14:40</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/11/c205304.html" target="_blank" style="text-decoration:none;">七项煤炭行业相关装备入选清单</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">国家能源局综合司关于公示第六批能源领域首台（套）重大技术装备清单的通知根据《国家能源局关于促进能源领域首台（套）重大技术装备示范应用的通知》（国能发科技〔2018〕49号）、《能源领域首台（套）重大技术装备评定和评价办法》（国能发科技〔2022〕81号）有关规定，经组织专家评审和复核，拟将“16MW级漂浮式海上风力发电机组”等90项技术装备列入第六批能源领域首台（套）重大技术装备清单（详见附件），现予公示。对匿名或无具体事实依据的异议，以及涉及自身利益的不正当要求，不予受理。异议材料应注明真实姓名和联系方式，提出异议的单位或个人应对异议材料的真实性和可靠性负责。<a href="http://www.ccoalnews.cn/news/202609/11/c205304.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-11 14:34</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/11/c205296.html" target="_blank" style="text-decoration:none;">“十五五”山西加快从煤炭大省迈向能源强省</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">9月10日，山西“开局起步‘十五五’”系列主题新闻发布会第十一场专场活动举行，本场聚焦山西省能源局，系统介绍山西“十五五”能源体系建设总体思路与重点任务，山西省能源局党组书记、局长张翔，副局长王义成，副局长、新闻发言人杜青，副局长毛晓文出席发布会，并就新能源开发、煤炭保供、煤电转型、煤层气产业、节能降碳等热点问题回应媒体关切。”山西目标到2030年，全省煤矿生产产能保持在13亿吨/年左右，煤炭产量稳定在12.5亿吨左右，构建“稳中向智、稳中向绿、稳中向效、稳中向新”的现代煤炭产业体系，推进采煤沉陷区风光项目建设，推动煤与新能源耦合发展。能源消费端严格实施能耗、煤炭消费、碳排放“三审合一”，实施重点行业节能降碳改造三年攻坚，持续压减高耗能项目碳排放。<a href="http://www.ccoalnews.cn/news/202609/11/c205296.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-11 10:58</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/11/c205315.html" target="_blank" style="text-decoration:none;">亚太清洁能源培训学院正式成立</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">在此背景下，“亚太清洁能源培训学院”作为2026APEC中国年能源领域中方重要自主贡献成果正式落地。本年度亚太能源合作紧扣“共筑普惠、创新、协同的亚太能源共同体”主题，聚焦高质量能源普遍服务、人工智能赋能能源发展、亚太能源协同共治三大优先方向，持续深化区域能源务实合作。9月9日，在2026APEC北京能源会议周期间，由国家能源集团牵头、龙源电力具体实施的“亚太清洁能源培训学院”正式揭牌成立。<a href="http://www.ccoalnews.cn/news/202609/11/c205315.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-11 17:13</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="https://mp.weixin.qq.com/s/_40Jur13v2YvdW5gLt43Qg" target="_blank" style="text-decoration:none;">国家发展改革委运行局组织安排提高疆煤外运规模</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">暂无摘要。<a href="https://mp.weixin.qq.com/s/_40Jur13v2YvdW5gLt43Qg" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-07 17:42</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/08/c205180.html" target="_blank" style="text-decoration:none;">全总支持全国劳模工匠创新工作室建设</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">到2030年，中华全国总工会支持建设的创新工作室达到3000家，各级创新工作室数量达到16万家，增强创新工作室创新攻关、传承技能、培养人才、弘扬精神等功能，营造全社会重视劳模工匠作用发挥，支持创新工作室建设，培养知识型、技能型、创新型产业工人的良好氛围。近日，中华全国总工会印发通知，确定2026年支持建设600个全国劳模工匠创新工作室，中华全国总工会给予每个创新工作室10万元补助资金，旨在进一步激发职工创新创造活力，更好发挥劳模工匠示范引领作用。2025年10月，中华全国总工会印发《关于加强劳模工匠创新工作室建设的意见》。<a href="http://www.ccoalnews.cn/news/202609/08/c205180.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-08 10:47</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/08/c205184.html" target="_blank" style="text-decoration:none;">山西能源转型，这届论坛给出了什么答案？</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">在煤与煤层气共采创新发展论坛上，行业专家提出要统筹煤矿瓦斯灾害综合治理与控排减碳，打通瓦斯抽采、梯级利用、碳资产开发全产业链条，实现安全保障、资源利用、减碳增效等多重效益。坚持产能优化、智能开采、绿色开发，持续优化煤炭产业布局，进一步提高煤矿单井规模和产业集中度，到2027年符合条件的生产煤矿基本实现智能化。“能源转型不等于简单‘去煤化’，立足我国资源禀赋，必须充分发挥煤炭‘压舱石’作用，依靠科技创新推动煤炭安全智能绿色开采，实现传统能源降碳增效。<a href="http://www.ccoalnews.cn/news/202609/08/c205184.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-08 10:51</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/08/c205181.html" target="_blank" style="text-decoration:none;">四川矿山人工智能创新中心挂牌成立</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">旺苍县11家矿山企业完成智能预警系统改造。近日，四川矿山人工智能创新中心在成都挂牌成立。四川矿山种类多、数量大，安全生产任务艰巨。<a href="http://www.ccoalnews.cn/news/202609/08/c205181.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-08 10:48</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="https://mp.weixin.qq.com/s/uDv9C0smwTgZQmN3dae4Vw" target="_blank" style="text-decoration:none;">山东能源集团再发20亿元科创债券</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">暂无摘要。<a href="https://mp.weixin.qq.com/s/uDv9C0smwTgZQmN3dae4Vw" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-08 10:49</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="https://mp.weixin.qq.com/s/8KoE3EeGxl_ZVLI8lP7yJw" target="_blank" style="text-decoration:none;">《煤矿企业安全生产许可证实施办法》公布</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">暂无摘要。<a href="https://mp.weixin.qq.com/s/8KoE3EeGxl_ZVLI8lP7yJw" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-07 11:22</div>
+      </div>
+      <div class="cy-list" style="padding:15px 0px 30px 0px;">
+        <h2 style="padding-bottom:10px; "><a href="http://www.ccoalnews.cn/news/202609/07/c205143.html" target="_blank" style="text-decoration:none;">全国碳市场配额分配相关方案印发</a></h2>
+        <dl class="clearfix">
+                    <dt style="width:0; height:0; min-height:60px;"></dt>
+          <dd style="float:none; width:100%; font-size:16px;">生态环境部近日印发《全国碳排放权交易市场2025、2026年度发电行业以及2026年度钢铁、水泥、铝冶炼行业配额总量和分配方案》，对相关行业配额的分配范围、计算方法、发放和清缴等工作进行部署，引导企业将碳排放管理深度融入战略规划与生产经营，支持能效提升、原料燃料替代、工艺革新等绿色低碳技术应用，推动全社会以较低成本实现减排目标。<a href="http://www.ccoalnews.cn/news/202609/07/c205143.html" target="_blank" class="read_more">[更多]</a></dd>
+        </dl>
+        <div class="cy-discuz" style="width:auto; height:auto; font-size:16px; border-radius:5px; text-align:center; background-color:#efefef; right:160px; color:#bcbcbc; bottom:10px; padding-left:10px; padding-right:10px;">要闻</div>
+        <div class="cy-discuz" style="width:150px; height:auto; font-size:16px; color:#bcbcbc; border-radius:5px; text-align:center; right:0px; font-style:italic; bottom:10px;">2026-09-07 11:25</div>
+      </div>
+<ul pages='20' current='1' class='pages'><li class='page page1 page-active'><a href='javascript:void(0)'>1</a></li><li class='page page2'><a href='http://www.ccoalnews.cn/news/yaowen_2.html'>2</a></li><li class='page page3'><a href='http://www.ccoalnews.cn/news/yaowen_3.html'>3</a></li><li class='page page4'><a href='http://www.ccoalnews.cn/news/yaowen_4.html'>4</a></li><li class='page page5'><a href='http://www.ccoalnews.cn/news/yaowen_5.html'>5</a></li><li class='page page6'><a href='http://www.ccoalnews.cn/news/yaowen_6.html'>6</a></li><li class='page page7'><a href='http://www.ccoalnews.cn/news/yaowen_7.html'>7</a></li><li class='page page8'><a href='http://www.ccoalnews.cn/news/yaowen_8.html'>8</a></li><li class='page page9'><a href='http://www.ccoalnews.cn/news/yaowen_9.html'>9</a></li><li class='page page10'><a href='http://www.ccoalnews.cn/news/yaowen_10.html'>10</a></li><li class='page page11'><a href='http://www.ccoalnews.cn/news/yaowen_11.html'>11</a></li><li class='page page12'><a href='http://www.ccoalnews.cn/news/yaowen_12.html'>12</a></li><li class='page page13'><a href='http://www.ccoalnews.cn/news/yaowen_13.html'>13</a></li><li class='page page14'><a href='http://www.ccoalnews.cn/news/yaowen_14.html'>14</a></li><li class='page page15'><a href='http://www.ccoalnews.cn/news/yaowen_15.html'>15</a></li><li class='page page16'><a href='http://www.ccoalnews.cn/news/yaowen_16.html'>16</a></li><li class='page page17'><a href='http://www.ccoalnews.cn/news/yaowen_17.html'>17</a></li><li class='page page18'><a href='http://www.ccoalnews.cn/news/yaowen_18.html'>18</a></li><li class='page page19'><a href='http://www.ccoalnews.cn/news/yaowen_19.html'>19</a></li><li class='page page20'><a href='http://www.ccoalnews.cn/news/yaowen_20.html'>20</a></li><li class='page-next'><a href='http://www.ccoalnews.cn/news/yaowen_2.html'>下一页</a></li></ul>
+				
+                
+                
+                
+                </div>
+			</div>
+			
+		</div>
+	</div>
+   	<div class="footer" style="text-align:center; padding:10px 0px 30px 0px;">
+    		<p style="line-height:2em;">
+				<span>中国应急管理报社有限公司维护  违法和不良信息举报电话：010 - 87986112</span><br/>
+				<a href="http://www.ccoalnews.cn/aboutus/c3183.html" target="_blank">关于我们</a> | 
+				<a href="http://www.ccoalnews.cn/aboutus/c5539.html" target="_blank">版权声明</a> | 
+				<a href="http://www.yuecheng.com/" target="_blank">法律顾问</a> | 
+				<a href="http://www.ccoalnews.cn/aboutus/c5547.html" target="_blank">联系方式</a> | 
+				
+    		</p>
+    		<p style="line-height:2em;">电子邮件：zgmtw2011@163.com 客服QQ：68555916，128625613</p>
+    		<p style="line-height:2em;"><a href="http://www.ccoalnews.cn/aboutus/c54150.html" target="_blank">互联网新闻信息服务许可证</a><a href="https://beian.miit.gov.cn" target="_blank" style="margin-left:20px;">京ICP备06009719号-2</a><a/p>
+			<p><a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010502034118" style="text-decoration:none;height:20px;line-height:20px; background:url(http://www.ccoalnews.cn/common/img/beian.png) no-repeat 0px 0px; padding-left:25px;">京公网安备 11010502034118号</a></p>
+    	</div>
+
+
+<input type="hidden" id="DocIDforCount" value="267">
+
+<script language="JavaScript" charset="gb2312" src="http://phpstat.aqsc.cn/phpstat/count/10000005/10000005.js" ></script>
+</body>
+</html>
