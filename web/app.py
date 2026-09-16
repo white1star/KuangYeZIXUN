@@ -17,7 +17,7 @@ from web import notify, queries
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
 
-NEWS_TYPES = {"新矿山": ["新矿"], "行情": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
+NEWS_TYPES = {"新矿山": ["新矿"], "市场": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
 CROSS_BOARD_TYPES = {"新矿山"}
 
 LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}

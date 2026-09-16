@@ -53,10 +53,10 @@ def test_news_page_lists_only_news(tmp_path):
     assert "河北开展磷矿安全生产整治" not in resp.text
     assert "贵州毕节煤矿采矿权挂牌出让公告" not in resp.text
     assert 'href="/news?type=新矿山"' in resp.text
-    assert 'href="/news?type=行情"' in resp.text
+    assert 'href="/news?type=市场"' in resp.text
     assert 'href="/news?type=技术"' in resp.text
     assert 'class="pill active" href="/news">全部</a>' in resp.text
-    order = [resp.text.index(f'href="/news?type={t}"') for t in ("新矿山", "行情", "技术", "企业", "安全")]
+    order = [resp.text.index(f'href="/news?type={t}"') for t in ("新矿山", "市场", "技术", "企业", "安全")]
     assert order == sorted(order)
 
 
@@ -88,7 +88,7 @@ def test_news_page_filters_type(tmp_path):
     assert "河北开展磷矿安全生产整治" not in resp.text
     assert 'class="pill active" href="/news?type=技术">技术</a>' in resp.text
     assert "贵州毕节煤矿采矿权挂牌出让公告" not in resp.text
-    resp2 = client.get("/news?type=行情")
+    resp2 = client.get("/news?type=市场")
     assert "今日铜价小幅上涨" in resp2.text
     assert "铁矿石港口库存下降" in resp2.text
     assert "智能矿山无人驾驶试点" not in resp2.text
