@@ -1,8 +1,11 @@
 import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -11,6 +14,7 @@ from crawler.config import load_settings
 from web import queries
 
 WEB = Path(__file__).resolve().parent
+ROOT = WEB.parent
 
 
 def create_app(db_path=None) -> FastAPI:
@@ -93,6 +97,43 @@ def create_app(db_path=None) -> FastAPI:
         finally:
             conn.close()
         return templates.TemplateResponse(request, "search.html", ctx)
+
+    @app.get("/sources", response_class=HTMLResponse)
+    def sources_page(request: Request):
+        conn = get_conn()
+        try:
+            health = queries.source_health(conn)
+        finally:
+            conn.close()
+        logs = sorted(settings.logs_dir.glob("crawler_*.log"), reverse=True)[:7]
+        return templates.TemplateResponse(request, "sources.html", {
+            "health": health, "logs": [p.name for p in logs]})
+
+    @app.post("/admin/run_crawl")
+    def run_crawl():
+        lock = db_file.parent / "crawl.lock"
+        if lock.exists() and time.time() - lock.stat().st_mtime < 3600:
+            return JSONResponse({"ok": False, "message": "已有抓取任务在运行"}, status_code=409)
+        lock.write_text(str(os.getpid()), encoding="utf-8")
+        try:
+            subprocess.Popen([sys.executable, "-m", "crawler.main", "--once"], cwd=str(ROOT))
+        except Exception as exc:
+            lock.unlink(missing_ok=True)
+            return JSONResponse({"ok": False, "message": f"启动失败: {exc}"}, status_code=500)
+        return {"ok": True, "message": "已开始抓取，稍后刷新查看源健康"}
+
+    @app.get("/admin/logs/{name}")
+    def download_log(name: str):
+        path = settings.logs_dir / name
+        if not path.exists() or path.parent != settings.logs_dir or not name.startswith("crawler_"):
+            return JSONResponse({"ok": False, "message": "日志文件不存在"}, status_code=404)
+        return FileResponse(path, filename=name)
+
+    @app.get("/admin/backup/now")
+    def backup_now():
+        from scripts.backup import run_backup
+        path = run_backup(db_file, settings.data_dir / "backup")
+        return {"ok": True, "path": str(path)}
 
     return app
 

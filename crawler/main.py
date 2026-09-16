@@ -108,6 +108,7 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
     report.log("本轮完成：源 {}/{} 成功，新增文章 {}，价格 {} 条".format(
         summary["sources_ok"], summary["sources_total"],
         summary["articles_new"], summary["prices"]))
+    (settings.data_dir / "crawl.lock").unlink(missing_ok=True)
     return summary
 
 

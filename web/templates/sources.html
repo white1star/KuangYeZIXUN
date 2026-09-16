@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>源健康</h2>
+<p>
+  <button onclick="runCrawl()">立即抓取一次</button>
+  <a href="/admin/backup/now">立即备份数据库</a>
+  <span class="muted" id="msg"></span>
+</p>
+<table class="prices wide">
+  <tr><th>源</th><th>板块</th><th>最近状态</th><th>完成时间</th><th>抓到</th><th>新增</th><th>错误</th></tr>
+  {% for h in health %}
+  <tr>
+    <td>{{ h.name }}<span class="ptype">{{ h.key }}</span></td>
+    <td>{{ h.board }}</td>
+    <td class="{{ 'oktext' if h.status == 'ok' else 'errtext' }}">{{ h.status or '未跑过' }}</td>
+    <td>{{ h.finished_at }}</td><td>{{ h.items_found }}</td><td>{{ h.items_new }}</td>
+    <td class="errtext">{{ h.error }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<h2>最近日志</h2>
+<ul class="policies">{% for name in logs %}<li><a href="/admin/logs/{{ name }}">{{ name }}</a></li>{% endfor %}</ul>
+<script>
+async function runCrawl() {
+  const resp = await fetch('/admin/run_crawl', {method: 'POST'});
+  const data = await resp.json();
+  document.getElementById('msg').textContent = data.message;
+}
+</script>
+{% endblock %}

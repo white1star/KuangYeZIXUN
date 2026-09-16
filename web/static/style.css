@@ -34,3 +34,5 @@ aside h2, .feed h2 { font-size: 15px; margin: 10px 0 8px; }
 .filterbar input, .filterbar select, .filterbar button { padding: 6px 10px; border: 1px solid #cfd4dc; border-radius: 6px; background: #fff; }
 .filterbar button { background: #17324d; color: #fff; cursor: pointer; }
 .card { background: #fff; border: 1px solid #e3e6eb; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.oktext { color: #1f7a45; }
+.errtext { color: #c0322b; }
