@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block head %}<script src="/static/vendor/echarts.min.js"></script>{% endblock %}
+{% block content %}
+<h2>矿价行情</h2>
+<div class="chart-controls">
+  <select id="commodity">{% for c in commodities %}<option>{{ c }}</option>{% endfor %}</select>
+  <select id="days"><option value="7">近7天</option><option value="30" selected>近30天</option><option value="90">近90天</option></select>
+</div>
+<div id="chart" style="width:100%;height:360px;background:#fff;border:1px solid #e3e6eb;border-radius:8px"></div>
+<h2>最新报价</h2>
+<table class="prices wide">
+  <tr><th>品种</th><th>类型</th><th>最新价</th><th>涨跌</th><th>涨跌幅</th><th>日期</th><th>来源</th></tr>
+  {% for p in prices %}
+  <tr>
+    <td>{{ p.commodity }}</td><td>{{ p.price_type }}</td>
+    <td class="num">{{ p.value }} {{ p.unit }}</td>
+    <td class="{{ 'up' if (p.change or 0) > 0 else 'down' }}">{{ p.change if p.change is not none else '-' }}</td>
+    <td class="{{ 'up' if (p.change_pct or 0) > 0 else 'down' }}">{{ p.change_pct if p.change_pct is not none else '-' }}</td>
+    <td>{{ p.price_date }}</td><td>{{ p.source_key }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<script>
+const chart = echarts.init(document.getElementById('chart'));
+async function load() {
+  const c = document.getElementById('commodity').value;
+  const d = document.getElementById('days').value;
+  const resp = await fetch('/api/prices/' + encodeURIComponent(c) + '?days=' + d);
+  const data = await resp.json();
+  chart.setOption({
+    title: { text: c + ' 近' + d + '天走势' },
+    tooltip: { trigger: 'axis' },
+    grid: { left: 60, right: 20, top: 50, bottom: 40 },
+    xAxis: { type: 'category', data: data.points.map(p => p.price_date) },
+    yAxis: { type: 'value', scale: true },
+    series: [{ type: 'line', smooth: true, data: data.points.map(p => p.value) }]
+  });
+}
+document.getElementById('commodity').addEventListener('change', load);
+document.getElementById('days').addEventListener('change', load);
+load();
+</script>
+{% endblock %}

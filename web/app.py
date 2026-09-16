@@ -44,6 +44,26 @@ def create_app(db_path=None) -> FastAPI:
             conn.close()
         return templates.TemplateResponse(request, "index.html", ctx)
 
+    @app.get("/prices", response_class=HTMLResponse)
+    def prices_page(request: Request):
+        conn = get_conn()
+        try:
+            ctx = {"commodities": queries.distinct_commodities(conn),
+                   "prices": queries.price_latest(conn, limit=80)}
+        finally:
+            conn.close()
+        return templates.TemplateResponse(request, "prices.html", ctx)
+
+    @app.get("/api/prices/{commodity}")
+    def price_api(commodity: str, days: int = 30, price_type: str = ""):
+        conn = get_conn()
+        try:
+            points = queries.price_series(conn, commodity, days=days,
+                                          price_type=price_type or None)
+        finally:
+            conn.close()
+        return {"commodity": commodity, "days": days, "points": points}
+
     return app
 
 

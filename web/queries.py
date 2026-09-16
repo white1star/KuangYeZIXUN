@@ -57,12 +57,15 @@ def price_latest(conn, limit=20) -> list:
 
 def price_series(conn, commodity, days=30, price_type=None) -> list:
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    sql = "SELECT price_date, AVG(value) value FROM prices WHERE commodity=? AND price_date>=?"
+    sql = ("SELECT price_date, value FROM ("
+           "SELECT price_date, value, ROW_NUMBER() OVER "
+           "(PARTITION BY price_date ORDER BY fetched_at DESC, id DESC) rn "
+           "FROM prices WHERE commodity=? AND price_date>=?")
     params = [commodity, cutoff]
     if price_type:
         sql += " AND price_type=?"
         params.append(price_type)
-    sql += " GROUP BY price_date ORDER BY price_date"
+    sql += ") WHERE rn=1 ORDER BY price_date"
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
 
