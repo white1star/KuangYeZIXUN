@@ -15,6 +15,7 @@ def seed(db):
         ("智能矿山无人驾驶试点", "news", ["煤炭"], [], ["技术"]),
         ("矿区安全应急演练完成", "news", ["磷矿"], [], ["安全"]),
         ("内蒙古新发现大型萤石矿", "news", ["萤石"], ["内蒙古"], ["新矿"]),
+        ("贵州毕节煤矿采矿权挂牌出让公告", "policy", ["煤炭"], ["贵州"], ["新矿"]),
     ]
     for i, (title, board, minerals, regions, types) in enumerate(rows):
         item = {"url": f"https://e.com/{i}", "title": title, "summary": title + "的摘要",
@@ -50,6 +51,7 @@ def test_news_page_lists_only_news(tmp_path):
     assert "矿区安全应急演练完成" in resp.text
     assert "内蒙古新发现大型萤石矿" in resp.text
     assert "河北开展磷矿安全生产整治" not in resp.text
+    assert "贵州毕节煤矿采矿权挂牌出让公告" not in resp.text
     assert 'href="/news?type=新矿山"' in resp.text
     assert 'href="/news?type=行情"' in resp.text
     assert 'href="/news?type=技术"' in resp.text
@@ -65,6 +67,7 @@ def test_news_page_filters_new_mine(tmp_path):
     resp = client.get("/news?type=新矿山")
     assert resp.status_code == 200
     assert "内蒙古新发现大型萤石矿" in resp.text
+    assert "贵州毕节煤矿采矿权挂牌出让公告" in resp.text
     assert "云南铜矿项目投产" not in resp.text
     assert "今日铜价小幅上涨" not in resp.text
     assert "铁矿石港口库存下降" not in resp.text
@@ -84,11 +87,14 @@ def test_news_page_filters_type(tmp_path):
     assert "今日铜价小幅上涨" not in resp.text
     assert "河北开展磷矿安全生产整治" not in resp.text
     assert 'class="pill active" href="/news?type=技术">技术</a>' in resp.text
+    assert "贵州毕节煤矿采矿权挂牌出让公告" not in resp.text
     resp2 = client.get("/news?type=行情")
     assert "今日铜价小幅上涨" in resp2.text
     assert "铁矿石港口库存下降" in resp2.text
     assert "智能矿山无人驾驶试点" not in resp2.text
     assert "云南铜矿项目投产" not in resp2.text
+    assert "贵州毕节煤矿采矿权挂牌出让公告" not in resp2.text
     resp3 = client.get("/news?type=安全")
     assert "矿区安全应急演练完成" in resp3.text
     assert "智能矿山无人驾驶试点" not in resp3.text
+    assert "贵州毕节煤矿采矿权挂牌出让公告" not in resp3.text

@@ -17,6 +17,7 @@ WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
 
 NEWS_TYPES = {"新矿山": ["新矿"], "行情": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
+CROSS_BOARD_TYPES = {"新矿山"}
 
 
 def _fmt_num(value) -> str:
@@ -103,9 +104,10 @@ def create_app(db_path=None) -> FastAPI:
     @app.get("/news", response_class=HTMLResponse)
     def news_page(request: Request, mineral: str = "", type: str = ""):
         types = NEWS_TYPES.get(type)
+        board = None if type in CROSS_BOARD_TYPES else "news"
         conn = get_conn()
         try:
-            articles = queries.search_articles(conn, board="news",
+            articles = queries.search_articles(conn, board=board,
                                                mineral=mineral or None, types=types, limit=120)
         finally:
             conn.close()
