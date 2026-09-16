@@ -1,13 +1,10 @@
-import base64
 import os
-import secrets
 import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
 
-import yaml
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,34 +20,13 @@ ROOT = WEB.parent
 NEWS_TYPES = {"新矿山": ["新矿"], "行情": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
 CROSS_BOARD_TYPES = {"新矿山"}
 
-ADMIN_CONFIG = ROOT / "config" / "admin.local.yaml"
+LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
 
 
-def load_admin_config():
-    try:
-        raw = yaml.safe_load(ADMIN_CONFIG.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        return None
-    if not raw.get("enabled", True) or not raw.get("password"):
-        return None
-    return {"username": str(raw.get("username") or "admin"), "password": str(raw["password"])}
-
-
-def require_admin(request: Request):
-    cfg = load_admin_config()
-    if cfg is None:
-        return
-    auth = request.headers.get("authorization", "")
-    if auth.lower().startswith("basic "):
-        try:
-            raw = base64.b64decode(auth.split(" ", 1)[1]).decode("utf-8")
-            user, _, pwd = raw.partition(":")
-        except Exception:
-            user = pwd = ""
-        if secrets.compare_digest(user, cfg["username"]) and secrets.compare_digest(pwd, cfg["password"]):
-            return
-    raise HTTPException(status_code=401, detail="需要管理密码",
-                        headers={"WWW-Authenticate": 'Basic realm="admin"'})
+def require_local(request: Request):
+    host = request.client.host if request.client else ""
+    if host not in LOCAL_HOSTS:
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 def _fmt_num(value) -> str:
@@ -191,7 +167,7 @@ def create_app(db_path=None) -> FastAPI:
             "articles": articles, "region": region, "source": source, "sources": sources})
 
     @app.get("/sources", response_class=HTMLResponse)
-    def sources_page(request: Request, _=Depends(require_admin)):
+    def sources_page(request: Request, _=Depends(require_local)):
         conn = get_conn()
         try:
             health = queries.source_health(conn)
@@ -243,7 +219,7 @@ def create_app(db_path=None) -> FastAPI:
         return {"ok": True}
 
     @app.post("/admin/run_crawl")
-    def run_crawl(_=Depends(require_admin)):
+    def run_crawl(_=Depends(require_local)):
         lock = db_file.parent / "crawl.lock"
         if lock.exists() and time.time() - lock.stat().st_mtime < 3600:
             return JSONResponse({"ok": False, "message": "已有抓取任务在运行"}, status_code=409)
@@ -256,14 +232,14 @@ def create_app(db_path=None) -> FastAPI:
         return {"ok": True, "message": "已开始抓取，稍后刷新查看源健康"}
 
     @app.get("/admin/logs/{name}")
-    def download_log(name: str, _=Depends(require_admin)):
+    def download_log(name: str, _=Depends(require_local)):
         path = settings.logs_dir / name
         if not path.exists() or path.parent != settings.logs_dir or not name.startswith("crawler_"):
             return JSONResponse({"ok": False, "message": "日志文件不存在"}, status_code=404)
         return FileResponse(path, filename=name)
 
     @app.get("/admin/backup/now")
-    def backup_now(_=Depends(require_admin)):
+    def backup_now(_=Depends(require_local)):
         from scripts.backup import run_backup
         path = run_backup(db_file, settings.data_dir / "backup")
         return {"ok": True, "path": str(path)}
