@@ -83,6 +83,7 @@ __pycache__/
 .pytest_cache/
 data/
 logs/
+.superpowers/
 ```
 
 `requirements.txt`:
