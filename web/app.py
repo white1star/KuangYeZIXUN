@@ -94,7 +94,6 @@ def create_app(db_path=None) -> FastAPI:
                 "dots": dots,
                 "sources_ok": ok_count,
                 "sources_total": len(dots),
-                "fail_count": queries.today_fail_count(conn),
                 "last_fetch": queries.last_fetch_time(conn),
                 "commodity_count": len(queries.distinct_commodities(conn)),
             }
