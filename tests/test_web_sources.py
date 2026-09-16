@@ -23,7 +23,8 @@ def test_sources_page(tmp_path):
     resp = client.get("/sources")
     assert resp.status_code == 200
     assert "自然资源部要闻" in resp.text
-    assert "ok" in resp.text
+    assert "成功" in resp.text
+    assert "数据源状态" in resp.text
 
 
 def test_run_crawl_lock(tmp_path, monkeypatch):

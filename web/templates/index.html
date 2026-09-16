@@ -1,34 +1,86 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block content %}
 <div class="statusbar">
-  今日新增 <b>{{ stats.total }}</b> 条（新闻 {{ stats.by_board.get('news', 0) }} · 政策 {{ stats.by_board.get('policy', 0) }} · 价格源更新见行情页）
-  <span class="runs">{% for r in runs %}<span class="dot {{ 'ok' if r.status == 'ok' else 'err' }}" title="{{ r.source_key }} {{ r.finished_at }} {{ r.status }}"></span>{% endfor %}</span>
+  <div class="status-inner container">
+    <div>
+      上次抓取 {{ last_fetch|hhmm }} · 今日新增 {{ stats.total }} 条 · 数据每日自动备份{% if fail_count %}<a class="status-alert" href="/sources">{{ fail_count }} 个源异常，点这里查看</a>{% endif %}
+    </div>
+    <div class="dots">
+      {% for d in dots %}<span class="dot {{ d.status or 'idle' }}" title="{{ d.name }} {{ '正常' if d.status == 'ok' else ('异常' if d.status == 'error' else '未跑过') }}"></span>{% endfor %}
+    </div>
+  </div>
 </div>
-<div class="cols">
-  <section class="feed">
-    <h2>最新动态</h2>
-    {% for a in articles %}
-    <article>
-      <a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
-      {% if a.member_count and a.member_count > 1 %}<span class="repost">另有 {{ a.member_count - 1 }} 家转载</span>{% endif %}
-      <div class="meta">{{ a.source_key }} · {{ a.published_at or a.fetched_at }} · {{ a.minerals|join('、') }} {{ a.types|join('、') }}</div>
-      {% if a.summary %}<p class="summary">{{ a.summary }}</p>{% endif %}
-    </article>
-    {% else %}
-    <p class="muted">暂无数据，请先运行：python -m crawler.main --once</p>
-    {% endfor %}
-  </section>
-  <aside>
-    <h2>矿价速览</h2>
-    <table class="prices">
-      {% for p in prices %}
-      <tr><td>{{ p.commodity }}<span class="ptype">{{ p.price_type }}</span></td>
-      <td class="num">{{ p.value }}<span class="ptype">{{ p.source_key }}</span></td>
-      <td class="{{ 'up' if (p.change_pct or 0) > 0 else 'down' }}">{{ '%+.2f%%'|format(p.change_pct or 0) }}</td></tr>
+<section class="hero">
+  <div class="container">
+    <form class="searchbox" method="get" action="/">
+      <input type="text" name="q" value="{{ q }}" placeholder="搜索新闻、政策、矿种，如：磷矿 政策" autocomplete="off">
+      <button type="submit">搜索</button>
+    </form>
+    {% if q %}
+    <div class="results-wrap">
+      <div class="search-meta">
+        <span>共 {{ results|length }} 条结果 · 关键词：{{ q }}</span>
+        <a href="/">清除</a>
+      </div>
+      {% if results %}
+      <div class="feed-inline">{% for a in results %}{{ ui.entry(a) }}{% endfor %}</div>
+      {% else %}
+      <p class="empty">没有找到匹配内容，试试其他关键词</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+<section class="page-body">
+  <div class="container">
+    <div class="stat-grid">
+      <div class="card stat-card">
+        <div class="stat-label">今日新增</div>
+        <div class="stat-value">{{ stats.total }}<span>条</span></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">新闻</div>
+        <div class="stat-value">{{ stats.by_board.get('news', 0) }}<span>篇</span></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">政策</div>
+        <div class="stat-value">{{ stats.by_board.get('policy', 0) }}<span>条</span></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">信息源</div>
+        <div class="stat-value">{{ sources_ok }}/{{ sources_total }}<span>正常</span></div>
+      </div>
+    </div>
+    <div class="section-title">今日行情</div>
+    <div class="price-grid">
+      {% for p in cards %}
+      <a class="card price-card" href="/prices">
+        <div class="pc-name">{{ p.commodity }}</div>
+        <div class="pc-value">{{ p.value|num }}</div>
+        <div class="pc-unit">{{ p.unit }}</div>
+        <div class="pc-pct">{{ ui.price_cell(p) }}</div>
+        <div class="pc-src">{{ p.source_label }}</div>
+      </a>
       {% endfor %}
-    </table>
-    <h2>最新政策</h2>
-    <ul class="policies">{% for a in policies %}<li><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></li>{% endfor %}</ul>
-  </aside>
-</div>
+    </div>
+    <div class="entry-grid">
+      <a class="card entry-card" href="/news">
+        <div class="ec-head"><span>新闻资讯</span><span class="ec-arrow">→</span></div>
+        <p>每日行业动态与政策早知道</p>
+        <div class="ec-foot">今日 {{ stats.by_board.get('news', 0) }} 条</div>
+      </a>
+      <a class="card entry-card" href="/prices">
+        <div class="ec-head"><span>矿价行情</span><span class="ec-arrow">→</span></div>
+        <p>全品种价格与走势</p>
+        <div class="ec-foot">{{ commodity_count }} 个品种</div>
+      </a>
+      <a class="card entry-card" href="/policy">
+        <div class="ec-head"><span>政策法规</span><span class="ec-arrow">→</span></div>
+        <p>国家与地方矿业政策</p>
+        <div class="ec-foot">今日 {{ stats.by_board.get('policy', 0) }} 条</div>
+      </a>
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -61,6 +61,9 @@ def test_prices_page(tmp_path):
     assert resp.status_code == 200
     assert "矿价行情" in resp.text
     assert "铜" in resp.text
+    assert "最新报价" in resp.text
+    assert 'id="chart-title"' in resp.text
+    assert 'id="chart"' in resp.text
 
 
 def test_price_api(tmp_path):

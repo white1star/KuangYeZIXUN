@@ -1,58 +1,141 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}矿价行情 · 矿业资讯站{% endblock %}
 {% block head %}<script src="/static/vendor/echarts.min.js"></script>{% endblock %}
 {% block content %}
-<h2>矿价行情</h2>
-<div class="chart-controls">
-  <select id="commodity">{% for c in commodities %}<option>{{ c }}</option>{% endfor %}</select>
-  <select id="ptype"></select>
-  <select id="days"><option value="7">近7天</option><option value="30" selected>近30天</option><option value="90">近90天</option></select>
-</div>
-<div id="chart" style="width:100%;height:360px;background:#fff;border:1px solid #e3e6eb;border-radius:8px"></div>
-<h2>最新报价</h2>
-<table class="prices wide">
-  <tr><th>品种</th><th>类型</th><th>最新价</th><th>涨跌</th><th>涨跌幅</th><th>日期</th><th>来源</th></tr>
-  {% for p in prices %}
-  <tr>
-    <td>{{ p.commodity }}</td><td>{{ p.price_type }}</td>
-    <td class="num">{{ p.value }} {{ p.unit }}</td>
-    <td class="{{ 'up' if (p.change or 0) > 0 else 'down' }}">{{ p.change if p.change is not none else '-' }}</td>
-    <td class="{{ 'up' if (p.change_pct or 0) > 0 else 'down' }}">{{ p.change_pct if p.change_pct is not none else '-' }}</td>
-    <td>{{ p.price_date }}</td><td>{{ p.source_key }}</td>
-  </tr>
-  {% endfor %}
-</table>
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">矿价行情</h1>
+    <p class="page-sub">实时追踪主要矿产品现货与期货价格动态</p>
+    <div class="card toolbar">
+      <label>品种
+        <select id="commodity">
+          {% for c in commodities %}<option value="{{ c }}" {{ 'selected' if c == commodity else '' }}>{{ c }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>类型
+        <select id="ptype">
+          <option value="">全部类型</option>
+          {% for t in type_map.get(commodity, []) %}<option value="{{ t }}" {{ 'selected' if t == ptype else '' }}>{{ t }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>周期
+        <select id="days">
+          <option value="7" {{ 'selected' if days == 7 else '' }}>近7天</option>
+          <option value="30" {{ 'selected' if days == 30 else '' }}>近30天</option>
+          <option value="90" {{ 'selected' if days == 90 else '' }}>近90天</option>
+        </select>
+      </label>
+    </div>
+    <div class="card chart-card">
+      <div class="card-head"><span id="chart-title">{{ commodity }} 价格走势 · {{ ptype or '全部类型' }} · 近{{ days }}天</span></div>
+      <div id="chart"></div>
+      <p class="empty" id="chart-empty" hidden>暂无数据</p>
+    </div>
+    <div class="card table-card">
+      <div class="card-head">最新报价</div>
+      <table class="prices wide">
+        <thead>
+          <tr><th>品种</th><th>类型</th><th class="num">最新价</th><th class="num">涨跌</th><th class="num">涨跌幅</th><th>日期</th><th>来源</th></tr>
+        </thead>
+        <tbody>
+          {% for p in prices %}
+          <tr>
+            <td>{{ p.commodity }}</td>
+            <td>{{ p.price_type }}</td>
+            <td class="num">{{ p.value|num }}</td>
+            <td class="num">{{ ui.change_cell(p) }}</td>
+            <td class="num">{{ ui.price_cell(p) }}</td>
+            <td>{{ p.price_date }}</td>
+            <td class="src">{{ p.source_label }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7"><p class="empty">暂无数据</p></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 <script>
-const chart = echarts.init(document.getElementById('chart'));
 const TYPE_MAP = {{ type_map|tojson }};
-const ptype = document.getElementById('ptype');
+const chartEl = document.getElementById('chart');
+const emptyEl = document.getElementById('chart-empty');
+const titleEl = document.getElementById('chart-title');
+const selCommodity = document.getElementById('commodity');
+const selPtype = document.getElementById('ptype');
+const selDays = document.getElementById('days');
+const chart = echarts.init(chartEl);
+
 function syncTypes() {
-  const c = document.getElementById('commodity').value;
-  ptype.innerHTML = '';
-  for (const t of (TYPE_MAP[c] || [])) {
+  const types = TYPE_MAP[selCommodity.value] || [];
+  selPtype.innerHTML = '<option value="">全部类型</option>';
+  for (const t of types) {
     const opt = document.createElement('option');
+    opt.value = t;
     opt.textContent = t;
-    ptype.appendChild(opt);
+    selPtype.appendChild(opt);
   }
 }
+
 async function load() {
-  const c = document.getElementById('commodity').value;
-  const d = document.getElementById('days').value;
+  const c = selCommodity.value;
+  const t = selPtype.value;
+  const d = selDays.value;
+  titleEl.textContent = c + ' 价格走势 · ' + (t || '全部类型') + ' · 近' + d + '天';
   let url = '/api/prices/' + encodeURIComponent(c) + '?days=' + d;
-  if (ptype.value) url += '&price_type=' + encodeURIComponent(ptype.value);
+  if (t) url += '&price_type=' + encodeURIComponent(t);
   const resp = await fetch(url);
   const data = await resp.json();
+  const points = data.points || [];
+  emptyEl.hidden = points.length > 0;
+  chartEl.style.display = points.length ? '' : 'none';
+  if (!points.length) return;
+  const values = points.map(p => p.value);
+  const lo = Math.min.apply(null, values);
+  const hi = Math.max.apply(null, values);
+  const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 1;
+  function roundTo(v, dir) {
+    const span = hi + pad - (lo - pad);
+    const mag = Math.pow(10, Math.floor(Math.log10(span / 4 || 1)));
+    return dir > 0 ? Math.ceil(v / mag) * mag : Math.floor(v / mag) * mag;
+  }
   chart.setOption({
-    title: { text: c + ' 近' + d + '天走势' },
     tooltip: { trigger: 'axis' },
-    grid: { left: 60, right: 20, top: 50, bottom: 40 },
-    xAxis: { type: 'category', data: data.points.map(p => p.price_date) },
-    yAxis: { type: 'value', scale: true },
-    series: [{ type: 'line', smooth: true, data: data.points.map(p => p.value) }]
+    grid: { left: 64, right: 24, top: 24, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: points.map(p => p.price_date),
+      axisLine: { lineStyle: { color: '#DFE6EA' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#6C7784', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      min: roundTo(lo - pad, -1),
+      max: roundTo(hi + pad, 1),
+      splitLine: { lineStyle: { color: '#EEF2F0' } },
+      axisLabel: { color: '#6C7784', fontSize: 11 }
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 5,
+      data: points.map(p => p.value),
+      lineStyle: { color: '#289048', width: 2 },
+      itemStyle: { color: '#289048' },
+      areaStyle: { color: 'rgba(40,144,72,0.08)' }
+    }]
   });
+  chart.resize();
 }
-document.getElementById('commodity').addEventListener('change', function () { syncTypes(); load(); });
-ptype.addEventListener('change', load);
-document.getElementById('days').addEventListener('change', load);
+
+selCommodity.addEventListener('change', function () { syncTypes(); load(); });
+selPtype.addEventListener('change', load);
+selDays.addEventListener('change', load);
+window.addEventListener('resize', function () { chart.resize(); });
 syncTypes();
 load();
 </script>

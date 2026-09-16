@@ -30,7 +30,8 @@ def last_runs(conn) -> list:
 
 
 def latest_articles(conn, limit=30, board=None) -> list:
-    sql = ("SELECT a.*, (SELECT member_count FROM article_clusters c WHERE c.id=a.cluster_id) AS member_count "
+    sql = ("SELECT a.*, (SELECT member_count FROM article_clusters c WHERE c.id=a.cluster_id) AS member_count, "
+           "(SELECT s.name FROM sources s WHERE s.key=a.source_key) AS source_name "
            "FROM articles a WHERE a.is_primary=1")
     params = []
     if board:
@@ -47,7 +48,8 @@ def latest_policies(conn, limit=8) -> list:
 
 def price_latest(conn, limit=20) -> list:
     rows = conn.execute(
-        "SELECT p.* FROM prices p JOIN "
+        "SELECT p.*, (SELECT s.name FROM sources s WHERE s.key=p.source_key) AS source_name "
+        "FROM prices p JOIN "
         "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type "
         "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices) r "
         "ON r.id=p.id WHERE r.rn=1 "
@@ -67,6 +69,42 @@ def price_series(conn, commodity, days=30, price_type=None) -> list:
         params.append(price_type)
     sql += ") WHERE rn=1 ORDER BY price_date"
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def price_overview(conn, commodities=None, limit=6) -> list:
+    sql = ("SELECT p.*, (SELECT s.name FROM sources s WHERE s.key=p.source_key) AS source_name "
+           "FROM prices p JOIN (SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity "
+           "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices")
+    params = []
+    if commodities:
+        marks = ",".join("?" for _ in commodities)
+        sql += f" WHERE commodity IN ({marks})"
+        params.extend(commodities)
+    sql += ") r ON r.id=p.id WHERE r.rn=1 ORDER BY p.commodity LIMIT ?"
+    params.append(limit)
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def source_dots(conn) -> list:
+    rows = conn.execute(
+        "SELECT s.key, s.name, r.status, r.finished_at FROM sources s LEFT JOIN crawl_runs r "
+        "ON r.id = (SELECT MAX(id) FROM crawl_runs WHERE source_key = s.key) "
+        "ORDER BY s.key").fetchall()
+    return [dict(r) for r in rows]
+
+
+def today_fail_count(conn) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) c FROM crawl_runs WHERE id IN "
+        "(SELECT MAX(id) FROM crawl_runs GROUP BY source_key) AND status='error'").fetchone()
+    return row["c"] if row else 0
+
+
+def last_fetch_time(conn) -> str:
+    row = conn.execute(
+        "SELECT MAX(finished_at) t FROM crawl_runs WHERE id IN "
+        "(SELECT MAX(id) FROM crawl_runs GROUP BY source_key)").fetchone()
+    return (row["t"] or "") if row else ""
 
 
 def commodity_types(conn) -> dict:
@@ -94,7 +132,8 @@ def search_articles(conn, q="", mineral=None, board=None, source=None,
                     date_from=None, date_to=None, limit=100) -> list:
     where = ["a.is_primary=1"]
     params = []
-    sql = ("SELECT a.*, (SELECT member_count FROM article_clusters c WHERE c.id=a.cluster_id) AS member_count "
+    sql = ("SELECT a.*, (SELECT member_count FROM article_clusters c WHERE c.id=a.cluster_id) AS member_count, "
+           "(SELECT s.name FROM sources s WHERE s.key=a.source_key) AS source_name "
            "FROM articles a ")
     text = (q or "").strip()
     if len(text) >= 3:

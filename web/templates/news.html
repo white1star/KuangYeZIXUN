@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}新闻资讯 · 矿业资讯站{% endblock %}
+{% block content %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">新闻资讯</h1>
+    <p class="page-sub">每日矿业行业动态与市场快讯</p>
+    <div class="pills">
+      <a class="pill {{ 'active' if not mineral else '' }}" href="/news">全部</a>
+      {% for m in minerals %}<a class="pill {{ 'active' if m == mineral else '' }}" href="/news?mineral={{ m }}">{{ m }}</a>{% endfor %}
+    </div>
+    <div class="card feed-card">
+      {% for a in articles %}{{ ui.entry(a) }}{% else %}
+      <p class="empty">没有找到相关新闻，试试其他矿种</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

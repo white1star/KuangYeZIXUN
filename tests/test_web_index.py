@@ -67,9 +67,28 @@ def test_index_renders(tmp_path):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "今日新增" in resp.text
-    assert "河北开展磷矿安全生产整治" in resp.text
-    assert "矿价速览" in resp.text
+    assert "搜索" in resp.text
     assert "铜" in resp.text
+    assert "新闻资讯" in resp.text
+
+
+def test_index_search_hits(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    client = TestClient(create_app(db))
+    resp = client.get("/?q=磷矿")
+    assert resp.status_code == 200
+    assert "河北开展磷矿安全生产整治" in resp.text
+    assert "共" in resp.text
+
+
+def test_index_search_empty(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    client = TestClient(create_app(db))
+    resp = client.get("/?q=不存在词")
+    assert resp.status_code == 200
+    assert "没有找到匹配内容" in resp.text
 
 
 def test_index_price_multi_source_dedup(tmp_path):
@@ -78,9 +97,9 @@ def test_index_price_multi_source_dedup(tmp_path):
     client = TestClient(create_app(db))
     resp = client.get("/")
     assert resp.status_code == 200
-    assert resp.text.count('class="num"') == 1
-    assert "71100.0" in resp.text
-    assert "71000.0" not in resp.text
+    assert resp.text.count('pc-value') == 1
+    assert "71,100" in resp.text
+    assert "71,000" not in resp.text
     assert ">ccmn<" in resp.text
     assert ">sina<" not in resp.text
 
@@ -91,8 +110,8 @@ def test_index_price_refetched_wins(tmp_path):
     client = TestClient(create_app(db))
     resp = client.get("/")
     assert resp.status_code == 200
-    assert resp.text.count('class="num"') == 1
-    assert "71050.0" in resp.text
-    assert "71100.0" not in resp.text
+    assert resp.text.count('pc-value') == 1
+    assert "71,050" in resp.text
+    assert "71,100" not in resp.text
     assert ">sina<" in resp.text
     assert ">ccmn<" not in resp.text

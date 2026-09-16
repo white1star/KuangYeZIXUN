@@ -1,22 +1,26 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}政策法规 · 矿业资讯站{% endblock %}
 {% block content %}
-<h2>政策法规</h2>
-<form method="get" class="filterbar">
-  <select name="source">
-    <option value="">全部机关</option>
-    {% for s in sources %}<option value="{{ s.key }}" {{ 'selected' if s.key == source else '' }}>{{ s.name }}</option>{% endfor %}
-  </select>
-  <input name="region" value="{{ region }}" placeholder="地区（如 河北）">
-  <button type="submit">筛选</button>
-</form>
-{% for a in articles %}
-<article class="card">
-  <a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
-  {% if a.member_count and a.member_count > 1 %}<span class="repost">另有 {{ a.member_count - 1 }} 家转载</span>{% endif %}
-  <div class="meta">{{ a.source_key }} · {{ a.published_at or a.fetched_at }} · {{ a.regions|join('、') }} {{ a.types|join('、') }}</div>
-  {% if a.summary %}<p class="summary">{{ a.summary }}</p>{% endif %}
-</article>
-{% else %}
-<p class="muted">没有符合条件的政策。</p>
-{% endfor %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">政策法规</h1>
+    <p class="page-sub">汇聚矿产行业最新政策、法规及通知公告</p>
+    <div class="card filter-card">
+      <form class="filterbar" method="get" action="/policy">
+        <select name="source">
+          <option value="">全部机关</option>
+          {% for s in sources %}<option value="{{ s.key }}" {{ 'selected' if s.key == source else '' }}>{{ s.name }}</option>{% endfor %}
+        </select>
+        <input name="region" value="{{ region }}" placeholder="地区，如 河北">
+        <button class="btn-primary" type="submit">筛选</button>
+      </form>
+    </div>
+    <div class="card feed-card">
+      {% for a in articles %}{{ ui.entry(a) }}{% else %}
+      <p class="empty">没有符合条件的政策，试试其他机关或地区</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -11,6 +11,7 @@ def seed(db):
         ("河北开展磷矿安全生产整治", "policy", ["磷矿"], ["河北"], ["政策"]),
         ("云南铜矿项目投产", "news", ["铜"], ["云南"], ["企业"]),
         ("今日铜价小幅上涨", "news", ["铜"], [], ["价格"]),
+        ("铁矿石港口库存下降", "news", ["铁矿石"], [], ["市场"]),
     ]
     for i, (title, board, minerals, regions, types) in enumerate(rows):
         item = {"url": f"https://e.com/{i}", "title": title, "summary": title + "的摘要",
@@ -33,27 +34,28 @@ def test_policy_page_filters_region(tmp_path):
     assert "云南铜矿项目投产" not in resp.text
 
 
-def test_search_fts_and_like(tmp_path):
+def test_news_page_lists_only_news(tmp_path):
     db = tmp_path / "t.db"
     seed(db)
     client = TestClient(create_app(db))
-    r1 = client.get("/search?q=磷矿")
-    assert "河北开展磷矿安全生产整治" in r1.text
-    assert "云南铜矿项目投产" not in r1.text
-    r2 = client.get("/search?q=铜价")
-    assert "今日铜价小幅上涨" in r2.text
-    r4 = client.get("/search?q=磷矿安全")
-    assert "河北开展磷矿安全生产整治" in r4.text
-    r3 = client.get("/search?mineral=铜")
-    assert "云南铜矿项目投产" in r3.text
-    assert "河北开展磷矿安全生产整治" not in r3.text
-
-
-def test_search_mineral_options_from_article_tags(tmp_path):
-    db = tmp_path / "t.db"
-    seed(db)
-    client = TestClient(create_app(db))
-    resp = client.get("/search")
+    resp = client.get("/news")
     assert resp.status_code == 200
-    assert 'value="磷矿"' in resp.text
-    assert 'value="黄金"' not in resp.text
+    assert "云南铜矿项目投产" in resp.text
+    assert "今日铜价小幅上涨" in resp.text
+    assert "铁矿石港口库存下降" in resp.text
+    assert "河北开展磷矿安全生产整治" not in resp.text
+    assert 'href="/news?mineral=煤炭"' in resp.text
+
+
+def test_news_page_filters_mineral(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    client = TestClient(create_app(db))
+    resp = client.get("/news?mineral=铜")
+    assert "云南铜矿项目投产" in resp.text
+    assert "今日铜价小幅上涨" in resp.text
+    assert "铁矿石港口库存下降" not in resp.text
+    assert "河北开展磷矿安全生产整治" not in resp.text
+    resp2 = client.get("/news?mineral=铁矿石")
+    assert "铁矿石港口库存下降" in resp2.text
+    assert "云南铜矿项目投产" not in resp2.text

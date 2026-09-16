@@ -10,11 +10,53 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from crawler import store
-from crawler.config import load_settings
+from crawler.config import load_settings, load_tags
 from web import queries
 
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
+
+HOME_COMMODITIES = ["动力煤", "焦煤", "铁矿石", "铜", "黄金", "磷矿石"]
+
+
+def _fmt_num(value) -> str:
+    if value is None:
+        return "—"
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if num.is_integer():
+        return f"{int(num):,}"
+    return f"{num:,.2f}".rstrip("0").rstrip(".")
+
+
+def _fmt_pct(value) -> str:
+    if value is None:
+        return ""
+    return f"{float(value):+.2f}%"
+
+
+def _fmt_time(value) -> str:
+    text = (value or "").strip()
+    return text[11:16] if len(text) >= 16 else (text or "—")
+
+
+def _change_pct(row) -> float | None:
+    if row.get("change_pct") is not None:
+        return float(row["change_pct"])
+    change = row.get("change")
+    value = row.get("value")
+    if change is not None and value is not None and (value - change) > 0:
+        return round(change / (value - change) * 100, 2)
+    return None
+
+
+def _decorate_price(row: dict) -> dict:
+    row = dict(row)
+    row["pct"] = _change_pct(row)
+    row["source_label"] = row.get("source_name") or row.get("source_key") or ""
+    return row
 
 
 def create_app(db_path=None) -> FastAPI:
@@ -23,6 +65,10 @@ def create_app(db_path=None) -> FastAPI:
     app = FastAPI(title="矿业资讯站")
     app.mount("/static", StaticFiles(directory=str(WEB / "static")), name="static")
     templates = Jinja2Templates(directory=str(WEB / "templates"))
+    templates.env.filters["num"] = _fmt_num
+    templates.env.filters["pct"] = _fmt_pct
+    templates.env.filters["hhmm"] = _fmt_time
+    minerals = list(load_tags().get("minerals", {}).keys())
 
     def get_conn():
         conn = store.connect(db_file)
@@ -34,27 +80,63 @@ def create_app(db_path=None) -> FastAPI:
         return {"ok": True}
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request):
+    def index(request: Request, q: str = ""):
         conn = get_conn()
         try:
+            stats = queries.today_stats(conn)
+            dots = queries.source_dots(conn)
+            ok_count = sum(1 for d in dots if d["status"] == "ok")
+            cards = [_decorate_price(r) for r in queries.price_overview(conn, commodities=HOME_COMMODITIES)]
+            if len(cards) < 6:
+                seen = {c["commodity"] for c in cards}
+                for row in queries.price_overview(conn, limit=10):
+                    if row["commodity"] in seen:
+                        continue
+                    cards.append(_decorate_price(row))
+                    if len(cards) == 6:
+                        break
             ctx = {
-                "stats": queries.today_stats(conn),
-                "runs": queries.last_runs(conn),
-                "articles": queries.latest_articles(conn, limit=40),
-                "prices": queries.price_latest(conn, limit=18),
-                "policies": queries.latest_policies(conn, limit=6),
+                "q": q.strip(),
+                "results": queries.search_articles(conn, q=q, limit=60) if q.strip() else [],
+                "stats": stats,
+                "dots": dots,
+                "sources_ok": ok_count,
+                "sources_total": len(dots),
+                "fail_count": queries.today_fail_count(conn),
+                "last_fetch": queries.last_fetch_time(conn),
+                "cards": cards,
+                "commodity_count": len(queries.distinct_commodities(conn)),
             }
         finally:
             conn.close()
         return templates.TemplateResponse(request, "index.html", ctx)
 
-    @app.get("/prices", response_class=HTMLResponse)
-    def prices_page(request: Request):
+    @app.get("/news", response_class=HTMLResponse)
+    def news_page(request: Request, mineral: str = ""):
         conn = get_conn()
         try:
-            ctx = {"commodities": queries.distinct_commodities(conn),
+            articles = queries.search_articles(conn, board="news",
+                                               mineral=mineral or None, limit=120)
+        finally:
+            conn.close()
+        return templates.TemplateResponse(request, "news.html", {
+            "articles": articles, "mineral": mineral, "minerals": minerals})
+
+    @app.get("/prices", response_class=HTMLResponse)
+    def prices_page(request: Request, commodity: str = "", price_type: str = "", days: int = 30):
+        conn = get_conn()
+        try:
+            commodity_list = queries.distinct_commodities(conn)
+            if commodity not in commodity_list:
+                commodity = commodity_list[0] if commodity_list else ""
+            if days not in (7, 30, 90):
+                days = 30
+            ctx = {"commodities": commodity_list,
+                   "commodity": commodity,
+                   "ptype": price_type,
+                   "days": days,
                    "type_map": queries.commodity_types(conn),
-                   "prices": queries.price_latest(conn, limit=80)}
+                   "prices": [_decorate_price(r) for r in queries.price_latest(conn, limit=80)]}
         finally:
             conn.close()
         return templates.TemplateResponse(request, "prices.html", ctx)
@@ -84,31 +166,19 @@ def create_app(db_path=None) -> FastAPI:
         return templates.TemplateResponse(request, "policy.html", {
             "articles": articles, "region": region, "source": source, "sources": sources})
 
-    @app.get("/search", response_class=HTMLResponse)
-    def search_page(request: Request, q: str = "", mineral: str = "",
-                    board: str = "", source: str = ""):
-        conn = get_conn()
-        try:
-            results = queries.search_articles(conn, q=q, mineral=mineral or None,
-                                              board=board or None, source=source or None,
-                                              limit=100)
-            ctx = {"results": results, "q": q, "mineral": mineral, "board": board,
-                   "source": source, "minerals": queries.distinct_minerals(conn),
-                   "sources": queries.source_health(conn)}
-        finally:
-            conn.close()
-        return templates.TemplateResponse(request, "search.html", ctx)
-
     @app.get("/sources", response_class=HTMLResponse)
     def sources_page(request: Request):
         conn = get_conn()
         try:
             health = queries.source_health(conn)
+            ok_count = sum(1 for h in health if h["status"] == "ok")
+            err_count = sum(1 for h in health if h["status"] == "error")
         finally:
             conn.close()
         logs = sorted(settings.logs_dir.glob("crawler_*.log"), reverse=True)[:7]
         return templates.TemplateResponse(request, "sources.html", {
-            "health": health, "logs": [p.name for p in logs]})
+            "health": health, "logs": [p.name for p in logs],
+            "ok_count": ok_count, "err_count": err_count})
 
     @app.post("/admin/run_crawl")
     def run_crawl():
