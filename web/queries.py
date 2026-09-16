@@ -49,7 +49,7 @@ def price_latest(conn, limit=20) -> list:
     rows = conn.execute(
         "SELECT p.* FROM prices p JOIN "
         "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type "
-        "ORDER BY price_date DESC, id DESC) rn FROM prices) r "
+        "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices) r "
         "ON r.id=p.id WHERE r.rn=1 "
         "ORDER BY p.commodity LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]
