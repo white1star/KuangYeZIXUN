@@ -46,6 +46,14 @@ def latest_policies(conn, limit=8) -> list:
     return latest_articles(conn, limit=limit, board="policy")
 
 
+def latest_by_type(conn, type_key, limit=5) -> list:
+    rows = conn.execute(
+        "SELECT a.*, (SELECT s.name FROM sources s WHERE s.key=a.source_key) AS source_name "
+        "FROM articles a WHERE a.is_primary=1 AND a.types LIKE ? ORDER BY a.id DESC LIMIT ?",
+        (f'%"{type_key}"%', limit)).fetchall()
+    return [_decode(r) for r in rows]
+
+
 def price_latest(conn, limit=20) -> list:
     rows = conn.execute(
         "SELECT p.*, (SELECT s.name FROM sources s WHERE s.key=p.source_key) AS source_name "

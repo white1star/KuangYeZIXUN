@@ -17,6 +17,10 @@
       <input type="text" name="q" value="{{ q }}" placeholder="搜索新闻、政策、矿种，如：磷矿 政策" autocomplete="off">
       <button type="submit">搜索</button>
     </form>
+    <div class="hot-words">
+      <span>热门搜索：</span>
+      {% for kw in ["探矿权", "磷矿", "绿色矿山", "焦煤", "萤石", "尾矿库"] %}<a href="/?q={{ kw|urlencode }}">{{ kw }}</a>{% endfor %}
+    </div>
     {% if q %}
     <div class="results-wrap">
       <div class="search-meta">
@@ -50,6 +54,40 @@
       <div class="card stat-card">
         <div class="stat-label">信息源</div>
         <div class="stat-value">{{ sources_ok }}/{{ sources_total }}<span>正常</span></div>
+      </div>
+    </div>
+    <div class="home-grid">
+      <div class="card mini-card">
+        <div class="mini-head">
+          <span>新矿山动态</span>
+          <a class="mini-more" href="/news?type={{ '新矿山'|urlencode }}">查看全部 →</a>
+        </div>
+        {% for a in new_mines %}
+        <a class="mine-item" href="{{ a.url }}" target="_blank" rel="noopener">
+          <div class="mine-title">{{ a.title }}</div>
+          <div class="mini-meta">
+            <span>{{ a.source_name or a.source_key }}</span>
+            <span>{{ (a.published_at or a.fetched_at)[:10] }}</span>
+            {% for m in a.minerals %}<span class="chip chip-mineral">{{ m }}</span>{% endfor %}
+          </div>
+        </a>
+        {% else %}
+        <p class="empty">暂无新矿山动态</p>
+        {% endfor %}
+      </div>
+      <div class="card mini-card">
+        <div class="mini-head">
+          <span>今日要闻</span>
+          <a class="mini-more" href="/news">更多 →</a>
+        </div>
+        {% for a in headlines %}
+        <a class="headline-item" href="{{ a.url }}" target="_blank" rel="noopener">
+          <span class="headline-title">{{ a.title }}</span>
+          <span class="headline-date">{{ (a.published_at or a.fetched_at)[:10] }}</span>
+        </a>
+        {% else %}
+        <p class="empty">暂无要闻</p>
+        {% endfor %}
       </div>
     </div>
     <div class="entry-grid">
