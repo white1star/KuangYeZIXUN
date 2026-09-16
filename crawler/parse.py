@@ -76,6 +76,14 @@ def parse_list(html: str, cfg: dict, base_url: str) -> list:
         published_at = ""
         if lst.get("date"):
             dnode = node.select_one(lst["date"])
+            if dnode is None and lst.get("date_sibling"):
+                sib = node.find_next_sibling()
+                hops = 0
+                while dnode is None and sib is not None and hops < 2:
+                    if hasattr(sib, "select_one"):
+                        dnode = sib.select_one(lst["date"])
+                    sib = sib.find_next_sibling()
+                    hops += 1
             if dnode is not None:
                 published_at = parse_date(dnode.get_text(" ", strip=True))
         if not published_at and lst.get("date_regex"):

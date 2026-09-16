@@ -94,3 +94,25 @@ def test_extract_summary_truncates_and_collapses():
 def test_extract_summary_without_selector():
     s = extract_summary("<html><body><p>正文一句话</p></body></html>", {}, max_chars=200)
     assert s == "正文一句话"
+
+
+SIBLING_HTML = """
+<html><body><div id="list">
+<h4><a href="/a/1.html">带兄弟日期的标题</a></h4>
+<div class="info"><span class="time">2026/9/16 7:51:00</span></div>
+<h4><a href="/a/2.html">没有日期的标题</a></h4>
+</div></body></html>
+"""
+
+
+def test_parse_list_date_sibling():
+    cfg = {"list": {"item": "div#list h4", "title": "a", "date": "span.time", "date_sibling": True}}
+    items = parse_list(SIBLING_HTML, cfg, "https://e.com/")
+    assert items[0].published_at == "2026-09-16"
+    assert items[1].published_at == ""
+
+
+def test_parse_list_date_without_sibling_flag():
+    cfg = {"list": {"item": "div#list h4", "title": "a", "date": "span.time"}}
+    items = parse_list(SIBLING_HTML, cfg, "https://e.com/")
+    assert items[0].published_at == ""

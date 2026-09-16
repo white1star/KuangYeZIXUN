@@ -5,6 +5,8 @@ url: https://www.cnmn.com.cn/ShowNewsList.aspx?id=43
 list:
   item: "div#tab11-1 h4"
   title: "a"
+  date: "span.time"
+  date_sibling: true
 detail:
   enabled: false
 pages:
