@@ -166,12 +166,39 @@ def create_app(db_path=None) -> FastAPI:
             health = queries.source_health(conn)
             ok_count = sum(1 for h in health if h["status"] == "ok")
             err_count = sum(1 for h in health if h["status"] == "error")
+            feedback = queries.latest_feedback(conn)
         finally:
             conn.close()
         logs = sorted(settings.logs_dir.glob("crawler_*.log"), reverse=True)[:7]
         return templates.TemplateResponse(request, "sources.html", {
             "health": health, "logs": [p.name for p in logs],
-            "ok_count": ok_count, "err_count": err_count})
+            "ok_count": ok_count, "err_count": err_count, "feedback": feedback})
+
+    @app.post("/feedback")
+    async def submit_feedback(request: Request):
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        content = str(data.get("content") or "").strip()
+        if not content:
+            return JSONResponse({"ok": False, "message": "内容不能为空"}, status_code=400)
+        if len(content) > 500:
+            return JSONResponse({"ok": False, "message": "内容太长（最多500字）"}, status_code=400)
+        contact = str(data.get("contact") or "").strip()[:100]
+        page = str(data.get("page") or "").strip()[:300]
+        conn = get_conn()
+        try:
+            conn.execute(
+                "INSERT INTO feedback(content,contact,page,created_at) VALUES(?,?,?,?)",
+                (content, contact, page, store.now_iso()),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        return {"ok": True}
 
     @app.post("/admin/run_crawl")
     def run_crawl():

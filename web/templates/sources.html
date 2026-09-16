@@ -35,6 +35,22 @@
         </tbody>
       </table>
     </div>
+    <div class="card feedback-card">
+      <div class="card-head">用户反馈</div>
+      {% if feedback %}
+      <ul class="feedback-list">
+        {% for f in feedback %}
+        <li>
+          <span class="fb-time">{{ f.created_at }}</span>
+          <b class="fb-who">{{ f.contact or '匿名' }}</b>
+          <span class="fb-text" title="{{ f.content }}">{{ f.content[:120] }}{{ '…' if f.content|length > 120 else '' }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty">暂无反馈</p>
+      {% endif %}
+    </div>
     <div class="card log-card">
       <div class="card-head">最近日志</div>
       <ul class="log-list">{% for name in logs %}<li><a href="/admin/logs/{{ name }}">{{ name }}</a></li>{% endfor %}</ul>

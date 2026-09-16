@@ -152,6 +152,13 @@ def search_articles(conn, q="", mineral=None, board=None, source=None,
     return [_decode(r) for r in conn.execute(sql, params).fetchall()]
 
 
+def latest_feedback(conn, limit=20) -> list:
+    rows = conn.execute(
+        "SELECT id, content, contact, page, created_at FROM feedback ORDER BY id DESC LIMIT ?",
+        (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 def source_health(conn) -> list:
     rows = conn.execute(
         "SELECT s.key, s.name, s.board, s.enabled, r.status, r.finished_at, r.items_found, r.items_new, r.error "
