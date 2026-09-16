@@ -92,7 +92,7 @@ def create_app(db_path=None) -> FastAPI:
                                               board=board or None, source=source or None,
                                               limit=100)
             ctx = {"results": results, "q": q, "mineral": mineral, "board": board,
-                   "source": source, "commodities": queries.distinct_commodities(conn),
+                   "source": source, "minerals": queries.distinct_minerals(conn),
                    "sources": queries.source_health(conn)}
         finally:
             conn.close()

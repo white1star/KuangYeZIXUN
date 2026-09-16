@@ -35,7 +35,7 @@ E:\矿_news\
 │   ├── app.py                   FastAPI 应用（python -m web.app 启动）
 │   ├── queries.py               页面查询
 │   ├── templates\*.html         Jinja2 模板
-│   └── static\                  样式/app.js/vendor/echarts.min.js
+│   └── static\                  样式/style.css、vendor/echarts.min.js
 ├── scripts\
 │   ├── backup.py                每日备份（保留30天）
 │   ├── watchdog.py              健康检查+自动拉起
@@ -87,7 +87,7 @@ E:\矿_news\
 
 | 页面 | 地址 | 用途 |
 |---|---|---|
-| 首页 | `/` | 今日新增条数 + 三次抓取状态灯 + 最新动态 + 矿价速览 + 最新政策 |
+| 首页 | `/` | 今日新增条数 + 每个源最近一轮的状态点（绿=成功、红=失败，悬停看详情） + 最新动态 + 矿价速览 + 最新政策 |
 | 行情 | `/prices` | 按品种最新价/涨跌/涨跌幅/日期/来源，点击品种看 7/30/90 天走势图 |
 | 政策 | `/policy` | 按发布机关/地区筛选，时间倒序 |
 | 搜索 | `/search` | 关键词 + 矿种/板块/来源组合筛选（FTS5，万级数据 <1 秒） |
@@ -179,7 +179,7 @@ python -m crawler.main --once
 ### 6.1 某个源抓取失败
 
 1. 打开源健康页 `/sources`，看失败源的错误信息与抓到条数
-2. 看 `logs\snapshots\` 下该源的 HTML 快照（失败时自动保存，每源保留最近 3 份），用浏览器打开对照页面结构
+2. 看 `logs\snapshots\` 下该源的 HTML 快照（抓取失败且已拿到响应体时自动保存原始响应快照，连接级失败无快照，每个源保留最近 3 份），用浏览器打开对照页面结构
 3. 改 `config\sources\<key>.yaml` 选择器（参见第 5 节教程）
 4. 跑 `python -m pytest tests/test_sources_news.py -v`（价格源跑 `tests/test_price_html_sources.py`）确认离线样本通过
 5. `python -m crawler.main --once` 验证真实抓取
@@ -206,11 +206,11 @@ python -m crawler.main --once
 python -m scripts.acceptance
 ```
 
-检查 4 项：今日文章数 ≥ 1、最近一轮源成功率 ≥ 80%、价格品种 ≥ 12、搜索响应 < 1000ms；未通过项会打印明细（退出码非 0）。处理建议：源失败 → 按 6.1；价格品种不足 → 补源或核对 `commodity_map` 品种映射。
+检查 4 项：今日文章数 ≥ 1、最近一轮源成功率 ≥ 90%、价格品种 ≥ 12、搜索响应 < 1000ms；未通过项会打印明细（退出码非 0）。处理建议：源失败 → 按 6.1；价格品种不足 → 补源或核对 `commodity_map` 品种映射。
 
 ### 6.5 其他
 
-- 抓取似乎没跑：计划任务默认"错过时间后尽快补跑"，但电脑当天未开机则不会补；手动 `python -m crawler.main --once`
+- 抓取似乎没跑：错过时点的抓取任务会在电脑可用后尽快自动补跑；网页服务在用户登录时自启；手动排查可跑 `python -m crawler.main --once`
 - 重复文章：去重阈值在 `config/settings.yaml` 的 `dedup_threshold`（默认 0.85，标题相似度）
 - 全部测试：`python -m pytest`（源站改版时先跑离线测试定位问题）
 

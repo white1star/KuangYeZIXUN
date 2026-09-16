@@ -74,6 +74,13 @@ def distinct_commodities(conn) -> list:
             conn.execute("SELECT DISTINCT commodity FROM prices ORDER BY commodity").fetchall()]
 
 
+def distinct_minerals(conn) -> list:
+    rows = conn.execute(
+        "SELECT DISTINCT je.value AS m FROM articles a, json_each(a.minerals) je "
+        "WHERE a.is_primary=1 ORDER BY m").fetchall()
+    return [r["m"] for r in rows]
+
+
 def search_articles(conn, q="", mineral=None, board=None, source=None,
                     date_from=None, date_to=None, limit=100) -> list:
     where = ["a.is_primary=1"]

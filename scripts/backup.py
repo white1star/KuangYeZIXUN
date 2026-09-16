@@ -1,4 +1,4 @@
-import shutil
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -8,7 +8,14 @@ def run_backup(db_path, backup_dir, keep_days=30) -> Path:
     backup_dir = Path(backup_dir)
     backup_dir.mkdir(parents=True, exist_ok=True)
     target = backup_dir / f"news_{datetime.now().strftime('%Y%m%d')}.db"
-    shutil.copy2(db_path, target)
+    src = sqlite3.connect(str(db_path))
+    dst = sqlite3.connect(str(target))
+    try:
+        with dst:
+            src.backup(dst)
+    finally:
+        src.close()
+        dst.close()
     cutoff = datetime.now() - timedelta(days=keep_days)
     for f in backup_dir.glob("news_*.db"):
         try:

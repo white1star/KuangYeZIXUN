@@ -9,13 +9,14 @@ def run_checks(settings=None) -> list:
     settings = settings or load_settings()
     conn = store.connect(settings.db_path)
     try:
+        store.init_db(conn)
         checks = []
         stats = queries.today_stats(conn)
         checks.append(("今日文章数 ≥ 1", stats["total"] >= 1, str(stats["total"])))
-        health = queries.source_health(conn)
+        health = [h for h in queries.source_health(conn) if h["status"] != "running"]
         ok = [h for h in health if h["status"] == "ok"]
         ratio = (len(ok) / len(health)) if health else 0.0
-        checks.append(("最近一轮源成功率 ≥ 80%", ratio >= 0.8, f"{len(ok)}/{len(health)}"))
+        checks.append(("最近一轮源成功率 ≥ 90%", ratio >= 0.9, f"{len(ok)}/{len(health)}"))
         commodities = queries.distinct_commodities(conn)
         checks.append(("价格品种 ≥ 12", len(commodities) >= 12, str(len(commodities))))
         start = time.time()

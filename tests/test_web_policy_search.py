@@ -17,6 +17,8 @@ def seed(db):
                 "source_key": "mnr", "published_at": "2026-09-15"}
         cls = {"board": board, "minerals": minerals, "regions": regions, "types": types}
         store.insert_article(conn, item, cls, f"u{i}", f"t{i}")
+    store.upsert_prices(conn, [{"commodity": "黄金", "price_type": "现货", "value": 560.0,
+                                "price_date": "2026-09-15", "source_key": "sina"}])
     conn.commit()
     conn.close()
 
@@ -45,3 +47,13 @@ def test_search_fts_and_like(tmp_path):
     r3 = client.get("/search?mineral=铜")
     assert "云南铜矿项目投产" in r3.text
     assert "河北开展磷矿安全生产整治" not in r3.text
+
+
+def test_search_mineral_options_from_article_tags(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    client = TestClient(create_app(db))
+    resp = client.get("/search")
+    assert resp.status_code == 200
+    assert 'value="磷矿"' in resp.text
+    assert 'value="黄金"' not in resp.text

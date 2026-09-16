@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -29,7 +30,10 @@ def test_netsh_and_powercfg():
 
 def test_backup_creates_and_prunes(tmp_path):
     db = tmp_path / "news.db"
-    db.write_text("x", encoding="utf-8")
+    src = sqlite3.connect(str(db))
+    src.execute("CREATE TABLE t(x INTEGER)")
+    src.execute("INSERT INTO t VALUES (1)")
+    src.commit()
     bdir = tmp_path / "backup"
     bdir.mkdir()
     old = bdir / "news_20200101.db"
@@ -37,6 +41,12 @@ def test_backup_creates_and_prunes(tmp_path):
     target = backup.run_backup(db, bdir, keep_days=30)
     assert target.exists()
     assert target.name == f"news_{datetime.now().strftime('%Y%m%d')}.db"
+    dst = sqlite3.connect(str(target))
+    try:
+        assert dst.execute("SELECT x FROM t").fetchone()[0] == 1
+    finally:
+        dst.close()
+        src.close()
     assert not old.exists()
 
 

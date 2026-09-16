@@ -5,7 +5,7 @@
   <input name="q" value="{{ q }}" placeholder="关键词（如：磷矿 政策）">
   <select name="mineral">
     <option value="">全部矿种</option>
-    {% for c in commodities %}<option value="{{ c }}" {{ 'selected' if c == mineral else '' }}>{{ c }}</option>{% endfor %}
+    {% for c in minerals %}<option value="{{ c }}" {{ 'selected' if c == mineral else '' }}>{{ c }}</option>{% endfor %}
   </select>
   <select name="board">
     <option value="">全部板块</option>
