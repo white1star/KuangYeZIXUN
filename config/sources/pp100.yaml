@@ -14,6 +14,8 @@ urls:
   - https://www.100ppi.com/mprice/plist-1-870-1.html
 price_type: 现货
 unit: 元/吨
+unit_map:
+  钨: 元/千克
 table:
   row: "table tr"
   cell: "td"
