@@ -23,7 +23,7 @@
     <table class="prices">
       {% for p in prices %}
       <tr><td>{{ p.commodity }}<span class="ptype">{{ p.price_type }}</span></td>
-      <td class="num">{{ p.value }}</td>
+      <td class="num">{{ p.value }}<span class="ptype">{{ p.source_key }}</span></td>
       <td class="{{ 'up' if (p.change_pct or 0) > 0 else 'down' }}">{{ '%+.2f%%'|format(p.change_pct or 0) }}</td></tr>
       {% endfor %}
     </table>

@@ -48,8 +48,9 @@ def latest_policies(conn, limit=8) -> list:
 def price_latest(conn, limit=20) -> list:
     rows = conn.execute(
         "SELECT p.* FROM prices p JOIN "
-        "(SELECT commodity, price_type, MAX(price_date) d FROM prices GROUP BY commodity, price_type) m "
-        "ON p.commodity=m.commodity AND p.price_type=m.price_type AND p.price_date=m.d "
+        "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type "
+        "ORDER BY price_date DESC, id DESC) rn FROM prices) r "
+        "ON r.id=p.id WHERE r.rn=1 "
         "ORDER BY p.commodity LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]
 
