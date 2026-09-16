@@ -36,6 +36,22 @@ def test_similarity_edges():
     assert dedup.similarity("河北开展磷矿安全生产整治", "云南铜矿项目投产") < 0.2
 
 
+def test_core_title_whitelist_decoration():
+    assert dedup.core_title("（转载）河北开展磷矿安全生产整治") == "河北开展磷矿安全生产整治"
+    assert dedup.core_title("转载：河北开展磷矿安全生产整治") == "河北开展磷矿安全生产整治"
+    assert dedup.core_title("铜价破位（来源：上海有色网）") == "铜价破位"
+    assert dedup.core_title("铜价上涨（2026年展望上篇）") == "铜价上涨（2026年展望上篇）"
+
+
+def test_similarity_reprint_prefix():
+    assert dedup.similarity("（转载）河北开展磷矿安全生产整治", "河北开展磷矿安全生产整治") >= 0.85
+    assert dedup.similarity("转载：河北开展磷矿安全生产整治", "河北开展磷矿安全生产整治") >= 0.85
+
+
+def test_similarity_part_titles_not_merged():
+    assert dedup.similarity("铜价上涨（2026年展望上篇）", "铜价上涨（2026年展望下篇）") < 0.85
+
+
 def _article(url, title):
     return {"url": url, "title": title, "summary": "", "source_key": "a",
             "published_at": "", "classification": {"board": "news", "minerals": [], "regions": [], "types": []}}

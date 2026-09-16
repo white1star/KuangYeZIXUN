@@ -8,7 +8,10 @@ TRACKING = {"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content
             "spm", "share_token", "from"}
 DECOR = [
     re.compile(r"^[【\[][^】\]]{1,12}[】\]]"),
-    re.compile(r"[（(][^）)]{0,20}[）)]$"),
+    re.compile(r"^(?:转载|转发)[：:]"),
+    re.compile(r"^[（(](?:转载|转发)[）)]"),
+    re.compile(r"[（(](?:附全文|全文|附视频|视频|图集|图解|名单|详情|链接|原文|点击查看|阅读原文)[）)]$"),
+    re.compile(r"[（(]来源[：:][^）)]{1,20}[）)]$"),
     re.compile(r"^[|｜\-—\s]+|[|｜\-—\s]+$"),
 ]
 
