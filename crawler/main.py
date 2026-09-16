@@ -62,45 +62,49 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
     store.init_db(conn)
     summary = {"sources_total": len(sources), "sources_ok": 0, "sources_error": 0,
                "articles_found": 0, "articles_new": 0, "prices": 0, "errors": []}
-    for src in sources:
-        store.upsert_source(conn, src["key"], src.get("name", src["key"]),
-                            src["board"], _iter_urls(src)[0], True)
-        run_id = store.start_crawl_run(conn, src["key"])
-        found = new = 0
-        last_result = None
-        try:
-            for url in _iter_urls(src):
-                result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
-                                 timeout=settings.request_timeout, retries=settings.request_retries)
-                last_result = result
-                if not result.ok:
-                    raise RuntimeError(result.error or f"HTTP {result.status}")
-                if src["board"] == "price":
-                    price_count = _process_prices(conn, src, result.text)
-                    found += price_count
-                    new += price_count
-                    summary["prices"] += price_count
-                else:
-                    item_count, new_count = _process_articles(
-                        conn, src, result.text, result.final_url or url, settings, tags, fetcher)
-                    found += item_count
-                    new += new_count
-                    summary["articles_found"] += item_count
-                    summary["articles_new"] += new_count
-                time.sleep(settings.request_interval)
-            store.finish_crawl_run(conn, run_id, "ok", found, new)
-            summary["sources_ok"] += 1
-            report.log(f"[{src['key']}] 完成：抓到 {found} 条，新增 {new} 条")
-        except Exception as e:
-            if last_result is not None and last_result.text:
-                snap = report.save_snapshot(src["key"], last_result.text)
-                report.prune_snapshots(src["key"], keep=3)
-                report.log(f"[{src['key']}] 原始响应已存快照 {snap.name}")
-            store.finish_crawl_run(conn, run_id, "error", 0, 0, str(e))
-            summary["sources_error"] += 1
-            summary["errors"].append(f"{src['key']}: {e}")
-            report.log(f"[{src['key']}] 失败: {e}")
-    conn.close()
+    try:
+        for src in sources:
+            run_id = None
+            found = new = 0
+            last_result = None
+            try:
+                store.upsert_source(conn, src["key"], src.get("name", src["key"]),
+                                    src["board"], _iter_urls(src)[0], True)
+                run_id = store.start_crawl_run(conn, src["key"])
+                for url in _iter_urls(src):
+                    result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
+                                     timeout=settings.request_timeout, retries=settings.request_retries)
+                    last_result = result
+                    if not result.ok:
+                        raise RuntimeError(result.error or f"HTTP {result.status}")
+                    if src["board"] == "price":
+                        price_count = _process_prices(conn, src, result.text)
+                        found += price_count
+                        new += price_count
+                        summary["prices"] += price_count
+                    else:
+                        item_count, new_count = _process_articles(
+                            conn, src, result.text, result.final_url or url, settings, tags, fetcher)
+                        found += item_count
+                        new += new_count
+                        summary["articles_found"] += item_count
+                        summary["articles_new"] += new_count
+                    time.sleep(settings.request_interval)
+                store.finish_crawl_run(conn, run_id, "ok", found, new)
+                summary["sources_ok"] += 1
+                report.log(f"[{src['key']}] 完成：抓到 {found} 条，新增 {new} 条")
+            except Exception as e:
+                if last_result is not None and last_result.text:
+                    snap = report.save_snapshot(src["key"], last_result.text)
+                    report.prune_snapshots(src["key"], keep=3)
+                    report.log(f"[{src['key']}] 原始响应已存快照 {snap.name}")
+                if run_id is not None:
+                    store.finish_crawl_run(conn, run_id, "error", found, new, str(e))
+                summary["sources_error"] += 1
+                summary["errors"].append(f"{src['key']}: {e}")
+                report.log(f"[{src['key']}] 失败: {e}")
+    finally:
+        conn.close()
     report.log("本轮完成：源 {}/{} 成功，新增文章 {}，价格 {} 条".format(
         summary["sources_ok"], summary["sources_total"],
         summary["articles_new"], summary["prices"]))
