@@ -4,8 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from crawler import store
+from web import app as web_app
 from web import notify
 from web.app import create_app
+
+
+@pytest.fixture(autouse=True)
+def open_admin(monkeypatch):
+    monkeypatch.setattr(web_app, "load_admin_config", lambda: None)
 
 FAKE_CONFIG = {
     "enabled": True,

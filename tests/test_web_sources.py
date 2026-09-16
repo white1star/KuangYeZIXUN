@@ -3,7 +3,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from crawler import store
+from web import app as web_app
 from web.app import create_app
+
+
+def _open_admin(monkeypatch):
+    monkeypatch.setattr(web_app, "load_admin_config", lambda: None)
 
 
 def seed(db):
@@ -16,7 +21,8 @@ def seed(db):
     conn.close()
 
 
-def test_sources_page(tmp_path):
+def test_sources_page(tmp_path, monkeypatch):
+    _open_admin(monkeypatch)
     db = tmp_path / "t.db"
     seed(db)
     client = TestClient(create_app(db))
@@ -28,6 +34,7 @@ def test_sources_page(tmp_path):
 
 
 def test_run_crawl_lock(tmp_path, monkeypatch):
+    _open_admin(monkeypatch)
     db = tmp_path / "t.db"
     seed(db)
     started = []

@@ -6,9 +6,6 @@
     <div>
       上次抓取 {{ last_fetch|hhmm }} · 今日新增 {{ stats.total }} 条 · 数据每日自动备份
     </div>
-    <div class="dots">
-      {% for d in dots %}<span class="dot {{ d.status or 'idle' }}" title="{{ d.name }} {{ '正常' if d.status == 'ok' else ('异常' if d.status == 'error' else '未跑过') }}"></span>{% endfor %}
-    </div>
   </div>
 </div>
 <section class="hero">

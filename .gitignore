@@ -7,4 +7,5 @@ data/
 logs/
 .superpowers/
 config/notify.local.yaml
+config/admin.local.yaml
 .playwright-cli/
