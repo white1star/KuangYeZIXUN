@@ -11,3 +11,6 @@ detail:
   enabled: true
   content: "div.TRS_Editor"
   limit: 10
+pages:
+  template: "https://www.chinamine-safety.gov.cn/xw/mkaqjcxw/index_{n}.shtml"
+  max_pages: 80

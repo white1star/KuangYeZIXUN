@@ -9,3 +9,6 @@ list:
   date: "span"
 detail:
   enabled: false
+pages:
+  template: "https://zrzy.guizhou.gov.cn/wzgb/zwgk/zdlyxxgk/kyqgl/kyqcrgg1/index_{n}.html"
+  max_pages: 80

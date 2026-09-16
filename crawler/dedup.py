@@ -1,5 +1,6 @@
 import hashlib
 import re
+from functools import lru_cache
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from crawler import store
@@ -23,10 +24,12 @@ def normalize_url(url: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
 
 
+@lru_cache(maxsize=None)
 def normalize_title(title: str) -> str:
     return re.sub(r"[\W_]+", "", title or "", flags=re.UNICODE).lower()
 
 
+@lru_cache(maxsize=None)
 def core_title(title: str) -> str:
     t = (title or "").strip()
     for _ in range(2):
@@ -37,10 +40,12 @@ def core_title(title: str) -> str:
     return t
 
 
+@lru_cache(maxsize=None)
 def title_hash(title: str) -> str:
     return hashlib.sha1(normalize_title(title).encode("utf-8")).hexdigest()[:16]
 
 
+@lru_cache(maxsize=None)
 def trigrams(text: str) -> set:
     s = normalize_title(text)
     if not s:

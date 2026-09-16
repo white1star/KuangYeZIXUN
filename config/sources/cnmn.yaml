@@ -7,3 +7,7 @@ list:
   title: "a"
 detail:
   enabled: false
+pages:
+  template: "https://www.cnmn.com.cn/ShowNewsList.aspx?id=43&pageindex={n}"
+  offset: 1
+  max_pages: 80

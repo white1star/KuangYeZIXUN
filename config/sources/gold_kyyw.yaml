@@ -9,3 +9,6 @@ list:
   date: "p"
 detail:
   enabled: false
+pages:
+  template: "https://www.gold.org.cn/ky1227/kyyw/index_{n}.html"
+  max_pages: 80

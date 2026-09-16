@@ -11,3 +11,6 @@ detail:
   enabled: true
   content: "div.TRS_Editor"
   limit: 10
+pages:
+  template: "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/index_{n}.html"
+  max_pages: 80

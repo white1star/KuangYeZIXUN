@@ -12,3 +12,7 @@ detail:
   enabled: true
   content: "div#BodyLabel"
   limit: 10
+pages:
+  template: "http://zygh.tangshan.gov.cn/ts/xxgk/gggs/tdgycr/index_{n}.html"
+  offset: 1
+  max_pages: 80

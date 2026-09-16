@@ -9,3 +9,7 @@ list:
   date: "span"
 detail:
   enabled: false
+pages:
+  template: "http://zrzyt.hunan.gov.cn/zrzyt/xxgk/kyqcrzr/list_tylb_dst_zczlm_{n}.html"
+  offset: 2
+  max_pages: 80

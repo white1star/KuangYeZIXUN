@@ -9,3 +9,7 @@ list:
   date: "div.cy-discuz:last-child"
 detail:
   enabled: false
+pages:
+  template: "http://www.ccoalnews.cn/news/yaowen_{n}.html"
+  offset: 2
+  max_pages: 80

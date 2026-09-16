@@ -11,3 +11,7 @@ detail:
   enabled: true
   content: "div#BodyLabel"
   limit: 10
+pages:
+  template: "https://zrzy.hebei.gov.cn/heb/zhuanlan/kqsc/index_{n}.html"
+  offset: 1
+  max_pages: 80

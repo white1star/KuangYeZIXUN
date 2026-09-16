@@ -9,3 +9,7 @@ list:
   date: "td:last-child"
 detail:
   enabled: false
+pages:
+  template: "http://www.cwestc.com/MroeNews.aspx?gd=13&page={n}"
+  offset: 2
+  max_pages: 80

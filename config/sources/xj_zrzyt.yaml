@@ -9,3 +9,7 @@ list:
   date: "span"
 detail:
   enabled: false
+pages:
+  template: "https://zrzyt.xinjiang.gov.cn/xjgtzy/kyqsc/common_list_{n}.shtml"
+  offset: 2
+  max_pages: 80

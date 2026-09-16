@@ -9,3 +9,7 @@ list:
   date: "span"
 detail:
   enabled: false
+pages:
+  template: "https://dnr.yn.gov.cn/html/shichangxinxi/kuangyeshichang/{n}.html"
+  offset: 2
+  max_pages: 80
