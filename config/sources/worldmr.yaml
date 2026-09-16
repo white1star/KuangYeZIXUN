@@ -7,5 +7,6 @@ list:
   item: "td.ljheizi12"
   title: "a"
   date_regex: '(\d{4}-\d{2}-\d{2})'
+filter_keywords: [矿, 煤, 焦, 钢, 铁矿, 有色金属, 金属, 铜, 铝, 铅, 锌, 镍, 锡, 钴, 锂, 稀土, 钨, 钼, 锑, 锰, 黄金, 白银, 尾矿, 选矿, 分选, 冶炼, 勘查, 开采, 地质, 资源税, 矿山]
 detail:
   enabled: false
