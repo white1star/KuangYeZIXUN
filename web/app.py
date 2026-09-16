@@ -96,8 +96,6 @@ def create_app(db_path=None) -> FastAPI:
                 "fail_count": queries.today_fail_count(conn),
                 "last_fetch": queries.last_fetch_time(conn),
                 "commodity_count": len(queries.distinct_commodities(conn)),
-                "new_mines": queries.latest_by_type(conn, "新矿", 5),
-                "headlines": queries.latest_articles(conn, limit=8),
             }
         finally:
             conn.close()

@@ -74,11 +74,24 @@ def test_index_home_blocks(tmp_path):
     client = TestClient(create_app(db))
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "新矿山动态" in resp.text
-    assert "内蒙古发现大型萤石矿" in resp.text
-    assert "今日要闻" in resp.text
-    assert "今日头条普通新闻" in resp.text
+    assert "新矿山动态" not in resp.text
+    assert "今日要闻" not in resp.text
+    assert "内蒙古发现大型萤石矿" not in resp.text
+    assert "今日头条普通新闻" not in resp.text
+    assert 'class="card entry-card"' in resp.text
+    assert resp.text.count('class="card entry-card"') == 3
+    assert resp.text.count("ec-arrow") == 3
+    assert resp.text.count("ec-icon") == 3
+    for title in ("新闻资讯", "矿价行情", "政策法规"):
+        assert title in resp.text
+    assert "每日行业动态与政策早知道" in resp.text
+    assert "全品种价格与走势" in resp.text
+    assert "国家与地方矿业政策" in resp.text
+    assert "今日 <b>1</b> 条" in resp.text
+    assert "<b>0</b> 个品种" in resp.text
     assert "热门搜索" in resp.text
     assert "探矿权" in resp.text
     assert "/?q=%E6%8E%A2%E7%9F%BF%E6%9D%83" in resp.text
-    assert "/news?type=%E6%96%B0%E7%9F%BF%E5%B1%B1" in resp.text
+    assert 'class="card stat-card"' in resp.text
+    assert resp.text.count('class="card stat-card"') == 4
+    assert "/news?type=%E6%96%B0%E7%9F%BF%E5%B1%B1" not in resp.text

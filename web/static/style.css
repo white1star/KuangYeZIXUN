@@ -197,13 +197,44 @@ a:hover { text-decoration: none; }
 .down { color: var(--down); }
 .muted { color: var(--muted); }
 
-.entry-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; }
-.entry-card { display: block; padding: 20px; border-top: 3px solid var(--brand); color: var(--text); }
-.entry-card:hover { border-color: #B9DCC5; border-top-color: var(--brand); }
-.ec-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; }
-.ec-arrow { color: var(--brand); font-weight: 700; }
+.entry-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+.entry-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 170px;
+  padding: 28px;
+  color: var(--text);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.entry-card:hover {
+  border-color: var(--brand);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(16, 24, 40, .12), 0 2px 6px rgba(16, 24, 40, .06);
+}
+.ec-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #E9F6ED;
+  color: var(--brand);
+}
+.ec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.ec-arrow { color: #98A1AC; transition: color .15s ease; }
+.entry-card:hover .ec-arrow { color: var(--brand); }
 .entry-card p { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
-.ec-foot { margin-top: 14px; font-size: 12px; color: var(--brand); }
+.ec-foot { margin-top: auto; padding-top: 18px; font-size: 12px; color: var(--muted); }
+.ec-foot b { margin: 0 2px; font-size: 24px; font-weight: 700; color: var(--text); }
 
 .hot-words {
   display: flex;
@@ -222,66 +253,6 @@ a:hover { text-decoration: none; }
   color: var(--muted);
 }
 .hot-words a:hover { background: #E9F6ED; color: var(--brand-dark); }
-
-.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 24px; }
-.mini-card { min-width: 0; padding: 0 18px 6px; }
-.mini-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px 0 11px;
-  border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  font-weight: 700;
-}
-.mini-more { font-size: 12px; font-weight: 400; color: var(--brand); white-space: nowrap; }
-.mini-more:hover { color: var(--brand-dark); text-decoration: underline; }
-
-.mine-item { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.mine-item:last-child { border-bottom: 0; }
-.mine-title {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--text);
-}
-.mine-item:hover .mine-title { color: var(--brand); }
-.mini-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.mini-meta .chip { font-size: 11px; padding: 0 7px; line-height: 17px; }
-
-.headline-item {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--line);
-}
-.headline-item:last-child { border-bottom: 0; }
-.headline-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  color: var(--text);
-}
-.headline-item:hover .headline-title { color: var(--brand); }
-.headline-date { flex: none; font-size: 12px; color: var(--muted); }
 
 .feed-card { padding: 4px 20px; }
 .feed-inline .entry { padding: 16px 0; }
@@ -518,9 +489,10 @@ table.prices td.err { max-width: 260px; overflow: hidden; text-overflow: ellipsi
   }
   .price-grid::-webkit-scrollbar { display: none; }
   .pc-value { font-size: 20px; }
-  .entry-grid { grid-template-columns: 1fr; }
-  .home-grid { grid-template-columns: minmax(0, 1fr); margin-top: 16px; }
-  .mini-card { padding: 0 14px 6px; }
+  .entry-grid { grid-template-columns: 1fr; gap: 14px; }
+  .entry-card { min-height: 0; padding: 22px; }
+  .ec-head { margin-top: 14px; font-size: 17px; }
+  .ec-foot { padding-top: 14px; }
   .feed-card { padding: 2px 14px; }
   .entry-summary { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .entry-meta { gap: 4px 6px; }

@@ -56,55 +56,30 @@
         <div class="stat-value">{{ sources_ok }}/{{ sources_total }}<span>正常</span></div>
       </div>
     </div>
-    <div class="home-grid">
-      <div class="card mini-card">
-        <div class="mini-head">
-          <span>新矿山动态</span>
-          <a class="mini-more" href="/news?type={{ '新矿山'|urlencode }}">查看全部 →</a>
-        </div>
-        {% for a in new_mines %}
-        <a class="mine-item" href="{{ a.url }}" target="_blank" rel="noopener">
-          <div class="mine-title">{{ a.title }}</div>
-          <div class="mini-meta">
-            <span>{{ a.source_name or a.source_key }}</span>
-            <span>{{ (a.published_at or a.fetched_at)[:10] }}</span>
-            {% for m in a.minerals %}<span class="chip chip-mineral">{{ m }}</span>{% endfor %}
-          </div>
-        </a>
-        {% else %}
-        <p class="empty">暂无新矿山动态</p>
-        {% endfor %}
-      </div>
-      <div class="card mini-card">
-        <div class="mini-head">
-          <span>今日要闻</span>
-          <a class="mini-more" href="/news">更多 →</a>
-        </div>
-        {% for a in headlines %}
-        <a class="headline-item" href="{{ a.url }}" target="_blank" rel="noopener">
-          <span class="headline-title">{{ a.title }}</span>
-          <span class="headline-date">{{ (a.published_at or a.fetched_at)[:10] }}</span>
-        </a>
-        {% else %}
-        <p class="empty">暂无要闻</p>
-        {% endfor %}
-      </div>
-    </div>
     <div class="entry-grid">
       <a class="card entry-card" href="/news">
+        <span class="ec-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M10 6h8v4h-8z"/><path d="M18 14h-8"/><path d="M15 18h-5"/></svg>
+        </span>
         <div class="ec-head"><span>新闻资讯</span><span class="ec-arrow">→</span></div>
         <p>每日行业动态与政策早知道</p>
-        <div class="ec-foot">今日 {{ stats.by_board.get('news', 0) }} 条</div>
+        <div class="ec-foot">今日 <b>{{ stats.by_board.get('news', 0) }}</b> 条</div>
       </a>
       <a class="card entry-card" href="/prices">
+        <span class="ec-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M7.5 15.5l3.5-4 3 3 4.5-5.5"/></svg>
+        </span>
         <div class="ec-head"><span>矿价行情</span><span class="ec-arrow">→</span></div>
         <p>全品种价格与走势</p>
-        <div class="ec-foot">{{ commodity_count }} 个品种</div>
+        <div class="ec-foot"><b>{{ commodity_count }}</b> 个品种</div>
       </a>
       <a class="card entry-card" href="/policy">
+        <span class="ec-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+        </span>
         <div class="ec-head"><span>政策法规</span><span class="ec-arrow">→</span></div>
         <p>国家与地方矿业政策</p>
-        <div class="ec-foot">今日 {{ stats.by_board.get('policy', 0) }} 条</div>
+        <div class="ec-foot">今日 <b>{{ stats.by_board.get('policy', 0) }}</b> 条</div>
       </a>
     </div>
   </div>
