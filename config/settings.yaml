@@ -1,0 +1,6 @@
+port: 8080
+summary_max_chars: 200
+dedup_threshold: 0.85
+request_timeout: 15
+request_retries: 2
+request_interval: 1.5
