@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS marketing_copy (
   short_uri TEXT NOT NULL UNIQUE,
   author TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL,
+  transcript TEXT NOT NULL DEFAULT '',
   published_at TEXT NOT NULL DEFAULT '',
   cover_url TEXT NOT NULL DEFAULT '',
   link TEXT NOT NULL DEFAULT '',

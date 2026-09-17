@@ -4,3 +4,11 @@ dedup_threshold: 0.85
 request_timeout: 15
 request_retries: 2
 request_interval: 1.5
+
+transcribe:
+  venv_python: "E:\\software\\funasr\\venv\\Scripts\\python.exe"
+  script: "E:\\software\\funasr\\transcribe.py"
+  language: zh
+
+marketing:
+  author: "计算机选矿"

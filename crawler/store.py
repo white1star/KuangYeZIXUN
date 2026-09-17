@@ -17,8 +17,15 @@ def connect(db_path):
     return conn
 
 
+def _ensure_column(conn, table, column, ddl) -> None:
+    columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in columns:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+
 def init_db(conn) -> None:
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+    _ensure_column(conn, "marketing_copy", "transcript", "transcript TEXT NOT NULL DEFAULT ''")
     conn.commit()
 
 
@@ -90,11 +97,13 @@ def insert_article(conn, item, classification, url_hash, title_hash, cluster_id=
 
 
 UPSERT_MARKETING_SQL = (
-    "INSERT INTO marketing_copy(short_uri,author,description,published_at,cover_url,link,fetched_at) "
-    "VALUES(?,?,?,?,?,?,?) "
+    "INSERT INTO marketing_copy(short_uri,author,description,transcript,published_at,cover_url,link,fetched_at) "
+    "VALUES(?,?,?,?,?,?,?,?) "
     "ON CONFLICT(short_uri) DO UPDATE SET "
-    "author=excluded.author,description=excluded.description,published_at=excluded.published_at,"
-    "cover_url=excluded.cover_url,link=excluded.link,fetched_at=excluded.fetched_at"
+    "author=excluded.author,description=excluded.description,"
+    "transcript=CASE WHEN excluded.transcript='' THEN transcript ELSE excluded.transcript END,"
+    "published_at=excluded.published_at,cover_url=excluded.cover_url,link=excluded.link,"
+    "fetched_at=excluded.fetched_at"
 )
 
 
@@ -103,12 +112,25 @@ def upsert_marketing_copy(conn, item) -> int:
         UPSERT_MARKETING_SQL,
         (
             item["short_uri"], item.get("author", ""), item.get("description", ""),
-            item.get("published_at", ""), item.get("cover_url", ""), item.get("link", ""),
-            item.get("fetched_at", now_iso()),
+            item.get("transcript", ""), item.get("published_at", ""), item.get("cover_url", ""),
+            item.get("link", ""), item.get("fetched_at", now_iso()),
         ),
     )
     conn.commit()
     return 1
+
+
+def list_marketing_copy(conn, limit=200):
+    return conn.execute(
+        "SELECT id, short_uri, author, description, transcript, published_at, cover_url, link, fetched_at "
+        "FROM marketing_copy ORDER BY published_at DESC, id DESC LIMIT ?", (int(limit),)).fetchall()
+
+
+def update_marketing_transcript(conn, copy_id, transcript) -> int:
+    cur = conn.execute(
+        "UPDATE marketing_copy SET transcript=? WHERE id=?", (transcript, int(copy_id)))
+    conn.commit()
+    return cur.rowcount
 
 
 UPSERT_PRICE_SQL = (

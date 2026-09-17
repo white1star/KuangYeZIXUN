@@ -48,6 +48,40 @@ def load_settings(path=None) -> Settings:
     )
 
 
+TRANSCRIBE_DEFAULTS = {
+    "venv_python": r"E:\software\funasr\venv\Scripts\python.exe",
+    "script": r"E:\software\funasr\transcribe.py",
+    "language": "zh",
+}
+
+MARKETING_DEFAULTS = {
+    "author": "计算机选矿",
+}
+
+
+def _load_section(section, defaults, path=None) -> dict:
+    result = dict(defaults)
+    p = Path(path) if path else ROOT / "config" / "settings.yaml"
+    if not p.exists():
+        return result
+    raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    data = raw.get(section) or {}
+    if not isinstance(data, dict):
+        return result
+    for key, value in data.items():
+        if value not in (None, ""):
+            result[str(key)] = value
+    return result
+
+
+def load_transcribe_settings(path=None) -> dict:
+    return _load_section("transcribe", TRANSCRIBE_DEFAULTS, path)
+
+
+def load_marketing_settings(path=None) -> dict:
+    return _load_section("marketing", MARKETING_DEFAULTS, path)
+
+
 def load_tags(path=None) -> dict:
     p = Path(path) if path else ROOT / "config" / "tags.yaml"
     return yaml.safe_load(p.read_text(encoding="utf-8"))

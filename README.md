@@ -56,11 +56,14 @@ E:\矿_news\
 ├── .github\workflows\crawl-deploy.yml  推 data 分支后自动构建+发布 GitHub Pages
 ├── tools\snapshot.py            抓源站样本到 tests/fixtures（接入与修源用）
 ├── tools\fetch_sph.py           抓视频号分享链接文案入库（Playwright + Edge）
+├── tools\process_videos.py      视频文件本地转录入库（收件箱 → 文案库，FunASR）
+├── crawler\transcribe.py        本地转录封装（ffmpeg 抽音频 + FunASR + 标签剥离）
 ├── docs\ai-maintenance.md       AI 巡检维护手册（修源四步法/重打标/备份恢复）
 ├── docs\github-pages.md         公网部署手册（GitHub Pages / 国内对象存储迁移）
 ├── tests\                       pytest 测试 + fixtures 离线样本
 ├── data\                        运行时生成（gitignore）：news.db、web.pid、backup\
 ├── logs\                        运行时生成（gitignore）：crawler_YYYYMMDD.log、snapshots\
+├── video_inbox\                 视频文案收件箱（gitignore）：丢视频文件，处理后移入 已处理\
 ├── requirements.txt
 ├── README.md                    中文运维文档（本文件）
 └── 安装.bat                     一行转发（调 python scripts\install.py）
@@ -153,6 +156,27 @@ python -m scripts.publish_data_branch   # 推送数据库到 data 分支，Actio
 - 微信生态封闭，无法像新闻源那样自动发现新内容：需要人（老板）把链接发给 AI，AI 再执行上述命令，这是刻意保留的人工环节
 - 抓取按 `short_uri` 幂等入库，重复抓同一条只更新文案与封面，不产生重复记录；每个链接独立容错，失败退出码为 1 并打印原因
 - 依赖 `playwright`（调用系统已装的 Edge，无需另外下载浏览器内核）；静态站文案页模板为 `site_build/templates/copy.html`，导航名称"文案"
+
+### 4.3 营销文案（视频号·文件方式）
+
+老板把导出的视频文件直接丢进收件箱 `video_inbox\`（桌面有快捷方式），告诉 AI 一声，AI 跑一条命令即可本地转录、入库、发布（全程离线，不上传视频）：
+
+```powershell
+python -m tools.process_videos             # 扫描收件箱：转录 → 入库 → 文件移入 video_inbox\已处理\
+python -m tools.process_videos --list 10   # 查看最近 10 条：id | 来源 | 日期 | 文案前 60 字
+python -m tools.process_videos --fix 3 "校对后的文案"   # AI 校对：按 id 覆盖转录文本（保留换行）
+python -m tools.process_videos --empty     # 列出还没有转录文案的条目
+python -m scripts.build_site               # 本地构建（dist\copy.html）
+python -m scripts.publish_data_branch      # 推送数据库到 data 分支，Actions 自动重新部署
+```
+
+工作方式与约定：
+
+- 支持 `mp4 / mov / mkv / m4v / avi / wmv / wav / mp3`；只处理收件箱根目录，**正在拷贝/写入的文件会自动跳过**（大小 5 秒无变化才处理），单个文件失败不中断整批
+- 转录链路：ffmpeg 抽 16k 单声道 wav → 本地 FunASR（SenseVoiceSmall，CPU 约 4 倍速，单文件超时 900 秒）→ 剥离 `<|...|>` 标签 → 入库；相关参数在 `config/settings.yaml` 的 `transcribe`（venv 解释器/脚本/语言），作者名在 `marketing.author`
+- 入库规则：`short_uri=file:<文件名>`（按文件名幂等），`published_at` 取文件修改时间，`description` 留空，正文写入 `transcript`
+- 页面上每条主区块为「口播文案」；「复制文案」按钮优先复制转录文本，没有转录时回退复制视频简介并给出灰字提示
+- 权限/环境要求：本机装有 FunASR 环境（`E:\software\funasr`）且 `ffmpeg` 在 PATH（转录脚本已内置 `--language zh`）；`video_inbox\` 已在 `.gitignore`，视频文件不会提交入库
 
 ---
 

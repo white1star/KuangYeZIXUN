@@ -72,7 +72,7 @@ def search_items(articles) -> list:
 
 def load_marketing_copies(conn) -> list:
     rows = conn.execute(
-        "SELECT short_uri, author, description, published_at, cover_url, link, fetched_at "
+        "SELECT short_uri, author, description, transcript, published_at, cover_url, link, fetched_at "
         "FROM marketing_copy ORDER BY published_at DESC, id DESC").fetchall()
     items = []
     for row in rows:
@@ -80,6 +80,7 @@ def load_marketing_copies(conn) -> list:
             "short_uri": row["short_uri"],
             "author": (row["author"] or "").strip(),
             "description": (row["description"] or "").strip(),
+            "transcript": (row["transcript"] or "").strip(),
             "published_at": (row["published_at"] or "").strip(),
             "cover_url": (row["cover_url"] or "").strip(),
             "link": (row["link"] or "").strip() or "https://weixin.qq.com/sph/" + row["short_uri"],

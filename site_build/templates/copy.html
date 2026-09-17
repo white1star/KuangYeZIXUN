@@ -14,16 +14,23 @@
           <span>{{ c.published_at }}</span>
           <span>今日已收 {{ copy_stats.today }} 条 · 累计 {{ copy_stats.total }} 条</span>
         </div>
+        <h2 class="copy-block-title">口播文案</h2>
+        {% if c.transcript %}
+        <p class="copy-text" data-copy>{{ c.transcript }}</p>
+        {% else %}
         <p class="copy-text" data-copy>{{ c.description }}</p>
+        <p class="copy-hint">本条暂无转录文案，复制的是视频简介</p>
+        {% endif %}
         <div class="copy-actions">
           <button class="btn-primary copy-btn" type="button" data-copy-btn>复制文案</button>
           <a class="copy-link" href="{{ c.link }}" target="_blank" rel="noopener">看视频</a>
         </div>
+        <p class="copy-foot">{{ c.author or '视频号' }} · {{ c.published_at }}{% if c.description %} · 视频简介：{{ c.description }}{% endif %}</p>
       </article>
       {% endfor %}
     </div>
     {% else %}
-    <p class="empty">暂无文案，把视频号分享链接发给 AI 即可自动收录</p>
+    <p class="empty">暂无文案，把视频号分享链接或视频文件发给 AI 即可自动收录</p>
     {% endif %}
   </div>
 </section>

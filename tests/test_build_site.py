@@ -152,6 +152,34 @@ def test_copy_page_renders_text_and_button(tmp_path):
     assert "看视频" in copy
 
 
+def test_copy_page_prefers_transcript(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    conn = store.connect(db)
+    conn.execute("UPDATE marketing_copy SET transcript=? WHERE short_uri='AIUEY9XuiH'",
+                 ("大家好，这里是口播文案。\n第二段内容。",))
+    conn.commit()
+    conn.close()
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_key="")
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert "口播文案" in copy
+    assert "大家好，这里是口播文案。" in copy
+    assert "第二段内容。" in copy
+    assert "data-copy" in copy
+    assert "复制文案" in copy
+    assert "本条暂无转录文案" not in copy
+
+
+def test_copy_page_fallback_when_transcript_empty(tmp_path):
+    out, _ = make_site(tmp_path)
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert "口播文案" in copy
+    assert "本条暂无转录文案，复制的是视频简介" in copy
+    assert "视频简介：" in copy
+    assert "磷矿价格回暖，选矿设备更新正当时。" in copy
+
+
 def test_nav_contains_copy_link(tmp_path):
     out, _ = make_site(tmp_path)
     for page in ("index.html", "news.html"):
