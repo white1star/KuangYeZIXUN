@@ -25,6 +25,7 @@ def test_process_moves_and_saves(tmp_path, capsys):
     inbox = make_inbox(tmp_path)
     video = inbox / "矿山现场.mp4"
     video.write_bytes(b"fake-video-bytes")
+    mtime = video.stat().st_mtime
     db = tmp_path / "t.db"
     code = process_videos.run(inbox=inbox, db_path=db, author="计算机选矿",
                               transcriber=lambda path: "大家好，欢迎来到矿山现场。",
@@ -34,7 +35,7 @@ def test_process_moves_and_saves(tmp_path, capsys):
     assert "[OK] 矿山现场.mp4" in output
     assert "大家好，欢迎来到矿山现场。" in output
     assert not video.exists()
-    day = datetime.fromtimestamp(video.stat().st_mtime).strftime("%Y-%m-%d")
+    day = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
     moved = inbox / "已处理" / day / "矿山现场.mp4"
     assert moved.exists()
     conn = store.connect(db)
