@@ -37,7 +37,7 @@ def make_site(tmp_path):
     db = tmp_path / "t.db"
     seed(db)
     out = tmp_path / "dist"
-    result = build(db_path=db, out_dir=out)
+    result = build(db_path=db, out_dir=out, feedback_key="")
     return out, result
 
 

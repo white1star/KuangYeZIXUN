@@ -46,13 +46,14 @@ E:\矿_news\
 │   ├── ai_run.py                AI 巡检总入口：先抓一轮，再体检，给修复建议
 │   ├── ai_check.py              巡检体检：源状态/失败快照/数据概览/建议报告
 │   ├── build_site.py            静态站构建入口（python -m scripts.build_site → dist\）
-│   └── publish_data_branch.py   一次性把 data\news.db 发布到 data 分支
+│   ├── crawl_publish.py         抓取一轮并发布到 data 分支（计划任务调用）
+│   └── publish_data_branch.py   只把 data\news.db 发布到 data 分支（不抓取，一次性初始化用）
 ├── site_build\                  静态站构建包（独立模板/样式，不改 web/）
 │   ├── builder.py               构建逻辑（读 data\news.db → dist\）
 │   ├── data.py                  数据查询与 search.json / prices.json 生成
 │   ├── templates\*.html         静态站模板（独立于 web\templates）
 │   └── static\                  静态站样式/脚本（style.css、app.js）
-├── .github\workflows\crawl-deploy.yml  定时抓取+构建+发布 GitHub Pages
+├── .github\workflows\crawl-deploy.yml  推 data 分支后自动构建+发布 GitHub Pages
 ├── tools\snapshot.py            抓源站样本到 tests/fixtures（接入与修源用）
 ├── docs\ai-maintenance.md       AI 巡检维护手册（修源四步法/重打标/备份恢复）
 ├── docs\github-pages.md         公网部署手册（GitHub Pages / 国内对象存储迁移）
@@ -340,14 +341,17 @@ python -m scripts.ai_check    # 只体检不抓取，报告写入 logs\ai_check_
 
 ## 12. 公网部署（GitHub Pages）
 
-内网动态版保持原样，可额外发布一份纯静态站点供外网访问：GitHub Actions 每天北京时间 07:30 / 12:30 / 18:30 自动抓取 → 构建 `dist/` → 发布 Pages，**不需要任何 Secrets**，数据库放在仓库的 `data` 孤儿分支（每次强推单提交，仓库不膨胀）。
+内网动态版保持原样，可额外发布一份纯静态站点供外网访问。数据流：**办公电脑（国内网络，27 个源全部可达）每天 07:30 / 12:30 / 18:30 抓取 → 自动把数据库强推到仓库 `data` 分支 → GitHub Actions 自动构建 `dist/` 并发布 Pages**。Actions 机器在美国只负责构建部署，不参与抓取。
 
 ```powershell
+python -m scripts.crawl_publish        # 抓一轮并发布到 data 分支（计划任务也是它）
 python -m scripts.build_site           # 本地构建静态站到 dist\（不碰动态版）
 python -m http.server 8090 -d dist     # 本地预览 http://127.0.0.1:8090/
-python -m scripts.publish_data_branch  # 一次性把当前数据库推到 data 分支
+python -m scripts.publish_data_branch  # 只发布当前数据库、不抓取（一次性初始化用）
 ```
 
-- 完整操作步骤（建公开仓库 → push → Pages 选 GitHub Actions → 本地发布一次数据库 → Actions 手动 Run）：见 [`docs/github-pages.md`](docs/github-pages.md)
-- 国内访问较慢，文档第四节给出「迁移到国内对象存储」的说明（同一份 `dist/`，无需改版面）
+- 办公电脑一次性设置（装 Python → clone 仓库 → `pip install -r requirements.txt` → 配置 PAT 凭据 → `python scripts\install.py` → 手动跑一次 `python -m scripts.crawl_publish` 验证）：见 [`docs/github-pages.md`](docs/github-pages.md)
+- `data` 分支每次强推单提交（体积≈当前数据库），仓库不膨胀；Actions 全程不需要任何 Secrets
+- 想只更新站点不抓取：Actions 页手动 Run 一次工作流
+- 国内访问较慢，文档第五节给出「迁移到国内对象存储」的说明（同一份 `dist/`，无需改版面）
 - 静态站不含管理页（源健康仅内网提供），反馈按钮改为 `mailto` 邮件

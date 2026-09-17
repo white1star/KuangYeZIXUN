@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 CRAWL_TASKS = [("矿news抓取07", "07:30"), ("矿news抓取12", "12:30"), ("矿news抓取18", "18:30")]
+CRAWL_CMD = "-m scripts.crawl_publish"
 BACKUP_TASK = ("矿news备份", "19:00")
 
 
@@ -85,7 +86,7 @@ def main():
     vpy = ensure_venv(requirements)
     subprocess.run([str(vpy), "-c", "from crawler import store; from crawler.config import load_settings; s=load_settings(); store.init_db(store.connect(s.db_path))"], cwd=str(ROOT), check=True)
     for name, when in CRAWL_TASKS:
-        register_task(ps_task_script(name, vpy, "-m crawler.main --once", ROOT, daily_at=when))
+        register_task(ps_task_script(name, vpy, CRAWL_CMD, ROOT, daily_at=when))
     register_task(ps_task_script("矿news网站", vpy, "-m web.app", ROOT, at_logon=True))
     register_task(ps_task_script(BACKUP_TASK[0], vpy, "-m scripts.backup", ROOT, daily_at=BACKUP_TASK[1]))
     register_task(ps_task_script("矿news看门狗", vpy, "-m scripts.watchdog", ROOT, repeat_minutes=5))

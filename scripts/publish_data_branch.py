@@ -3,6 +3,12 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_MESSAGE = "data: 初始化数据分支（含回填数据）"
+WORKFLOW = ROOT / ".github" / "workflows" / "crawl-deploy.yml"
+
+
+class PublishError(RuntimeError):
+    pass
 
 
 class GitResult:
@@ -21,17 +27,55 @@ def git(args, input_bytes=None, check=True):
     return result
 
 
-def build_tree(db_path: Path) -> str:
-    blob = git(["hash-object", "-w", str(db_path)]).stdout.strip()
-    subtree = git(["mktree"],
-                  input_bytes=f"100644 blob {blob}\tnews.db\n".encode("utf-8")).stdout.strip()
+def _blob(path: Path) -> str:
+    return git(["hash-object", "-w", str(path)]).stdout.strip()
+
+
+def _tree(entries: list) -> str:
+    entries = sorted(entries, key=lambda line: line.split("\t", 1)[1])
     return git(["mktree"],
-               input_bytes=f"040000 tree {subtree}\tdata\n".encode("utf-8")).stdout.strip()
+               input_bytes="".join(entries).encode("utf-8")).stdout.strip()
+
+
+def build_tree(db_path: Path) -> str:
+    db_blob = _blob(db_path)
+    data_tree = _tree([f"100644 blob {db_blob}\tnews.db\n"])
+    entries = [f"040000 tree {data_tree}\tdata\n"]
+    if WORKFLOW.exists():
+        wf_blob = _blob(WORKFLOW)
+        wf_tree = _tree([f"100644 blob {wf_blob}\tcrawl-deploy.yml\n"])
+        gh_tree = _tree([f"040000 tree {wf_tree}\tworkflows\n"])
+        entries.append(f"040000 tree {gh_tree}\t.github\n")
+    return _tree(entries)
 
 
 def commit_tree(tree: str, message: str) -> str:
     return git(["-c", "user.name=矿news静态发布", "-c", "user.email=noreply@local",
                 "commit-tree", tree, "-m", message]).stdout.strip()
+
+
+def publish(db_path=None, remote="origin", branch="data", message=None, dry_run=False) -> str:
+    db = Path(db_path) if db_path else ROOT / "data" / "news.db"
+    if not db.exists():
+        raise PublishError(f"数据库不存在：{db}")
+    inside = git(["rev-parse", "--is-inside-work-tree"], check=False)
+    if inside.returncode != 0:
+        raise PublishError("当前目录不是 git 仓库")
+    remote_url = git(["remote", "get-url", remote], check=False)
+    if remote_url.returncode != 0:
+        raise PublishError(f"未配置远程仓库 {remote}，请先执行：\n"
+                           f"  git remote add {remote} https://github.com/<用户名>/<仓库>.git")
+    tree = build_tree(db)
+    commit = commit_tree(tree, message or DEFAULT_MESSAGE)
+    size_mb = db.stat().st_size / 1048576
+    print(f"已生成数据提交 {commit[:12]}（{db}，{size_mb:.1f} MB）")
+    if dry_run:
+        print("dry-run：不执行推送")
+        return commit[:12]
+    git(["push", "-f", remote, f"{commit}:refs/heads/{branch}"])
+    print(f"已强推到 {remote}/{branch}（该分支只保留这一条提交）")
+    print("data 分支更新后 GitHub Actions 会自动构建并部署静态站")
+    return commit[:12]
 
 
 def main(argv=None) -> int:
@@ -40,32 +84,15 @@ def main(argv=None) -> int:
     parser.add_argument("--db", default=str(ROOT / "data" / "news.db"))
     parser.add_argument("--remote", default="origin")
     parser.add_argument("--branch", default="data")
-    parser.add_argument("--message", default="data: 初始化数据分支（含回填数据）")
+    parser.add_argument("--message", default=DEFAULT_MESSAGE)
     parser.add_argument("--dry-run", action="store_true", help="只生成提交对象，不推送")
     args = parser.parse_args(argv)
-    db = Path(args.db)
-    if not db.exists():
-        print(f"数据库不存在：{db}")
+    try:
+        publish(db_path=args.db, remote=args.remote, branch=args.branch,
+                message=args.message, dry_run=args.dry_run)
+    except Exception as e:
+        print(e)
         return 1
-    inside = git(["rev-parse", "--is-inside-work-tree"], check=False)
-    if inside.returncode != 0:
-        print("当前目录不是 git 仓库")
-        return 1
-    remote = git(["remote", "get-url", args.remote], check=False)
-    if remote.returncode != 0:
-        print(f"未配置远程仓库 {args.remote}，请先执行：")
-        print(f"  git remote add {args.remote} https://github.com/<用户名>/<仓库>.git")
-        return 1
-    tree = build_tree(db)
-    commit = commit_tree(tree, args.message)
-    size_mb = db.stat().st_size / 1048576
-    print(f"已生成数据提交 {commit[:12]}（{db}，{size_mb:.1f} MB）")
-    if args.dry_run:
-        print("dry-run：不执行推送")
-        return 0
-    git(["push", "-f", args.remote, f"{commit}:refs/heads/{args.branch}"])
-    print(f"已强推到 {args.remote}/{args.branch}（该分支只保留这一条提交）")
-    print("之后在 GitHub Actions 页手动 Run 一次『抓取并部署静态站』即可验证")
     return 0
 
 

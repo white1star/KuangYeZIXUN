@@ -6,13 +6,21 @@ from scripts import backup, install, watchdog
 
 
 def test_ps_task_script_contents():
-    script = install.ps_task_script("矿news抓取07", r"C:\py\python.exe", "-m crawler.main --once",
+    script = install.ps_task_script("矿news抓取07", r"C:\py\python.exe", "-m scripts.crawl_publish",
                                     r"E:\矿_news", daily_at="07:30")
     assert "Register-ScheduledTask" in script
     assert "矿news抓取07" in script
-    assert "-m crawler.main --once" in script
+    assert "-m scripts.crawl_publish" in script
     assert "07:30" in script
     assert "StartWhenAvailable" in script
+
+
+def test_crawl_tasks_use_crawl_publish():
+    assert len(install.CRAWL_TASKS) == 3
+    assert install.CRAWL_CMD == "-m scripts.crawl_publish"
+    for name, when in install.CRAWL_TASKS:
+        script = install.ps_task_script(name, "py.exe", install.CRAWL_CMD, "d", daily_at=when)
+        assert "-m scripts.crawl_publish" in script
 
 
 def test_ps_task_script_logon_and_repeat():
