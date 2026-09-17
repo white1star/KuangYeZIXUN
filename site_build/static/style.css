@@ -524,3 +524,17 @@ mark { padding: 0 1px; border-radius: 2px; background: #FEF3C7; color: inherit; 
 .fb-submit[disabled] { opacity: .6; cursor: default; }
 .fb-msg { margin: 0; font-size: 13px; color: #1A8F4C; }
 .fb-msg.err { color: #D23F31; }
+
+/* 信息中心返回入口（品牌旁） */
+.head-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.portal-back {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+.portal-back:hover { color: var(--brand); }

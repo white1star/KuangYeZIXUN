@@ -583,3 +583,17 @@ table.prices td.err { max-width: 260px; overflow: hidden; text-overflow: ellipsi
   .feedback-list li { line-height: 1.6; }
 }
 .prices .unit { margin-left: 5px; font-size: 11px; color: #98A1AC; }
+
+/* 信息中心返回入口（品牌旁） */
+.head-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.portal-back {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+.portal-back:hover { color: var(--brand); }
