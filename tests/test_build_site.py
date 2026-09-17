@@ -77,6 +77,25 @@ def test_index_contains_stats_and_feedback(tmp_path):
     assert "3103631561@qq.com" not in index
 
 
+def test_feedback_form_rendered_when_key_configured(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_key="test-key-123")
+    index = (out / "index.html").read_text(encoding="utf-8")
+    assert "api.web3forms.com" in index
+    assert "test-key-123" in index
+    assert 'id="feedback-dialog"' in index
+    assert "mailto:" not in index
+
+
+def test_feedback_mailto_without_key(tmp_path):
+    out, _ = make_site(tmp_path)
+    index = (out / "index.html").read_text(encoding="utf-8")
+    assert "mailto:" in index
+    assert "api.web3forms.com" not in index
+
+
 def test_news_contains_seed_title(tmp_path):
     out, _ = make_site(tmp_path)
     news = (out / "news.html").read_text(encoding="utf-8")

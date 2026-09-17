@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import jinja2
+import yaml
 
 from crawler import store
 from site_build import data
@@ -12,9 +13,20 @@ from site_build import data
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+SETTINGS_FILE = Path(__file__).resolve().parent / "settings.yaml"
 DEFAULT_DB = ROOT / "data" / "news.db"
 DEFAULT_OUT = ROOT / "dist"
 DEFAULT_VENDOR = ROOT / "web" / "static" / "vendor" / "echarts.min.js"
+
+
+def load_feedback_key() -> str:
+    if not SETTINGS_FILE.exists():
+        return ""
+    try:
+        raw = yaml.safe_load(SETTINGS_FILE.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return ""
+    return str((raw.get("feedback") or {}).get("web3forms_key") or "").strip()
 
 NEWS_TABS = {"全部": [], "新矿山": ["新矿"], "市场": ["价格", "市场"],
              "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]}
@@ -60,10 +72,12 @@ def _json_text(payload) -> str:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
-def build(db_path=None, out_dir=None, vendor_path=None) -> dict:
+def build(db_path=None, out_dir=None, vendor_path=None, feedback_key=None) -> dict:
     db_file = Path(db_path) if db_path else DEFAULT_DB
     out = Path(out_dir) if out_dir else DEFAULT_OUT
     vendor = Path(vendor_path) if vendor_path else DEFAULT_VENDOR
+    if feedback_key is None:
+        feedback_key = load_feedback_key()
     if not db_file.exists():
         raise FileNotFoundError(f"数据库不存在：{db_file}，请先运行 python -m crawler.main --once")
     if not vendor.exists():
@@ -87,7 +101,7 @@ def build(db_path=None, out_dir=None, vendor_path=None) -> dict:
     env.filters["hhmm"] = lambda v: (v or "")[11:16]
     news_articles = [a for a in articles if a["board"] == "news"]
     policy_articles = [a for a in articles if a["board"] == "policy"]
-    base = {"build_time": build_time}
+    base = {"build_time": build_time, "feedback_key": feedback_key}
     pages = {
         "index.html": env.get_template("index.html").render(
             **base, page="index", stats=stats, sources_ok=sources_ok, sources_total=sources_total,
