@@ -525,12 +525,14 @@ mark { padding: 0 1px; border-radius: 2px; background: #FEF3C7; color: inherit; 
 .fb-msg { margin: 0; font-size: 13px; color: #1A8F4C; }
 .fb-msg.err { color: #D23F31; }
 
-/* 信息中心返回入口（品牌旁） */
-.head-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* 信息中心返回入口（右侧，与导航分隔） */
+.head-right { display: flex; align-items: center; }
 .portal-back {
   display: inline-flex;
   align-items: center;
-  padding-left: 14px;
+  height: 54px;
+  margin-left: 10px;
+  padding-left: 16px;
   border-left: 1px solid var(--line);
   font-size: 13px;
   color: var(--muted);
@@ -538,3 +540,6 @@ mark { padding: 0 1px; border-radius: 2px; background: #FEF3C7; color: inherit; 
   transition: color .15s ease;
 }
 .portal-back:hover { color: var(--brand); }
+@media (max-width: 760px) {
+  .portal-back { height: 50px; margin-left: 6px; padding-left: 10px; font-size: 12px; }
+}
