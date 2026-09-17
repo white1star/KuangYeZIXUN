@@ -41,7 +41,7 @@ jobs:
           mkdir -p data logs
           if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
             git fetch --depth=1 origin data
-            git show origin/data:news.db > data/news.db
+            git show origin/data:data/news.db > data/news.db
             echo "已从 data 分支恢复数据库（$(du -h data/news.db | cut -f1)）"
           else
             echo "data 分支尚不存在，本次使用空库"
