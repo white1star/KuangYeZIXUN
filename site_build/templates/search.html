@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}搜索 · 矿业资讯站{% endblock %}
+{% block content %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">站内搜索</h1>
+    <p class="page-sub">按关键词检索全站新闻、政策与行业动态</p>
+    <div class="card filter-card">
+      <form class="filterbar" id="search-form">
+        <input type="text" id="search-input" name="q" placeholder="输入关键词，如：磷矿 政策" autocomplete="off">
+        <button class="btn-primary" type="submit">搜索</button>
+      </form>
+    </div>
+    <div class="search-meta" id="search-meta" hidden>
+      <span id="search-count"></span>
+      <a href="search.html" id="search-clear">清除</a>
+    </div>
+    <div class="card feed-card" id="feed"></div>
+    <p class="empty" id="search-empty" hidden>没有找到匹配内容，试试其他关键词</p>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="app.js"></script>
+<script>
+(function () {
+  var form = document.getElementById('search-form');
+  var input = document.getElementById('search-input');
+  var meta = document.getElementById('search-meta');
+  var count = document.getElementById('search-count');
+  var clear = document.getElementById('search-clear');
+  var feedEl = document.getElementById('feed');
+  var emptyEl = document.getElementById('search-empty');
+  var feed = new App.Feed(feedEl, 100);
+  var all = [];
+  var query = '';
+
+  function currentQuery() {
+    var params = new URLSearchParams(location.search);
+    return (params.get('q') || '').trim();
+  }
+
+  function search(text) {
+    query = (text || '').trim();
+    var target = query.toLowerCase();
+    var items = [];
+    if (target) {
+      items = all.filter(function (a) {
+        var title = (a.title || '').toLowerCase();
+        var summary = (a.summary || '').toLowerCase();
+        return title.indexOf(target) >= 0 || summary.indexOf(target) >= 0;
+      });
+    }
+    meta.hidden = !query;
+    count.textContent = '共 ' + items.length + ' 条结果 · 关键词：' + query;
+    feedEl.hidden = items.length === 0;
+    emptyEl.hidden = !query || items.length > 0;
+    feed.set(items, query);
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var text = input.value.trim();
+    var url = text ? 'search.html?q=' + encodeURIComponent(text) : 'search.html';
+    window.history.replaceState(null, '', url);
+    search(text);
+  });
+
+  clear.addEventListener('click', function (event) {
+    event.preventDefault();
+    input.value = '';
+    window.history.replaceState(null, '', 'search.html');
+    search('');
+  });
+
+  App.loadJSON('search.json').then(function (payload) {
+    all = payload.items || [];
+    var q = currentQuery();
+    input.value = q;
+    search(q);
+  });
+})();
+</script>
+{% endblock %}

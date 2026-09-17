@@ -1,0 +1,25 @@
+{% macro entry(a) %}
+<article class="entry">
+  <a class="entry-title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+  {% if a.member_count and a.member_count > 1 %}<span class="repost">另有 {{ a.member_count - 1 }} 家转载</span>{% endif %}
+  {% if a.summary %}<p class="entry-summary">{{ a.summary }}</p>{% endif %}
+  <div class="entry-meta">
+    <span>{{ a.source_name }}</span>
+    <span>{{ a.published_at }}</span>
+    {% for m in a.minerals %}<span class="chip chip-mineral">{{ m }}</span>{% endfor %}
+    {% for t in a.types %}<span class="chip chip-type-{{ t }}">{{ t }}</span>{% endfor %}
+  </div>
+</article>
+{% endmacro %}
+
+{% macro change_cell(p) %}
+{% if p.change is not none %}
+<span class="{{ 'up' if p.change > 0 else ('down' if p.change < 0 else 'muted') }}">{{ p.change|num }}</span>
+{% else %}<span class="muted">—</span>{% endif %}
+{% endmacro %}
+
+{% macro price_cell(p) %}
+{% if p.pct is not none %}
+<span class="{{ 'up' if p.pct > 0 else ('down' if p.pct < 0 else 'muted') }}">{{ '▲' if p.pct > 0 else ('▼' if p.pct < 0 else '') }} {{ p.pct|pct }}</span>
+{% else %}<span class="muted">—</span>{% endif %}
+{% endmacro %}

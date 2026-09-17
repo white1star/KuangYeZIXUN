@@ -44,9 +44,18 @@ E:\矿_news\
 │   ├── install.py               一键安装（venv/计划任务/防火墙/关睡眠）
 │   ├── acceptance.py            端到端自检（python -m scripts.acceptance）
 │   ├── ai_run.py                AI 巡检总入口：先抓一轮，再体检，给修复建议
-│   └── ai_check.py              巡检体检：源状态/失败快照/数据概览/建议报告
+│   ├── ai_check.py              巡检体检：源状态/失败快照/数据概览/建议报告
+│   ├── build_site.py            静态站构建入口（python -m scripts.build_site → dist\）
+│   └── publish_data_branch.py   一次性把 data\news.db 发布到 data 分支
+├── site_build\                  静态站构建包（独立模板/样式，不改 web/）
+│   ├── builder.py               构建逻辑（读 data\news.db → dist\）
+│   ├── data.py                  数据查询与 search.json / prices.json 生成
+│   ├── templates\*.html         静态站模板（独立于 web\templates）
+│   └── static\                  静态站样式/脚本（style.css、app.js）
+├── .github\workflows\crawl-deploy.yml  定时抓取+构建+发布 GitHub Pages
 ├── tools\snapshot.py            抓源站样本到 tests/fixtures（接入与修源用）
 ├── docs\ai-maintenance.md       AI 巡检维护手册（修源四步法/重打标/备份恢复）
+├── docs\github-pages.md         公网部署手册（GitHub Pages / 国内对象存储迁移）
 ├── tests\                       pytest 测试 + fixtures 离线样本
 ├── data\                        运行时生成（gitignore）：news.db、web.pid、backup\
 ├── logs\                        运行时生成（gitignore）：crawler_YYYYMMDD.log、snapshots\
@@ -326,3 +335,19 @@ python -m scripts.ai_check    # 只体检不抓取，报告写入 logs\ai_check_
 - 用户反馈：员工在网站上提交不受影响，每条反馈会**实时发到你邮箱**（见第 4 节反馈邮件通知）
 - 巡检报告不再发邮件，需要看时在本机打开管理页或看 `logs/ai_check_*.md`
 - 将来部署到云服务器后，通过远程桌面/SSH 登录服务器本机访问该页面
+
+---
+
+## 12. 公网部署（GitHub Pages）
+
+内网动态版保持原样，可额外发布一份纯静态站点供外网访问：GitHub Actions 每天北京时间 07:30 / 12:30 / 18:30 自动抓取 → 构建 `dist/` → 发布 Pages，**不需要任何 Secrets**，数据库放在仓库的 `data` 孤儿分支（每次强推单提交，仓库不膨胀）。
+
+```powershell
+python -m scripts.build_site           # 本地构建静态站到 dist\（不碰动态版）
+python -m http.server 8090 -d dist     # 本地预览 http://127.0.0.1:8090/
+python -m scripts.publish_data_branch  # 一次性把当前数据库推到 data 分支
+```
+
+- 完整操作步骤（建公开仓库 → push → Pages 选 GitHub Actions → 本地发布一次数据库 → Actions 手动 Run）：见 [`docs/github-pages.md`](docs/github-pages.md)
+- 国内访问较慢，文档第四节给出「迁移到国内对象存储」的说明（同一份 `dist/`，无需改版面）
+- 静态站不含管理页（源健康仅内网提供），反馈按钮改为 `mailto` 邮件

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}新闻资讯 · 矿业资讯站{% endblock %}
+{% block content %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">新闻资讯</h1>
+    <p class="page-sub">每日矿业行业动态与市场快讯</p>
+    <div class="pills" id="news-pills">
+      {% for t in tabs %}<button class="pill {{ 'active' if loop.first else '' }}" type="button" data-type="{{ t }}">{{ t }}</button>{% endfor %}
+    </div>
+    <div class="card feed-card" id="feed">
+      {% for a in articles %}{{ ui.entry(a) }}{% endfor %}
+    </div>
+    <p class="empty" id="feed-empty" hidden>没有找到相关新闻，试试其他分类</p>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="app.js"></script>
+<script>
+(function () {
+  var TYPES = {"新矿山": ["新矿"], "市场": ["价格", "市场"], "技术": ["技术"], "企业": ["企业"], "安全": ["安全"]};
+  var feedEl = document.getElementById('feed');
+  var emptyEl = document.getElementById('feed-empty');
+  var pills = document.getElementById('news-pills');
+  var feed = new App.Feed(feedEl, 80);
+  var all = [];
+  var tab = '全部';
+
+  function filtered(name) {
+    if (name === '全部') {
+      return all.filter(function (a) { return a.board === 'news'; });
+    }
+    var types = TYPES[name] || [];
+    return all.filter(function (a) {
+      var hit = (a.types || []).some(function (t) { return types.indexOf(t) >= 0; });
+      if (!hit) return false;
+      return name === '新矿山' || a.board === 'news';
+    });
+  }
+
+  function render() {
+    var items = filtered(tab);
+    feedEl.hidden = items.length === 0;
+    emptyEl.hidden = items.length > 0;
+    feed.set(items);
+  }
+
+  pills.addEventListener('click', function (event) {
+    var btn = event.target.closest('.pill');
+    if (!btn) return;
+    tab = btn.getAttribute('data-type');
+    Array.prototype.forEach.call(pills.querySelectorAll('.pill'), function (p) {
+      p.classList.toggle('active', p === btn);
+    });
+    render();
+  });
+
+  App.loadJSON('search.json').then(function (payload) {
+    all = payload.items || [];
+    render();
+  });
+})();
+</script>
+{% endblock %}

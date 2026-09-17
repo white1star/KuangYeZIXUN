@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="statusbar">
+  <div class="status-inner container">
+    <div>
+      构建时间 {{ build_time }} · 今日新增 {{ stats.total }} 条 · 信息源 {{ sources_ok }}/{{ sources_total }} 正常
+    </div>
+  </div>
+</div>
+<section class="hero">
+  <div class="container">
+    <form class="searchbox" method="get" action="search.html">
+      <input type="text" name="q" placeholder="搜索新闻、政策、矿种，如：磷矿 政策" autocomplete="off">
+      <button type="submit">搜索</button>
+    </form>
+    <div class="hot-words">
+      <span>热门搜索：</span>
+      {% for kw in hot_words %}<a href="search.html?q={{ kw|urlencode }}">{{ kw }}</a>{% endfor %}
+    </div>
+  </div>
+</section>
+<section class="page-body">
+  <div class="container">
+    <div class="stat-grid">
+      <div class="card stat-card">
+        <div class="stat-label">今日新增</div>
+        <div class="stat-value">{{ stats.total }}<span>条</span></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">新闻</div>
+        <div class="stat-value">{{ stats.by_board.get('news', 0) }}<span>篇</span></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">政策</div>
+        <div class="stat-value">{{ stats.by_board.get('policy', 0) }}<span>条</span></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">信息源</div>
+        <div class="stat-value">{{ sources_ok }}/{{ sources_total }}<span>正常</span></div>
+      </div>
+    </div>
+    <div class="entry-grid">
+      <a class="card entry-card" href="news.html">
+        <span class="ec-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M10 6h8v4h-8z"/><path d="M18 14h-8"/><path d="M15 18h-5"/></svg>
+        </span>
+        <div class="ec-head"><span>新闻资讯</span><span class="ec-arrow">→</span></div>
+        <p>每日行业动态与政策早知道</p>
+        <div class="ec-foot">今日 <b>{{ stats.by_board.get('news', 0) }}</b> 条</div>
+      </a>
+      <a class="card entry-card" href="prices.html">
+        <span class="ec-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M7.5 15.5l3.5-4 3 3 4.5-5.5"/></svg>
+        </span>
+        <div class="ec-head"><span>矿价行情</span><span class="ec-arrow">→</span></div>
+        <p>全品种价格与走势</p>
+        <div class="ec-foot"><b>{{ commodity_count }}</b> 个品种</div>
+      </a>
+      <a class="card entry-card" href="policy.html">
+        <span class="ec-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+        </span>
+        <div class="ec-head"><span>政策法规</span><span class="ec-arrow">→</span></div>
+        <p>国家与地方矿业政策</p>
+        <div class="ec-foot">今日 <b>{{ stats.by_board.get('policy', 0) }}</b> 条</div>
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

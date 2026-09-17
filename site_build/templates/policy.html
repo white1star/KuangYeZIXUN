@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}政策法规 · 矿业资讯站{% endblock %}
+{% block content %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">政策法规</h1>
+    <p class="page-sub">汇聚矿产行业最新政策、法规及通知公告</p>
+    <div class="card filter-card">
+      <div class="filterbar">
+        <select id="pol-source">
+          <option value="">全部机关</option>
+          {% for s in sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        </select>
+        <select id="pol-region">
+          <option value="">全部地区</option>
+          {% for r in regions %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="card feed-card" id="feed">
+      {% for a in articles %}{{ ui.entry(a) }}{% endfor %}
+    </div>
+    <p class="empty" id="feed-empty" hidden>没有符合条件的政策，试试其他机关或地区</p>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="app.js"></script>
+<script>
+(function () {
+  var feedEl = document.getElementById('feed');
+  var emptyEl = document.getElementById('feed-empty');
+  var selSource = document.getElementById('pol-source');
+  var selRegion = document.getElementById('pol-region');
+  var feed = new App.Feed(feedEl, 80);
+  var all = [];
+
+  function render() {
+    var source = selSource.value;
+    var region = selRegion.value;
+    var items = all.filter(function (a) {
+      if (a.board !== 'policy') return false;
+      if (source && a.source_name !== source) return false;
+      if (region && (a.regions || []).indexOf(region) < 0) return false;
+      return true;
+    });
+    feedEl.hidden = items.length === 0;
+    emptyEl.hidden = items.length > 0;
+    feed.set(items);
+  }
+
+  selSource.addEventListener('change', render);
+  selRegion.addEventListener('change', render);
+
+  App.loadJSON('search.json').then(function (payload) {
+    all = payload.items || [];
+    render();
+  });
+})();
+</script>
+{% endblock %}

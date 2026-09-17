@@ -5,6 +5,7 @@ __pycache__/
 .pytest_tmp/
 data/
 logs/
+dist/
 .superpowers/
 config/notify.local.yaml
 .playwright-cli/

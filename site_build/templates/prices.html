@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}矿价行情 · 矿业资讯站{% endblock %}
+{% block head %}<script src="vendor/echarts.min.js"></script>{% endblock %}
+{% block content %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">矿价行情</h1>
+    <p class="page-sub">实时追踪主要矿产品现货与期货价格动态</p>
+    <div class="card toolbar">
+      <label>品种
+        <select id="commodity">
+          {% for c in commodities %}<option value="{{ c }}" {{ 'selected' if c == commodity else '' }}>{{ c }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>类型
+        <select id="ptype">
+          <option value="">全部类型</option>
+          {% for t in type_map.get(commodity, []) %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>周期
+        <select id="days">
+          <option value="7">近7天</option>
+          <option value="30" selected>近30天</option>
+          <option value="90">近90天</option>
+        </select>
+      </label>
+    </div>
+    <div class="card chart-card">
+      <div class="card-head"><span id="chart-title">{{ commodity }} 价格走势 · 全部类型 · 近30天</span></div>
+      <div id="chart"></div>
+      <p class="empty" id="chart-empty" hidden>暂无数据</p>
+    </div>
+    <div class="card table-card">
+      <div class="card-head">最新报价</div>
+      <div class="table-scroll">
+        <table class="prices wide">
+          <thead>
+            <tr><th>品种</th><th>类型</th><th class="num">最新价</th><th class="num">涨跌</th><th class="num">涨跌幅</th><th>日期</th><th>来源</th></tr>
+          </thead>
+          <tbody>
+            {% for p in prices %}
+            <tr>
+              <td>{{ p.commodity }}</td>
+              <td>{{ p.price_type }}</td>
+              <td class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
+              <td class="num">{{ ui.change_cell(p) }}</td>
+              <td class="num">{{ ui.price_cell(p) }}</td>
+              <td>{{ p.price_date }}</td>
+              <td class="src">{{ p.source }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7"><p class="empty">暂无数据</p></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="app.js"></script>
+<script>
+(function () {
+  var chartEl = document.getElementById('chart');
+  var emptyEl = document.getElementById('chart-empty');
+  var titleEl = document.getElementById('chart-title');
+  var selCommodity = document.getElementById('commodity');
+  var selPtype = document.getElementById('ptype');
+  var selDays = document.getElementById('days');
+  var chart = echarts.init(chartEl);
+  var TYPE_MAP = {};
+  var SERIES = {};
+
+  function fmtNum(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return '';
+    var parts = (Math.round(n * 100) / 100).toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  }
+
+  function shiftDate(iso, delta) {
+    var parts = iso.split('-');
+    var dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + delta);
+    var m = String(dt.getMonth() + 1).padStart(2, '0');
+    var d = String(dt.getDate()).padStart(2, '0');
+    return dt.getFullYear() + '-' + m + '-' + d;
+  }
+
+  function pointsFor(commodity, priceType, days) {
+    var entry = SERIES[commodity] || {};
+    var points = entry[priceType || '全部'] || [];
+    if (!points.length) return [];
+    var cutoff = shiftDate(points[points.length - 1][0], -(days - 1));
+    return points.filter(function (p) { return p[0] >= cutoff; });
+  }
+
+  function syncTypes() {
+    var types = TYPE_MAP[selCommodity.value] || [];
+    var current = selPtype.value;
+    selPtype.innerHTML = '<option value="">全部类型</option>';
+    for (var i = 0; i < types.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = types[i];
+      opt.textContent = types[i];
+      selPtype.appendChild(opt);
+    }
+    if (types.indexOf(current) >= 0) selPtype.value = current;
+    if (selPtype.selectedIndex < 0) selPtype.value = '';
+  }
+
+  function load() {
+    var c = selCommodity.value;
+    var t = selPtype.value;
+    var d = Number(selDays.value);
+    titleEl.textContent = c + ' 价格走势 · ' + (t || '全部类型') + ' · 近' + d + '天';
+    var points = pointsFor(c, t, d);
+    emptyEl.hidden = points.length > 0;
+    chartEl.style.display = points.length ? '' : 'none';
+    if (!points.length) {
+      chart.clear();
+      return;
+    }
+    var values = points.map(function (p) { return p[1]; });
+    var lo = Math.min.apply(null, values);
+    var hi = Math.max.apply(null, values);
+    var pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 1;
+    function roundTo(v, dir) {
+      var span = hi + pad - (lo - pad);
+      var mag = Math.pow(10, Math.floor(Math.log10(span / 4 || 1)));
+      return dir > 0 ? Math.ceil(v / mag) * mag : Math.floor(v / mag) * mag;
+    }
+    var lastIndex = points.length - 1;
+    var unit = points[lastIndex][2] || '';
+    chart.setOption({
+      tooltip: {
+        trigger: 'axis',
+        formatter: function (items) {
+          if (!items || !items.length) return '';
+          var it = items[0];
+          return it.axisValue + '<br/>' + fmtNum(it.value) + (unit ? ' ' + unit : '');
+        }
+      },
+      grid: { left: 64, right: 32, top: 32, bottom: 40 },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: points.map(function (p) { return p[0]; }),
+        axisLine: { lineStyle: { color: '#DFE6EA' } },
+        axisTick: { show: false },
+        axisLabel: {
+          color: '#6C7784',
+          fontSize: 11,
+          formatter: function (value) { return value.slice(5); }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        scale: true,
+        min: roundTo(lo - pad, -1),
+        max: roundTo(hi + pad, 1),
+        splitLine: { lineStyle: { color: '#EEF2F0' } },
+        axisLabel: { color: '#6C7784', fontSize: 11 }
+      },
+      series: [{
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        connectNulls: true,
+        data: points.map(function (p) { return p[1]; }),
+        lineStyle: { color: '#289048', width: 2 },
+        itemStyle: { color: '#289048' },
+        areaStyle: { color: 'rgba(40,144,72,0.08)' },
+        label: {
+          show: true,
+          position: 'top',
+          color: '#111418',
+          fontSize: 12,
+          formatter: function (params) {
+            return params.dataIndex === lastIndex
+              ? fmtNum(params.value) + (unit ? ' ' + unit : '')
+              : '';
+          }
+        }
+      }]
+    });
+    chart.resize();
+  }
+
+  selCommodity.addEventListener('change', function () { syncTypes(); load(); });
+  selPtype.addEventListener('change', load);
+  selDays.addEventListener('change', load);
+  window.addEventListener('resize', function () { chart.resize(); });
+
+  App.loadJSON('prices.json').then(function (payload) {
+    TYPE_MAP = payload.type_map || {};
+    SERIES = payload.series || {};
+    syncTypes();
+    load();
+  }).catch(function () {
+    emptyEl.hidden = false;
+    chartEl.style.display = 'none';
+  });
+})();
+</script>
+{% endblock %}

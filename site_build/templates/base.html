@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}矿业资讯站{% endblock %}</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23289048'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="site-head">
+  <div class="head-inner container">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-text"><b>像素智能</b><small>矿业资讯站</small></span>
+    </a>
+    <nav class="site-nav">
+      <a href="index.html" class="{{ 'active' if page == 'index' else '' }}">首页</a>
+      <a href="news.html" class="{{ 'active' if page == 'news' else '' }}">新闻</a>
+      <a href="prices.html" class="{{ 'active' if page == 'prices' else '' }}">矿价</a>
+      <a href="policy.html" class="{{ 'active' if page == 'policy' else '' }}">政策</a>
+    </nav>
+  </div>
+</header>
+<main>{% block content %}{% endblock %}</main>
+<footer class="site-foot">
+  <div class="foot-inner container">
+    <span>仅存标题与摘要 · 点击标题跳转原文 · 构建于 {{ build_time }}</span>
+    <span>© 2026 像素智能</span>
+  </div>
+</footer>
+<a class="feedback-fab" id="feedback-open" href="#" rel="nofollow">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+  </svg>
+  <span>反馈</span>
+</a>
+<script>
+(function () {
+  var user = '3103631561';
+  var domain = 'qq' + '.com';
+  var open = document.getElementById('feedback-open');
+  function link() {
+    var subject = '矿业资讯站反馈';
+    var body = '页面地址：' + location.href + '\n\n反馈内容：\n';
+    return 'mailto:' + user + '@' + domain + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  }
+  function sync() { open.setAttribute('href', link()); }
+  sync();
+  open.addEventListener('click', sync);
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
