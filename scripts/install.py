@@ -29,7 +29,7 @@ def ps_task_script(name, python_exe, arguments, workdir, *,
         parts.append(
             "$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) "
             f"-RepetitionInterval (New-TimeSpan -Minutes {int(repeat_minutes or 5)}) "
-            "-RepetitionDuration ([TimeSpan]::MaxValue)")
+            "-RepetitionDuration (New-TimeSpan -Days 3650)")
     flags = []
     if start_when_available:
         flags.append("-StartWhenAvailable")
