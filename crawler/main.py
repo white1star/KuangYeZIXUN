@@ -1,5 +1,6 @@
 import argparse
 import time
+from datetime import datetime, timedelta
 
 from crawler import classify, dedup, parse, price_sources, report, store
 from crawler.config import load_settings, load_sources, load_tags
@@ -10,8 +11,16 @@ def _iter_urls(src: dict) -> list:
     return src.get("urls") or [src["url"]]
 
 
+def _drop_stale(items, src):
+    days = int((src.get("list") or {}).get("max_age_days") or 0)
+    if not days:
+        return items
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    return [i for i in items if not i.published_at or i.published_at >= cutoff]
+
+
 def _process_articles(conn, src, html, base_url, settings, tags, fetcher):
-    items = parse.parse_list(html, src, base_url)
+    items = _drop_stale(parse.parse_list(html, src, base_url), src)
     detail = src.get("detail") or {}
     if detail.get("enabled"):
         limit = int(detail.get("limit", 10))

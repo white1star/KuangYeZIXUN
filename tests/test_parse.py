@@ -116,3 +116,48 @@ def test_parse_list_date_without_sibling_flag():
     cfg = {"list": {"item": "div#list h4", "title": "a", "date": "span.time"}}
     items = parse_list(SIBLING_HTML, cfg, "https://e.com/")
     assert items[0].published_at == ""
+
+
+LIST_JSON = """
+{"datasource": [
+  {"title": "关于煤矿产能置换的通知", "publishUrl": "../20260911/abc/c.html",
+   "publishTime": "2026-09-11 12:04:01", "summary": "摘要一"},
+  {"title": "能源政策发布", "publishUrl": "https://x.com/y/z.html",
+   "publishTime": "2026-08-01 09:00:00", "summary": ""},
+  {"title": "无链接的条目", "publishUrl": "", "publishTime": "2026-07-01 09:00:00"},
+  {"title": "", "publishUrl": "../20260701/dead/c.html", "publishTime": "2026-06-01 09:00:00"},
+  {"showTitle": "标题字段缺失的条目", "publishUrl": "../20260501/beef/c.html",
+   "publishTime": "2026-05-01 09:00:00", "summary": ""}
+]}
+"""
+
+JSON_CFG = {
+    "list": {"format": "json", "items": "datasource", "title": "title",
+             "link": "publishUrl", "date": "publishTime", "summary": "summary"},
+}
+
+
+def test_parse_json_list_basic():
+    items = parse_list(LIST_JSON, JSON_CFG, "https://www.nea.gov.cn/xwzx/ds_x.json")
+    assert [i.title for i in items] == ["关于煤矿产能置换的通知", "能源政策发布"]
+    assert items[0].url == "https://www.nea.gov.cn/20260911/abc/c.html"
+    assert items[1].url == "https://x.com/y/z.html"
+    assert items[0].published_at == "2026-09-11"
+    assert items[0].summary == "摘要一"
+    assert items[1].summary == ""
+
+
+def test_parse_json_list_filter_keywords():
+    cfg = {**JSON_CFG, "filter_keywords": ["煤矿"]}
+    items = parse_list(LIST_JSON, cfg, "https://www.nea.gov.cn/xwzx/ds_x.json")
+    assert [i.title for i in items] == ["关于煤矿产能置换的通知"]
+
+
+def test_parse_json_list_bad_json_returns_empty():
+    assert parse_list("not json", JSON_CFG, "https://e.com/") == []
+    assert parse_list('{"other": []}', JSON_CFG, "https://e.com/") == []
+
+
+def test_parse_json_list_tolerates_bom():
+    items = parse_list("\ufeff" + LIST_JSON, JSON_CFG, "https://www.nea.gov.cn/xwzx/ds_x.json")
+    assert len(items) == 2

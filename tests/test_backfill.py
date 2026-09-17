@@ -122,3 +122,90 @@ def test_template_offset_start(tmp_path):
                        fetcher=make_fetcher(pages), sleep=lambda s: None)["t"]
     assert res["pages"] == 2
     assert res["new"] == 2
+
+
+def test_iter_entries_single_url():
+    assert backfill.iter_entries(make_source()) == [{"url": "https://t/", "pages": {}}]
+
+
+def test_iter_entries_multi_url_shared_pages():
+    src = make_source()
+    src.pop("url")
+    src["urls"] = ["https://t/a/", "https://t/b/"]
+    src["pages"] = {"template": "{url}index_{n}.html"}
+    entries = backfill.iter_entries(src)
+    assert [e["url"] for e in entries] == ["https://t/a/", "https://t/b/"]
+    assert entries[0]["pages"]["template"] == "{url}index_{n}.html"
+    assert entries[1]["pages"] == src["pages"]
+
+
+def test_iter_entries_url_pages_override():
+    src = make_source()
+    src["urls"] = [{"url": "https://t/a/", "pages": {"max_pages": 3}}, "https://t/b/"]
+    src["pages"] = {"template": "{url}index_{n}.html", "max_pages": 9}
+    entries = backfill.iter_entries(src)
+    assert entries[0]["pages"]["max_pages"] == 3
+    assert entries[0]["pages"]["template"] == "{url}index_{n}.html"
+    assert entries[1]["pages"]["max_pages"] == 9
+
+
+def test_page_base():
+    assert backfill.page_base("https://t/a/") == "https://t/a/"
+    assert backfill.page_base("https://t/a") == "https://t/a/"
+    assert backfill.page_base("https://t/a/index.html") == "https://t/a/"
+    assert backfill.page_base("https://t/a/index.htm?x=1") == "https://t/a/"
+
+
+def test_probe_candidates_skips_data_urls():
+    assert backfill.probe_candidates("https://t/ds_1.json", 1) == []
+
+
+def test_multi_url_template_pagination(tmp_path):
+    src = make_source()
+    src.pop("url")
+    src["urls"] = ["https://t/a/", "https://t/b/"]
+    src["pages"] = {"template": "{url}index_{n}.html", "max_pages": 5}
+    pages = {
+        "https://t/a/": page(item(1, "A1", "2026-06-01")),
+        "https://t/a/index_1.html": page(item(2, "A2", "2025-12-01")),
+        "https://t/b/": page(item(3, "B1", "2026-05-01")),
+        "https://t/b/index_1.html": page(""),
+    }
+    settings = dataclasses.replace(load_settings(), request_interval=0.0, db_path=tmp_path / "t.db")
+    res = backfill.run(max_pages=0, settings=settings, sources=[src],
+                       fetcher=make_fetcher(pages), sleep=lambda s: None)["t"]
+    assert res["pages"] == 3
+    assert res["new"] == 2
+    assert "已到日期下限" in res["stopped"]
+    assert "空页" in res["stopped"]
+    conn = store.connect(tmp_path / "t.db")
+    titles = [r["title"] for r in conn.execute("SELECT title FROM articles ORDER BY id")]
+    assert titles == ["A1", "B1"]
+
+
+def test_multi_url_sleeps_between_entries(tmp_path):
+    src = make_source()
+    src.pop("url")
+    src["urls"] = ["https://t/a/", "https://t/b/"]
+    pages = {
+        "https://t/a/": page(item(1, "A", "2026-06-01")),
+        "https://t/b/": page(item(2, "B", "2026-06-01")),
+    }
+    settings = dataclasses.replace(load_settings(), request_interval=1.0, db_path=tmp_path / "t.db")
+    slept = []
+    backfill.run(max_pages=0, settings=settings, sources=[src],
+                 fetcher=make_fetcher(pages), sleep=slept.append)
+    assert slept == [1.0]
+
+
+def test_multi_url_one_entry_failure_keeps_others(tmp_path):
+    src = make_source()
+    src.pop("url")
+    src["urls"] = ["https://t/a/", "https://t/broken/"]
+    pages = {"https://t/a/": page(item(1, "A1", "2026-06-01"))}
+    settings = dataclasses.replace(load_settings(), request_interval=0.0, db_path=tmp_path / "t.db")
+    res = backfill.run(max_pages=0, settings=settings, sources=[src],
+                       fetcher=make_fetcher(pages), sleep=lambda s: None)["t"]
+    assert res["new"] == 1
+    assert res["pages"] == 1
+    assert "broken" in res["error"]

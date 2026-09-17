@@ -34,9 +34,33 @@ def probe_candidates(base_url, n):
         if b.lower().endswith(tail):
             b = b[: -len(tail)]
             break
-    if b.lower().endswith((".html", ".htm", ".shtml", ".aspx")):
+    if b.lower().endswith((".html", ".htm", ".shtml", ".aspx", ".json", ".txt", ".dat")):
         return []
     return [f"{b}/index_{n}.html", f"{b}/index_{n}.htm", f"{b}/index_{n}.shtml"]
+
+
+def page_base(url):
+    b = (url or "").split("#")[0].split("?")[0].rstrip("/")
+    for tail in ("/index.html", "/index.htm", "/index.shtml"):
+        if b.lower().endswith(tail):
+            b = b[: -len(tail)]
+            break
+    return f"{b}/" if b else ""
+
+
+def iter_entries(src):
+    urls = src.get("urls")
+    if not urls:
+        return [{"url": src["url"], "pages": src.get("pages") or {}}]
+    entries = []
+    for u in urls:
+        if isinstance(u, dict):
+            pages = dict(src.get("pages") or {})
+            pages.update(u.get("pages") or {})
+            entries.append({"url": u["url"], "pages": pages})
+        else:
+            entries.append({"url": u, "pages": src.get("pages") or {}})
+    return entries
 
 
 def keep_item(item, since):
@@ -52,102 +76,118 @@ def page_all_older(items, since):
     return all(i.published_at < since for i in dated)
 
 
-def crawl_source(conn, src, settings, tags, fetcher, since, max_pages, sleep=time.sleep):
-    run_id = store.start_crawl_run(conn, src["key"])
-    pages_cfg = src.get("pages") or {}
+def crawl_entry(conn, src, entry, settings, tags, fetcher, since, max_pages, stats, sleep=time.sleep):
+    pages_cfg = entry.get("pages") or {}
     tpl = pages_cfg.get("template")
     total_max = int(pages_cfg.get("max_pages") or max_pages or 80)
     if max_pages:
         total_max = min(total_max, max_pages)
     start_n = int(pages_cfg.get("offset") or 1)
-    stats = {"pages": 0, "found": 0, "new": 0, "merged": 0, "skipped": 0,
-             "oldest": "", "stopped": "", "error": ""}
+    entry_url = entry["url"]
     seen_urls = set()
-    current_url = src["url"]
+    current_url = entry_url
     html = ""
     zero_streak = 0
-    try:
-        result = fetcher(current_url, referer=src.get("referer", ""), encoding=src.get("encoding"),
-                         timeout=settings.request_timeout, retries=settings.request_retries)
-        if not result.ok:
-            raise RuntimeError(result.error or f"HTTP {result.status}")
-        html = result.text
-        current_url = result.final_url or current_url
-        for page_no in range(1, total_max + 1):
-            if current_url in seen_urls:
-                stats["stopped"] = "循环翻页"
-                break
-            seen_urls.add(current_url)
-            items = parse.parse_list(html, src, current_url)
-            if not items:
-                stats["stopped"] = "空页"
-                break
-            stats["pages"] += 1
-            page_new = 0
-            for item in items:
-                stats["found"] += 1
-                if not keep_item(item, since):
-                    continue
-                if item.published_at and (not stats["oldest"] or item.published_at < stats["oldest"]):
-                    stats["oldest"] = item.published_at
-                article = {
-                    "url": item.url,
-                    "title": item.title,
-                    "summary": item.summary,
-                    "source_key": src["key"],
-                    "published_at": item.published_at,
-                    "classification": classify.classify(item.title, item.summary, src["board"], tags),
-                }
-                status = dedup.submit_item(conn, article, threshold=settings.dedup_threshold)
-                if status == "new":
-                    stats["new"] += 1
-                    page_new += 1
-                elif status == "merged":
-                    stats["merged"] += 1
-                else:
-                    stats["skipped"] += 1
-            if page_all_older(items, since):
-                stats["stopped"] = "已到日期下限"
-                break
-            zero_streak = zero_streak + 1 if page_new == 0 else 0
-            if not any(i.published_at for i in items) and page_new == 0:
-                stats["stopped"] = "无新内容"
-                break
-            if zero_streak >= 2:
-                stats["stopped"] = "连续无新增"
-                break
-            next_url = ""
-            next_text = ""
-            if page_no < total_max:
-                if tpl:
-                    next_url = tpl.format(n=start_n + page_no - 1)
-                else:
-                    next_url = find_next_url(html, current_url)
-                    if not next_url:
-                        for cand in probe_candidates(src["url"], page_no):
-                            probe = fetcher(cand, referer=src.get("referer", ""), encoding=src.get("encoding"),
-                                            timeout=settings.request_timeout, retries=0)
-                            if probe.ok:
-                                next_url = probe.final_url or cand
-                                next_text = probe.text
-                                break
-            if not next_url:
-                if not stats["stopped"]:
-                    stats["stopped"] = "达到页数上限" if page_no >= total_max else "无下一页"
-                break
-            if next_text:
-                html = next_text
-                current_url = next_url
+    result = fetcher(current_url, referer=src.get("referer", ""), encoding=src.get("encoding"),
+                     timeout=settings.request_timeout, retries=settings.request_retries)
+    if not result.ok:
+        raise RuntimeError(result.error or f"HTTP {result.status}")
+    html = result.text
+    current_url = result.final_url or current_url
+    for page_no in range(1, total_max + 1):
+        if current_url in seen_urls:
+            return "循环翻页"
+        seen_urls.add(current_url)
+        items = parse.parse_list(html, src, current_url)
+        if not items:
+            return "空页"
+        stats["pages"] += 1
+        page_new = 0
+        for item in items:
+            stats["found"] += 1
+            if not keep_item(item, since):
                 continue
-            sleep(settings.request_interval)
-            nxt = fetcher(next_url, referer=src.get("referer", ""), encoding=src.get("encoding"),
-                          timeout=settings.request_timeout, retries=settings.request_retries)
-            if not nxt.ok:
-                stats["stopped"] = "下一页抓取失败"
-                break
-            html = nxt.text
-            current_url = nxt.final_url or next_url
-        store.finish_crawl_run(conn, run_id, "ok", stats["found"], stats["new"])
+            if item.published_at and (not stats["oldest"] or item.published_at < stats["oldest"]):
+                stats["oldest"] = item.published_at
+            article = {
+                "url": item.url,
+                "title": item.title,
+                "summary": item.summary,
+                "source_key": src["key"],
+                "published_at": item.published_at,
+                "classification": classify.classify(item.title, item.summary, src["board"], tags),
+            }
+            status = dedup.submit_item(conn, article, threshold=settings.dedup_threshold)
+            if status == "new":
+                stats["new"] += 1
+                page_new += 1
+            elif status == "merged":
+                stats["merged"] += 1
+            else:
+                stats["skipped"] += 1
+        if page_all_older(items, since):
+            return "已到日期下限"
+        zero_streak = zero_streak + 1 if page_new == 0 else 0
+        if not any(i.published_at for i in items) and page_new == 0:
+            return "无新内容"
+        if zero_streak >= 2:
+            return "连续无新增"
+        next_url = ""
+        next_text = ""
+        if page_no < total_max:
+            if tpl:
+                next_url = tpl.format(url=page_base(entry_url), n=start_n + page_no - 1)
+            else:
+                next_url = find_next_url(html, current_url)
+                if not next_url:
+                    for cand in probe_candidates(entry_url, page_no):
+                        probe = fetcher(cand, referer=src.get("referer", ""), encoding=src.get("encoding"),
+                                        timeout=settings.request_timeout, retries=0)
+                        if probe.ok:
+                            next_url = probe.final_url or cand
+                            next_text = probe.text
+                            break
+        if not next_url:
+            return "达到页数上限" if page_no >= total_max else "无下一页"
+        if next_text:
+            html = next_text
+            current_url = next_url
+            continue
+        sleep(settings.request_interval)
+        nxt = fetcher(next_url, referer=src.get("referer", ""), encoding=src.get("encoding"),
+                      timeout=settings.request_timeout, retries=settings.request_retries)
+        if not nxt.ok:
+            return "下一页抓取失败"
+        html = nxt.text
+        current_url = nxt.final_url or next_url
+    return ""
+
+
+def crawl_source(conn, src, settings, tags, fetcher, since, max_pages, sleep=time.sleep):
+    run_id = store.start_crawl_run(conn, src["key"])
+    stats = {"pages": 0, "found": 0, "new": 0, "merged": 0, "skipped": 0,
+             "oldest": "", "stopped": "", "error": ""}
+    stops = []
+    errors = []
+    entries = iter_entries(src)
+    try:
+        for index, entry in enumerate(entries):
+            if index:
+                sleep(settings.request_interval)
+            try:
+                reason = crawl_entry(conn, src, entry, settings, tags, fetcher, since, max_pages, stats, sleep)
+                if reason:
+                    stops.append(reason)
+            except Exception as e:
+                errors.append(f"{entry['url']}: {e}")
+        if errors:
+            stats["error"] = "；".join(errors)
+        if len(entries) > 1:
+            stats["stopped"] = "；".join(dict.fromkeys(stops))
+        else:
+            stats["stopped"] = stops[0] if stops else ""
+        store.finish_crawl_run(conn, run_id, "error" if errors else "ok",
+                               stats["found"], stats["new"], stats["error"])
     except Exception as e:
         store.finish_crawl_run(conn, run_id, "error", stats["found"], stats["new"], str(e))
         stats["error"] = str(e)

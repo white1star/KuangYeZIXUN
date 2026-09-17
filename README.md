@@ -137,16 +137,21 @@ python -c "from web import notify; print(notify.send_feedback_email('测试邮�
 | `key` | 否 | 源唯一标识，默认取文件名（如 `mnr.yaml` → `mnr`），出现在日志/源健康页/测试中 |
 | `name` | 是 | 中文显示名，源健康页展示 |
 | `board` | 是 | 板块：`price` 价格 / `policy` 政策 / `news` 新闻 |
-| `url` | 单页必填 | 列表页地址；与 `urls` 二选一 |
-| `urls` | 否 | 多列表页地址数组（如生意社多个品种列表页），会依次抓取 |
+| `url` | 单页必填 | 列表页地址（`test_sources_news` 的快照解析基准）；与 `urls` 二选一 |
+| `urls` | 否 | 多列表页地址数组（如生意社多品种、内蒙矿业权市场多子栏目），抓取时依次处理；元素可写成 `{url, pages}` 覆盖该入口的翻页配置 |
 | `referer` | 否 | 请求头 Referer，部分站点（新浪行情、生意社）校验需要 |
 | `encoding` | 否 | 网页编码，如 `gb18030`；不填按响应自动识别 |
 | `list` | 新闻/政策必填 | 列表页解析（`parser` 不在时使用） |
 | `list.item` | 是 | 列表行 CSS 选择器（必填，否则报错"源配置缺少 list.item 选择器"） |
-| `list.title` | 否 | 标题选择器（相对行）；不填取整行文本 |
-| `list.link` | 否 | 链接选择器（相对行）；不填取标题元素或行内第一个 `<a>` |
-| `list.date` | 否 | 日期选择器（相对行）；取出文本自动识别 `2026-09-15 / 09-15` 等格式 |
+| `list.title` | 否 | 标题选择器（相对行）；不填取整行文本。JSON 模式下是字段名（默认 `title`） |
+| `list.link` | 否 | 链接选择器（相对行）；不填取标题元素或行内第一个 `<a>`。JSON 模式下是字段名（默认 `link`，相对地址按列表接口地址拼接） |
+| `list.date` | 否 | 日期选择器（相对行）；取出文本自动识别 `2026-09-15 / 09-15` 等格式。JSON 模式下是字段名（如 `publishTime`） |
 | `list.date_regex` | 否 | 选择器取不到日期时，用正则从链接/行文本提取 |
+| `list.format` | 否 | 填 `json` 时按 JSON 接口解析（如国家能源局数据源 `ds_*.json`） |
+| `list.items` | 否 | JSON 数组所在字段（支持 `a.b` 路径，如 `datasource`）；不填用根节点 |
+| `list.summary` | 否 | JSON 条目的摘要字段名 |
+| `list.max_age_days` | 否 | 常规抓取只收最近 N 天的条目（无日期条目保留；历史回填不受限）；用于全量接口型源（如能源局 JSON）避免一次性灌入多年旧闻 |
+| `pages` | 否 | 历史回填翻页：`template` 页码模板（`{n}` 为页码，`{url}` 为入口地址），可加 `offset`（起始页码，默认 1）与 `max_pages` |
 | `detail` | 否 | 详情页摘要抓取配置 |
 | `detail.enabled` | 否 | 是否进详情页抓摘要（每轮限 `limit` 条，控制请求量） |
 | `detail.content` | 否 | 正文容器选择器（如 `div.TRS_Editor`）；摘要截断到 200 字 |

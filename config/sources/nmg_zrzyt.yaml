@@ -2,10 +2,24 @@ key: nmg_zrzyt
 name: 内蒙古自治区自然资源厅·矿业权市场
 board: policy
 url: https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/index.html
+urls:
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/tkqcr/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/tkqcrjg/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/tkxycr/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/tkqzr/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/tkqqtgg/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/ckqcr/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/ckqcrjg/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/ckqcrxy/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/ckqzrgs/
+  - https://zrzy.nmg.gov.cn/bsfw/ywcx_kyqsc/ckqqtgg/
 encoding: utf-8
 list:
-  item: "div.list li"
+  item: "div.list li, div.lanMu_con ul li"
   title: "a"
   date: "span"
+pages:
+  template: "{url}index_{n}.html"
+  max_pages: 8
 detail:
   enabled: false

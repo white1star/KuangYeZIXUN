@@ -1,4 +1,5 @@
 import dataclasses
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from crawler import main, store
@@ -92,6 +93,32 @@ def test_run_once_bad_yaml_isolation(tmp_path, monkeypatch):
     conn = store.connect(settings.db_path)
     runs = conn.execute("SELECT source_key,status FROM crawl_runs ORDER BY id").fetchall()
     assert [(r["source_key"], r["status"]) for r in runs] == [("news_a", "ok")]
+
+
+def test_run_once_max_age_days_drops_old_items(tmp_path, monkeypatch):
+    sources_dir = tmp_path / "sources"
+    sources_dir.mkdir()
+    (sources_dir / "news_fresh.yaml").write_text(
+        "name: 时效过滤源\nboard: news\nurl: https://news.example.com/list\n"
+        "list:\n  item: ul.list li\n  title: a\n  date: span\n  max_age_days: 3\n",
+        encoding="utf-8")
+    today = datetime.now().strftime("%Y-%m-%d")
+    old = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    html = (f'<ul class="list">'
+            f'<li><a href="/a/new.html">新鲜新闻</a><span>{today}</span></li>'
+            f'<li><a href="/a/old.html">过期新闻</a><span>{old}</span></li>'
+            f'<li><a href="/a/nodate.html">无日期新闻</a><span>暂无</span></li></ul>')
+    fetcher = lambda url, **kw: FetchResult(ok=True, status=200, text=html, final_url=url)
+    settings = dataclasses.replace(
+        load_settings(), request_interval=0.0, db_path=tmp_path / "t.db")
+    monkeypatch.setattr(main.report, "snapshots_dir", lambda: tmp_path / "snaps")
+    monkeypatch.setattr(main.report, "logs_dir", lambda: tmp_path / "logs")
+    (tmp_path / "logs").mkdir()
+    main.run_once(settings=settings, fetcher=fetcher, sources_dir=sources_dir)
+
+    conn = store.connect(settings.db_path)
+    titles = [r["title"] for r in conn.execute("SELECT title FROM articles ORDER BY id")]
+    assert titles == ["新鲜新闻", "无日期新闻"]
 
 
 def test_run_once_multi_url_partial_failure_keeps_counts(tmp_path, monkeypatch):
