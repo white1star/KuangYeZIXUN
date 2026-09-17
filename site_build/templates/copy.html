@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}营销文案 · 矿业资讯站{% endblock %}
+{% block content %}
+<section class="page-body">
+  <div class="container">
+    <h1 class="page-title">营销文案</h1>
+    <p class="page-sub">每日视频号文案，点复制发朋友圈</p>
+    {% if copies %}
+    <div class="copy-list">
+      {% for c in copies %}
+      <article class="card copy-card">
+        <div class="copy-meta">
+          <span class="chip chip-mineral">{{ c.author or '视频号' }}</span>
+          <span>{{ c.published_at }}</span>
+          <span>今日已收 {{ copy_stats.today }} 条 · 累计 {{ copy_stats.total }} 条</span>
+        </div>
+        <p class="copy-text" data-copy>{{ c.description }}</p>
+        <div class="copy-actions">
+          <button class="btn-primary copy-btn" type="button" data-copy-btn>复制文案</button>
+          <a class="copy-link" href="{{ c.link }}" target="_blank" rel="noopener">看视频</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">暂无文案，把视频号分享链接发给 AI 即可自动收录</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.left = '-9999px';
+      document.body.appendChild(area);
+      area.select();
+      try {
+        document.execCommand('copy') ? resolve() : reject(new Error('copy failed'));
+      } catch (err) {
+        reject(err);
+      } finally {
+        document.body.removeChild(area);
+      }
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-copy-btn]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var card = btn.closest('.copy-card');
+      var text = card.querySelector('[data-copy]').textContent;
+      copyText(text).then(function () {
+        btn.textContent = '已复制 ✓';
+        btn.disabled = true;
+        setTimeout(function () {
+          btn.textContent = '复制文案';
+          btn.disabled = false;
+        }, 1500);
+      }).catch(function () {
+        btn.textContent = '复制失败，请手动选择';
+        setTimeout(function () { btn.textContent = '复制文案'; }, 1500);
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

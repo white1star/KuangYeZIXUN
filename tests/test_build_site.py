@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from crawler import store
 from site_build.builder import build
 
-PAGES = ["index.html", "news.html", "policy.html", "prices.html", "search.html"]
+PAGES = ["index.html", "news.html", "policy.html", "prices.html", "search.html", "copy.html"]
 ASSETS = ["style.css", "app.js", "vendor/echarts.min.js"]
 
 
@@ -30,6 +30,11 @@ def seed(db):
         for i, day in enumerate(days)])
     run = store.start_crawl_run(conn, "mnr")
     store.finish_crawl_run(conn, run, "ok", 2, 2)
+    store.upsert_marketing_copy(conn, {
+        "short_uri": "AIUEY9XuiH", "author": "老张说矿",
+        "description": "磷矿价格回暖，选矿设备更新正当时。\n欢迎咨询像素智能。",
+        "published_at": "2026-09-16 10:30", "cover_url": "https://e.com/cover.jpg",
+        "link": "https://weixin.qq.com/sph/AIUEY9XuiH", "fetched_at": store.now_iso()})
     conn.close()
 
 
@@ -46,8 +51,10 @@ def test_build_outputs_complete(tmp_path):
     for name in PAGES + ASSETS + ["search.json", "prices.json"]:
         assert (out / name).exists(), name
     assert result["counts"]["articles"] == 2
+    assert result["counts"]["copies"] == 1
     assert result["files"]["search.json"] > 0
     assert result["files"]["prices.json"] > 0
+    assert result["files"]["copy.html"] > 0
 
 
 def test_pages_use_relative_assets(tmp_path):
@@ -71,7 +78,8 @@ def test_index_contains_stats_and_feedback(tmp_path):
     assert "构建时间" in index
     assert "今日新增" in index
     assert index.count('class="card stat-card"') == 4
-    assert index.count('class="card entry-card"') == 3
+    assert index.count('class="card entry-card"') == 4
+    assert "营销文案" in index
     assert "1/3" in index
     assert "mailto:" in index
     assert "3103631561@qq.com" not in index
@@ -127,6 +135,54 @@ def test_search_json_items(tmp_path):
     assert "新矿" in item["types"]
     assert len(item["summary"]) <= 60
     assert result["files"]["search.json"] == (out / "search.json").stat().st_size
+
+
+def test_copy_page_renders_text_and_button(tmp_path):
+    out, _ = make_site(tmp_path)
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert "营销文案" in copy
+    assert "每日视频号文案，点复制发朋友圈" in copy
+    assert "磷矿价格回暖，选矿设备更新正当时。" in copy
+    assert "\n欢迎咨询像素智能。" in copy
+    assert "复制文案" in copy
+    assert "data-copy" in copy
+    assert "2026-09-16 10:30" in copy
+    assert "老张说矿" in copy
+    assert 'href="https://weixin.qq.com/sph/AIUEY9XuiH"' in copy
+    assert "看视频" in copy
+
+
+def test_nav_contains_copy_link(tmp_path):
+    out, _ = make_site(tmp_path)
+    for page in ("index.html", "news.html"):
+        text = (out / page).read_text(encoding="utf-8")
+        assert 'href="copy.html"' in text
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert 'href="copy.html" class="active"' in copy
+    index = (out / "index.html").read_text(encoding="utf-8")
+    assert "今日 <b>1</b> 条 · 累计 <b>1</b> 条" in index
+
+
+def test_copy_page_empty_state(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    conn = store.connect(db)
+    conn.execute("DELETE FROM marketing_copy")
+    conn.commit()
+    conn.close()
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_key="")
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert "暂无文案" in copy
+    assert 'class="card copy-card"' not in copy
+
+
+def test_search_json_unaffected_by_marketing_copy(tmp_path):
+    out, _ = make_site(tmp_path)
+    text = (out / "search.json").read_text(encoding="utf-8")
+    payload = json.loads(text)
+    assert payload["count"] == 2
+    assert "磷矿价格回暖" not in text
 
 
 def test_prices_json_series_and_latest(tmp_path):

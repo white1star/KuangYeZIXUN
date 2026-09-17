@@ -70,6 +70,31 @@ def search_items(articles) -> list:
     return items
 
 
+def load_marketing_copies(conn) -> list:
+    rows = conn.execute(
+        "SELECT short_uri, author, description, published_at, cover_url, link, fetched_at "
+        "FROM marketing_copy ORDER BY published_at DESC, id DESC").fetchall()
+    items = []
+    for row in rows:
+        items.append({
+            "short_uri": row["short_uri"],
+            "author": (row["author"] or "").strip(),
+            "description": (row["description"] or "").strip(),
+            "published_at": (row["published_at"] or "").strip(),
+            "cover_url": (row["cover_url"] or "").strip(),
+            "link": (row["link"] or "").strip() or "https://weixin.qq.com/sph/" + row["short_uri"],
+        })
+    return items
+
+
+def marketing_stats(conn) -> dict:
+    day = datetime.now().strftime("%Y-%m-%d")
+    total = conn.execute("SELECT COUNT(*) c FROM marketing_copy").fetchone()["c"]
+    today = conn.execute(
+        "SELECT COUNT(*) c FROM marketing_copy WHERE fetched_at LIKE ?", (day + "%",)).fetchone()["c"]
+    return {"today": int(today), "total": int(total)}
+
+
 def today_stats(conn) -> dict:
     day = datetime.now().strftime("%Y-%m-%d")
     rows = conn.execute(

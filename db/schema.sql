@@ -70,6 +70,17 @@ CREATE TABLE IF NOT EXISTS crawl_runs (
   error TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS marketing_copy (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  short_uri TEXT NOT NULL UNIQUE,
+  author TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL,
+  published_at TEXT NOT NULL DEFAULT '',
+  cover_url TEXT NOT NULL DEFAULT '',
+  link TEXT NOT NULL DEFAULT '',
+  fetched_at TEXT NOT NULL
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
   title, summary,
   content='articles', content_rowid='id',

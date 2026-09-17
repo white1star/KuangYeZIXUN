@@ -55,6 +55,7 @@ E:\矿_news\
 │   └── static\                  静态站样式/脚本（style.css、app.js）
 ├── .github\workflows\crawl-deploy.yml  推 data 分支后自动构建+发布 GitHub Pages
 ├── tools\snapshot.py            抓源站样本到 tests/fixtures（接入与修源用）
+├── tools\fetch_sph.py           抓视频号分享链接文案入库（Playwright + Edge）
 ├── docs\ai-maintenance.md       AI 巡检维护手册（修源四步法/重打标/备份恢复）
 ├── docs\github-pages.md         公网部署手册（GitHub Pages / 国内对象存储迁移）
 ├── tests\                       pytest 测试 + fixtures 离线样本
@@ -135,6 +136,23 @@ python -c "from web import notify; print(notify.send_feedback_email('测试邮�
 关闭方式：把 `config\notify.local.yaml` 里的 `enabled` 改为 `false`，或直接删除该文件。
 
 说明：`notify.local.yaml` 含授权码，已加入 `.gitignore`，不会提交入库，仓库内只保留占位示例 `config\notify.example.yaml`；发送过程在后台线程执行，不阻塞反馈提交，发送失败只写一行日志到 `logs\notify_YYYYMMDD.log`。
+
+### 4.2 营销文案（视频号）
+
+老板把视频号分享链接发给 AI，AI 跑一条命令抓取文案入库，站点"文案"页即出现内容，销售点"复制文案"直接发朋友圈：
+
+```powershell
+python -m tools.fetch_sph https://weixin.qq.com/sph/AIUEY9XuiH   # 支持分享链接/预览链接/shortUri，可一次传多条
+python -m scripts.build_site        # 本地构建（生成 dist\copy.html）
+python -m scripts.publish_data_branch   # 推送数据库到 data 分支，Actions 自动重新部署
+```
+
+实现说明与限制：
+
+- 视频号接口有防护，直接请求返回"服务异常"，因此工具用 Playwright + 本机 Edge 无头浏览器打开预览页，拦截页面自身发出的 `get_feed_info` 响应取文案（作者 / 文案 / 发布时间 / 封面）
+- 微信生态封闭，无法像新闻源那样自动发现新内容：需要人（老板）把链接发给 AI，AI 再执行上述命令，这是刻意保留的人工环节
+- 抓取按 `short_uri` 幂等入库，重复抓同一条只更新文案与封面，不产生重复记录；每个链接独立容错，失败退出码为 1 并打印原因
+- 依赖 `playwright`（调用系统已装的 Edge，无需另外下载浏览器内核）；静态站文案页模板为 `site_build/templates/copy.html`，导航名称"文案"
 
 ---
 

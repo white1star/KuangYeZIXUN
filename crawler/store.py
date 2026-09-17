@@ -89,6 +89,28 @@ def insert_article(conn, item, classification, url_hash, title_hash, cluster_id=
     return aid
 
 
+UPSERT_MARKETING_SQL = (
+    "INSERT INTO marketing_copy(short_uri,author,description,published_at,cover_url,link,fetched_at) "
+    "VALUES(?,?,?,?,?,?,?) "
+    "ON CONFLICT(short_uri) DO UPDATE SET "
+    "author=excluded.author,description=excluded.description,published_at=excluded.published_at,"
+    "cover_url=excluded.cover_url,link=excluded.link,fetched_at=excluded.fetched_at"
+)
+
+
+def upsert_marketing_copy(conn, item) -> int:
+    conn.execute(
+        UPSERT_MARKETING_SQL,
+        (
+            item["short_uri"], item.get("author", ""), item.get("description", ""),
+            item.get("published_at", ""), item.get("cover_url", ""), item.get("link", ""),
+            item.get("fetched_at", now_iso()),
+        ),
+    )
+    conn.commit()
+    return 1
+
+
 UPSERT_PRICE_SQL = (
     "INSERT INTO prices(commodity,price_type,value,unit,change,change_pct,price_date,source_key,raw_label,fetched_at) "
     "VALUES(?,?,?,?,?,?,?,?,?,?) "

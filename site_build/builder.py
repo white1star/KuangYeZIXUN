@@ -91,6 +91,8 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_key=None) -> di
         last_fetch = data.last_fetch_time(conn)
         prices = data.prices_payload(conn)
         policy_meta = data.policy_meta(articles)
+        copies = data.load_marketing_copies(conn)
+        copy_stats = data.marketing_stats(conn)
     finally:
         conn.close()
     build_time = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -105,7 +107,10 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_key=None) -> di
     pages = {
         "index.html": env.get_template("index.html").render(
             **base, page="index", stats=stats, sources_ok=sources_ok, sources_total=sources_total,
-            last_fetch=last_fetch, commodity_count=len(prices["commodities"]), hot_words=HOT_WORDS),
+            last_fetch=last_fetch, commodity_count=len(prices["commodities"]), hot_words=HOT_WORDS,
+            copy_stats=copy_stats),
+        "copy.html": env.get_template("copy.html").render(
+            **base, page="copy", copies=copies, copy_stats=copy_stats),
         "news.html": env.get_template("news.html").render(
             **base, page="news", articles=news_articles[:NEWS_INITIAL],
             tabs=list(NEWS_TABS.keys())),
@@ -143,7 +148,8 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_key=None) -> di
         "counts": {"articles": len(articles), "news": len(news_articles),
                    "policy": len(policy_articles),
                    "prices": len(prices["latest"]),
-                   "commodities": len(prices["commodities"])},
+                   "commodities": len(prices["commodities"]),
+                   "copies": len(copies)},
     }
 
 
@@ -154,9 +160,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     result = build(db_path=args.db, out_dir=args.out)
     print(f"静态站构建完成：{result['out_dir']}（{result['built_at']}）")
-    print("文章 {} 篇（新闻 {}，政策 {}），品种 {} 个，报价行 {} 条".format(
+    print("文章 {} 篇（新闻 {}，政策 {}），品种 {} 个，报价行 {} 条，文案 {} 条".format(
         result["counts"]["articles"], result["counts"]["news"], result["counts"]["policy"],
-        result["counts"]["commodities"], result["counts"]["prices"]))
+        result["counts"]["commodities"], result["counts"]["prices"], result["counts"]["copies"]))
     for name, size in sorted(result["files"].items()):
         print(f"  {name:<24} {_fmt_size(size):>10}")
     print(f"  {'合计':<24} {_fmt_size(result['total_bytes']):>10}")

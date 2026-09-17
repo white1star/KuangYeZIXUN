@@ -48,6 +48,23 @@ def test_runs_and_articles(tmp_path):
     assert len(store.find_recent_titles(conn, days=3)) == 1
 
 
+def test_upsert_marketing_copy_dedups(tmp_path):
+    conn = store.connect(tmp_path / "t.db")
+    store.init_db(conn)
+    item = {"short_uri": "AIUEY9XuiH", "author": "老张说矿", "description": "第一版文案",
+            "published_at": "2026-09-16 10:30", "cover_url": "https://e.com/c.jpg",
+            "link": "https://weixin.qq.com/sph/AIUEY9XuiH", "fetched_at": store.now_iso()}
+    assert store.upsert_marketing_copy(conn, item) == 1
+    item["description"] = "第二版文案"
+    item["cover_url"] = "https://e.com/c2.jpg"
+    assert store.upsert_marketing_copy(conn, item) == 1
+    row = conn.execute("SELECT * FROM marketing_copy").fetchone()
+    assert conn.execute("SELECT COUNT(*) c FROM marketing_copy").fetchone()["c"] == 1
+    assert row["description"] == "第二版文案"
+    assert row["cover_url"] == "https://e.com/c2.jpg"
+    assert row["author"] == "老张说矿"
+
+
 def test_upsert_prices_dedups(tmp_path):
     conn = store.connect(tmp_path / "t.db")
     store.init_db(conn)
