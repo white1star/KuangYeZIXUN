@@ -34,7 +34,8 @@ def test_process_moves_and_saves(tmp_path, capsys):
     assert "[OK] 矿山现场.mp4" in output
     assert "大家好，欢迎来到矿山现场。" in output
     assert not video.exists()
-    moved = inbox / "已处理" / "矿山现场.mp4"
+    day = datetime.fromtimestamp(video.stat().st_mtime).strftime("%Y-%m-%d")
+    moved = inbox / "已处理" / day / "矿山现场.mp4"
     assert moved.exists()
     conn = store.connect(db)
     row = conn.execute("SELECT * FROM marketing_copy").fetchone()
@@ -88,8 +89,8 @@ def test_failure_does_not_stop_others(tmp_path, capsys):
     assert "模型加载失败" in output
     assert "[OK] 好文件.mp4" in output
     assert bad.exists()
-    assert not (inbox / "已处理" / "坏文件.mp4").exists()
-    assert (inbox / "已处理" / "好文件.mp4").exists()
+    assert not list((inbox / "已处理").rglob("坏文件.mp4"))
+    assert list((inbox / "已处理").rglob("好文件.mp4"))
     assert count_copies(db) == 1
 
 
@@ -106,8 +107,29 @@ def test_skips_growing_file(tmp_path):
                               sleeper=sleeper, wait=0)
     assert code == 0
     assert growing.exists()
-    assert not (inbox / "已处理" / "写入中.mp4").exists()
+    assert not list((inbox / "已处理").rglob("写入中.mp4"))
     assert not (tmp_path / "t.db").exists()
+
+
+def test_scans_subfolders_and_archives_by_date(tmp_path, capsys):
+    inbox = make_inbox(tmp_path)
+    day_dir = inbox / "2026-09-17"
+    day_dir.mkdir()
+    video = day_dir / "现场视频.mp4"
+    video.write_bytes(b"x")
+    mtime = video.stat().st_mtime
+    db = tmp_path / "t.db"
+    code = process_videos.run(inbox=inbox, db_path=db, author="作者",
+                              transcriber=lambda path: "子文件夹里的口播文案",
+                              sleeper=no_sleep, wait=0)
+    assert code == 0
+    assert not video.exists()
+    archived = list((inbox / "已处理").rglob("现场视频.mp4"))
+    assert len(archived) == 1
+    expected_day = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+    assert archived[0].parent.name == expected_day
+    assert count_copies(db) == 1
+    assert "子文件夹里的口播文案" in capsys.readouterr().out
 
 
 def test_ignores_unsupported_and_subdirs(tmp_path):

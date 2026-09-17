@@ -36,14 +36,19 @@ def is_stable(path: Path, wait=STABLE_SECONDS, sleeper=time.sleep) -> bool:
 
 def scan_inbox(inbox: Path, wait=STABLE_SECONDS, sleeper=time.sleep) -> list:
     inbox.mkdir(parents=True, exist_ok=True)
+    done_root = inbox / DONE_DIR_NAME
     files = []
-    for path in sorted(inbox.iterdir()):
-        if path.is_file() and path.suffix.lower() in MEDIA_EXTS and is_stable(path, wait, sleeper):
+    for path in sorted(inbox.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in MEDIA_EXTS:
+            continue
+        if done_root in path.parents:
+            continue
+        if is_stable(path, wait, sleeper):
             files.append(path)
     return files
 
 
-def process_file(path: Path, conn, author: str, transcriber) -> tuple:
+def process_file(path: Path, conn, author: str, transcriber, archive_root: Path) -> tuple:
     published_at = _fmt_time(path)
     text = (transcriber(path) or "").strip()
     if not text:
@@ -58,8 +63,9 @@ def process_file(path: Path, conn, author: str, transcriber) -> tuple:
         "link": "",
         "fetched_at": store.now_iso(),
     })
-    done_dir = path.parent / DONE_DIR_NAME
-    done_dir.mkdir(exist_ok=True)
+    day = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
+    done_dir = archive_root / day
+    done_dir.mkdir(parents=True, exist_ok=True)
     target = done_dir / path.name
     if target.exists():
         target = done_dir / f"{path.stem}_{int(time.time())}{path.suffix}"
@@ -81,11 +87,12 @@ def run(inbox=None, db_path=None, transcriber=None, sleeper=None,
         return 0
     conn = store.connect(db)
     store.init_db(conn)
+    archive_root = inbox / DONE_DIR_NAME
     failures = 0
     try:
         for path in files:
             try:
-                published_at, text = process_file(path, conn, author, transcriber)
+                published_at, text = process_file(path, conn, author, transcriber, archive_root)
             except Exception as exc:
                 failures += 1
                 show(f"[失败] {path.name} | {exc}")
