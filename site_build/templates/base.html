@@ -76,18 +76,12 @@
     e.preventDefault();
     submit.disabled = true;
     msg.hidden = true;
-    var payload = {
-      access_key: form.elements.access_key.value,
-      subject: form.elements.subject.value,
-      from_name: form.elements.from_name.value,
-      name: form.elements.name.value,
-      message: message.value,
-      page_url: location.href
-    };
+    var data = new FormData(form);
+    data.append('page_url', location.href);
     fetch('https://api.web3forms.com/submit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
+      body: data,
+      headers: { 'Accept': 'application/json' }
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data && data.success) {
         msg.textContent = '已收到，谢谢！';
