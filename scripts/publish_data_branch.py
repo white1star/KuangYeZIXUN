@@ -1,10 +1,14 @@
 import argparse
 import subprocess
+import time
 from pathlib import Path
+
+from crawler.report import log as report_log
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MESSAGE = "data: 初始化数据分支（含回填数据）"
 WORKFLOW = ROOT / ".github" / "workflows" / "crawl-deploy.yml"
+RETRY_WAITS = (15, 45, 90)
 
 
 class PublishError(RuntimeError):
@@ -54,6 +58,22 @@ def commit_tree(tree: str, message: str) -> str:
                 "commit-tree", tree, "-m", message]).stdout.strip()
 
 
+def _push_with_retry(remote, commit, branch, attempts=3, sleep=time.sleep):
+    last_error = ""
+    for i in range(attempts + 1):
+        result = git(["push", "-f", remote, f"{commit}:refs/heads/{branch}"], check=False)
+        if result.returncode == 0:
+            return
+        last_error = (result.stderr or result.stdout).strip()
+        tail = last_error.splitlines()[-1] if last_error else "未知错误"
+        if i < attempts:
+            wait = RETRY_WAITS[min(i, len(RETRY_WAITS) - 1)]
+            report_log(f"推送失败（{tail}），{wait} 秒后第 {i + 2} 次重试", name="publish")
+            print(f"推送失败（{tail}），{wait} 秒后重试…")
+            sleep(wait)
+    raise PublishError(f"推送到 {remote}/{branch} 失败（重试 {attempts} 次后仍不通）：{last_error}")
+
+
 def publish(db_path=None, remote="origin", branch="data", message=None, dry_run=False) -> str:
     db = Path(db_path) if db_path else ROOT / "data" / "news.db"
     if not db.exists():
@@ -72,7 +92,9 @@ def publish(db_path=None, remote="origin", branch="data", message=None, dry_run=
     if dry_run:
         print("dry-run：不执行推送")
         return commit[:12]
-    git(["push", "-f", remote, f"{commit}:refs/heads/{branch}"])
+    report_log(f"开始发布数据提交 {commit[:12]}（{size_mb:.1f} MB）", name="publish")
+    _push_with_retry(remote, commit, branch)
+    report_log(f"已推送 {remote}/{branch}（提交 {commit[:12]}）", name="publish")
     print(f"已强推到 {remote}/{branch}（该分支只保留这一条提交）")
     print("data 分支更新后 GitHub Actions 会自动构建并部署静态站")
     return commit[:12]
