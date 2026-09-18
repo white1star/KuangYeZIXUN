@@ -1,0 +1,11 @@
+key: hubei_kyq
+name: 湖北省自然资源厅·矿业权出让转让信息
+board: policy
+url: http://zrzyt.hubei.gov.cn/fbjd/xxgkml/ggzypz/kyqcrzrxxgsgk/
+encoding: utf-8
+list:
+  item: "ul.info-list li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

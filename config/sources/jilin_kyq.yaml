@@ -1,0 +1,11 @@
+key: jilin_kyq
+name: 吉林省自然资源厅·矿业权招拍挂出让公告
+board: policy
+url: https://zrzy.jl.gov.cn/zwgk/kczygl/kyqcrzr/kyqcrgg/
+encoding: utf-8
+list:
+  item: "ul.lby_list li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false

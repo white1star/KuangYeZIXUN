@@ -1,0 +1,11 @@
+key: chongqing_dzkc
+name: 重庆市规划和自然资源局·土地及地质矿产公示
+board: policy
+url: https://ghzrzyj.cq.gov.cn/zwgk_186/fdzdgknr/gggs/dzkc/
+encoding: utf-8
+list:
+  item: "ul.zsj-fr-main li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false
