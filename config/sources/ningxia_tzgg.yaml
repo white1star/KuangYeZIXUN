@@ -1,0 +1,12 @@
+key: ningxia_tzgg
+name: 宁夏回族自治区自然资源厅·通知公告（矿权）
+board: policy
+url: https://zrzyt.nx.gov.cn/gk/fdzdgknr/tzgg/
+encoding: utf-8
+filter_keywords: [矿]
+list:
+  item: "li"
+  title: "a"
+  date: "span.date"
+detail:
+  enabled: false

@@ -1,0 +1,12 @@
+key: anhui_tzgg
+name: 安徽省自然资源厅·通知公告（矿权）
+board: policy
+url: https://zrzyt.ah.gov.cn/xwdt/tzgg/index.html
+encoding: utf-8
+filter_keywords: [矿]
+list:
+  item: "li"
+  title: "a"
+  date: "span.right"
+detail:
+  enabled: false

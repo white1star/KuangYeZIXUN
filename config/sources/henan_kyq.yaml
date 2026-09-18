@@ -1,0 +1,11 @@
+key: henan_kyq
+name: 河南省自然资源厅·矿业权交易公示公告
+board: policy
+url: https://dnr.henan.gov.cn/fw/kq/kyqjygsgg/
+encoding: utf-8
+list:
+  item: "div.info-box"
+  title: "a"
+  date: "span.fl"
+detail:
+  enabled: false

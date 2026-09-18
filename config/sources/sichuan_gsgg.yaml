@@ -1,0 +1,13 @@
+key: sichuan_gsgg
+name: 四川省自然资源厅·公示公告（矿权）
+board: policy
+url: https://dnr.sc.gov.cn/scdnr/scgsgg/sc_gsgg1_list.shtml
+encoding: utf-8
+filter_keywords: [矿]
+list:
+  item: "li"
+  title: "div.new-list-title"
+  link: "a"
+  date: "div.new-list-time"
+detail:
+  enabled: false
