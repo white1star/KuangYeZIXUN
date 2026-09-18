@@ -1,0 +1,12 @@
+key: fujian_kyq
+name: 福建省自然资源厅·矿业权评估公告
+board: policy
+url: https://zrzyt.fujian.gov.cn/zwgk/zdly/dzkc/kyqpggg/
+encoding: utf-8
+list:
+  item: "ul.gl-ul li"
+  title: "p.fl"
+  link: "a"
+  date: "div.li-btn"
+detail:
+  enabled: false
