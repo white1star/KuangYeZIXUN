@@ -1,0 +1,11 @@
+key: cgs_ywdt
+name: 中国地质调查局·地调要闻
+board: news
+url: https://www.cgs.gov.cn/ywdt/ddyw/
+encoding: utf-8
+list:
+  item: "div.ej_list li"
+  title: "a"
+  date: "span.time"
+detail:
+  enabled: false

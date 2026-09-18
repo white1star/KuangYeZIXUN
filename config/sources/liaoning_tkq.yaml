@@ -1,0 +1,11 @@
+key: liaoning_tkq
+name: 辽宁省自然资源厅·探矿权出让转让公告
+board: policy
+url: https://zrzy.ln.gov.cn/zrzy/gsgg/kyqsc/tkqcrzrgg/index.shtml
+encoding: utf-8
+list:
+  item: "ul.list-model li"
+  title: "a"
+  date: "span"
+detail:
+  enabled: false
