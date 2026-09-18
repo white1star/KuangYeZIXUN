@@ -10,3 +10,7 @@ video_inbox/
 .superpowers/
 config/notify.local.yaml
 .playwright-cli/
+
+config/yuanbao_cookie.txt
+
+_crawl_today.log

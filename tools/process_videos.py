@@ -48,11 +48,25 @@ def scan_inbox(inbox: Path, wait=STABLE_SECONDS, sleeper=time.sleep) -> list:
     return files
 
 
-def process_file(path: Path, conn, author: str, transcriber, archive_root: Path) -> tuple:
+def default_ocr():
+    from tools.video_ocr import ocr_video
+
+    def run_ocr(path) -> str:
+        return " ".join(ocr_video(path))
+
+    return run_ocr
+
+
+def process_file(path: Path, conn, author: str, transcriber, archive_root: Path, ocr=None) -> tuple:
     published_at = _fmt_time(path)
     text = (transcriber(path) or "").strip()
+    source = "转录"
     if not text:
-        raise RuntimeError("转录结果为空")
+        ocr = ocr or default_ocr()
+        text = (ocr(path) or "").strip()
+        source = "画面文字"
+    if not text:
+        raise RuntimeError("转录和画面文字均为空")
     store.upsert_marketing_copy(conn, {
         "short_uri": f"file:{path.name}",
         "author": author,
@@ -70,11 +84,11 @@ def process_file(path: Path, conn, author: str, transcriber, archive_root: Path)
     if target.exists():
         target = done_dir / f"{path.stem}_{int(time.time())}{path.suffix}"
     path.replace(target)
-    return published_at, text
+    return published_at, text, source
 
 
 def run(inbox=None, db_path=None, transcriber=None, sleeper=None,
-        wait=STABLE_SECONDS, author=None, show=print) -> int:
+        wait=STABLE_SECONDS, author=None, show=print, ocr=None) -> int:
     inbox = Path(inbox) if inbox else INBOX_DIR
     db = Path(db_path) if db_path else ROOT / "data" / "news.db"
     transcriber = transcriber or transcribe_media
@@ -92,13 +106,14 @@ def run(inbox=None, db_path=None, transcriber=None, sleeper=None,
     try:
         for path in files:
             try:
-                published_at, text = process_file(path, conn, author, transcriber, archive_root)
+                published_at, text, source = process_file(path, conn, author, transcriber, archive_root, ocr=ocr)
             except Exception as exc:
                 failures += 1
                 show(f"[失败] {path.name} | {exc}")
                 continue
             preview = text.replace("\n", " ")[:PREVIEW_CHARS]
-            show(f"[OK] {path.name} | {published_at} | {preview}")
+            tag = "[OK]" if source == "转录" else "[OK-OCR]"
+            show(f"{tag} {path.name} | {published_at} | {preview}")
     finally:
         conn.close()
     return 1 if failures else 0

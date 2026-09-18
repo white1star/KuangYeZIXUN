@@ -51,6 +51,39 @@ def test_process_moves_and_saves(tmp_path, capsys):
     conn.close()
 
 
+def test_ocr_fallback_when_transcript_empty(tmp_path, capsys):
+    inbox = make_inbox(tmp_path)
+    video = inbox / "无声视频.mp4"
+    video.write_bytes(b"fake-video-bytes")
+    db = tmp_path / "t.db"
+    code = process_videos.run(inbox=inbox, db_path=db, author="作者",
+                              transcriber=lambda path: "",
+                              ocr=lambda path: "画面文字文案",
+                              sleeper=no_sleep, wait=0)
+    assert code == 0
+    output = capsys.readouterr().out
+    assert "[OK-OCR] 无声视频.mp4" in output
+    assert not video.exists()
+    conn = store.connect(db)
+    row = conn.execute("SELECT * FROM marketing_copy").fetchone()
+    assert row["transcript"] == "画面文字文案"
+    conn.close()
+
+
+def test_both_transcript_and_ocr_empty_fails(tmp_path, capsys):
+    inbox = make_inbox(tmp_path)
+    video = inbox / "空白视频.mp4"
+    video.write_bytes(b"x")
+    code = process_videos.run(inbox=inbox, db_path=tmp_path / "t.db", author="作者",
+                              transcriber=lambda path: "",
+                              ocr=lambda path: "  ",
+                              sleeper=no_sleep, wait=0)
+    assert code == 1
+    assert "[失败] 空白视频.mp4" in capsys.readouterr().out
+    assert video.exists()
+    assert count_copies(tmp_path / "t.db") == 0
+
+
 def test_second_run_is_idempotent(tmp_path):
     inbox = make_inbox(tmp_path)
     (inbox / "第一条.mp4").write_bytes(b"x")
