@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from crawler import store
@@ -82,6 +83,29 @@ def test_both_transcript_and_ocr_empty_fails(tmp_path, capsys):
     assert "[失败] 空白视频.mp4" in capsys.readouterr().out
     assert video.exists()
     assert count_copies(tmp_path / "t.db") == 0
+
+
+def test_sidecar_metadata_used(tmp_path):
+    inbox = make_inbox(tmp_path)
+    video = inbox / "来源视频.mp4"
+    video.write_bytes(b"x")
+    meta = {"link": "https://weixin.qq.com/sph/AbCdEf123", "author": "唐山像素智能选矿",
+            "description": "简介文字", "cover_url": "https://e.com/c.jpg", "createtime": 1779545781}
+    (inbox / "来源视频.mp4.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+    db = tmp_path / "t.db"
+    code = process_videos.run(inbox=inbox, db_path=db, author="计算机选矿",
+                              transcriber=lambda path: "口播文案", sleeper=no_sleep, wait=0)
+    assert code == 0
+    conn = store.connect(db)
+    row = conn.execute("SELECT * FROM marketing_copy").fetchone()
+    assert row["link"] == meta["link"]
+    assert row["author"] == "唐山像素智能选矿"
+    assert row["description"] == "简介文字"
+    assert row["cover_url"] == "https://e.com/c.jpg"
+    assert row["published_at"] == datetime.fromtimestamp(1779545781).strftime("%Y-%m-%d %H:%M")
+    conn.close()
+    assert not (inbox / "来源视频.mp4.json").exists()
+    assert list((inbox / "已处理").rglob("来源视频.mp4.json"))
 
 
 def test_second_run_is_idempotent(tmp_path):

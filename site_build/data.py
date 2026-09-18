@@ -76,14 +76,18 @@ def load_marketing_copies(conn) -> list:
         "FROM marketing_copy ORDER BY published_at DESC, id DESC").fetchall()
     items = []
     for row in rows:
+        short_uri = (row["short_uri"] or "").strip()
+        link = (row["link"] or "").strip()
+        if not link and short_uri and not short_uri.startswith("file:"):
+            link = "https://weixin.qq.com/sph/" + short_uri
         items.append({
-            "short_uri": row["short_uri"],
+            "short_uri": short_uri,
             "author": (row["author"] or "").strip(),
             "description": (row["description"] or "").strip(),
             "transcript": (row["transcript"] or "").strip(),
             "published_at": (row["published_at"] or "").strip(),
             "cover_url": (row["cover_url"] or "").strip(),
-            "link": (row["link"] or "").strip() or "https://weixin.qq.com/sph/" + row["short_uri"],
+            "link": link,
         })
     return items
 

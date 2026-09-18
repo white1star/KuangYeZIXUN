@@ -40,10 +40,11 @@ def resolve(link):
     feed = fetch_feed(eid, token)
     info = feed.get("data", {}).get("feedInfo", {})
     media = {
+        "link": link,
         "author": parsed.get("author", ""),
         "desc": parsed.get("desc", ""),
         "cover_url": parsed.get("cover_url", ""),
-        "createtime": info.get("createtime"),
+        "createtime": info.get("createtime") or parsed.get("createtime"),
         "h264": (info.get("h264VideoInfo") or {}).get("videoUrl") or info.get("videoUrl", ""),
         "h265": (info.get("h265VideoInfo") or {}).get("videoUrl", ""),
     }
@@ -75,6 +76,17 @@ def download(media, out_dir=DEFAULT_DOWNLOAD_DIR, prefer="h264"):
     with open(path, "rb") as fh:
         head = fh.read(24)
     print("文件头:", head[:16])
+    meta = {
+        "link": media.get("link", ""),
+        "author": media.get("author", ""),
+        "description": media.get("desc", ""),
+        "cover_url": media.get("cover_url", ""),
+        "createtime": media.get("createtime"),
+        "downloaded_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    with open(path + ".json", "w", encoding="utf-8") as fh:
+        json.dump(meta, fh, ensure_ascii=False, indent=1)
+    print("已保存来源信息:", path + ".json")
     return path
 
 

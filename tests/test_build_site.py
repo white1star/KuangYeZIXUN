@@ -180,6 +180,38 @@ def test_copy_page_fallback_when_transcript_empty(tmp_path):
     assert "磷矿价格回暖，选矿设备更新正当时。" in copy
 
 
+def test_copy_page_no_fake_link_for_file_sources(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    conn = store.connect(db)
+    store.upsert_marketing_copy(conn, {
+        "short_uri": "file:现场视频.mp4", "author": "计算机选矿", "description": "",
+        "transcript": "画面文字文案", "published_at": "2026-09-18 12:48",
+        "cover_url": "", "link": "", "fetched_at": store.now_iso()})
+    conn.close()
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_key="")
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert "画面文字文案" in copy
+    assert "sph/file:" not in copy
+    assert copy.count("看视频") == 1
+
+
+def test_copy_page_uses_real_link(tmp_path):
+    db = tmp_path / "t.db"
+    seed(db)
+    conn = store.connect(db)
+    store.upsert_marketing_copy(conn, {
+        "short_uri": "file:带链接视频.mp4", "author": "作者", "description": "",
+        "transcript": "文案", "published_at": "2026-09-18 12:48",
+        "cover_url": "", "link": "https://weixin.qq.com/sph/A7d0lShgp8", "fetched_at": store.now_iso()})
+    conn.close()
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_key="")
+    copy = (out / "copy.html").read_text(encoding="utf-8")
+    assert 'href="https://weixin.qq.com/sph/A7d0lShgp8"' in copy
+
+
 def test_nav_contains_copy_link(tmp_path):
     out, _ = make_site(tmp_path)
     for page in ("index.html", "news.html"):

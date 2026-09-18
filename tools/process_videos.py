@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 import time
 from datetime import datetime
@@ -57,8 +58,26 @@ def default_ocr():
     return run_ocr
 
 
+def load_sidecar(path: Path) -> dict:
+    sidecar = path.with_name(path.name + ".json")
+    if not sidecar.is_file():
+        return {}
+    try:
+        data = json.loads(sidecar.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def process_file(path: Path, conn, author: str, transcriber, archive_root: Path, ocr=None) -> tuple:
+    meta = load_sidecar(path)
     published_at = _fmt_time(path)
+    createtime = meta.get("createtime")
+    if createtime:
+        try:
+            published_at = datetime.fromtimestamp(int(createtime)).strftime("%Y-%m-%d %H:%M")
+        except (OverflowError, OSError, ValueError):
+            pass
     text = (transcriber(path) or "").strip()
     source = "转录"
     if not text:
@@ -69,12 +88,12 @@ def process_file(path: Path, conn, author: str, transcriber, archive_root: Path,
         raise RuntimeError("转录和画面文字均为空")
     store.upsert_marketing_copy(conn, {
         "short_uri": f"file:{path.name}",
-        "author": author,
-        "description": "",
+        "author": str(meta.get("author") or author),
+        "description": str(meta.get("description") or ""),
         "transcript": text,
         "published_at": published_at,
-        "cover_url": "",
-        "link": "",
+        "cover_url": str(meta.get("cover_url") or ""),
+        "link": str(meta.get("link") or ""),
         "fetched_at": store.now_iso(),
     })
     day = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
@@ -84,6 +103,12 @@ def process_file(path: Path, conn, author: str, transcriber, archive_root: Path,
     if target.exists():
         target = done_dir / f"{path.stem}_{int(time.time())}{path.suffix}"
     path.replace(target)
+    sidecar = path.with_name(path.name + ".json")
+    if sidecar.is_file():
+        sidecar_target = target.with_name(target.name + ".json")
+        if sidecar_target.exists():
+            sidecar_target = done_dir / f"{sidecar.stem}_{int(time.time())}.json"
+        sidecar.replace(sidecar_target)
     return published_at, text, source
 
 
