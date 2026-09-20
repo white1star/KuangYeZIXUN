@@ -13,7 +13,9 @@
 """
 
 import argparse
+import difflib
 import json
+import re
 import sys
 import time
 from datetime import datetime
@@ -31,6 +33,30 @@ MEDIA_EXTS = {".mp4", ".mov", ".mkv", ".m4v", ".avi", ".wmv", ".wav", ".mp3"}
 STABLE_SECONDS = 5.0
 PREVIEW_CHARS = 60
 MIN_SPEECH_CHARS = 4
+BRAND_RE = re.compile(r"\s*(唐山像素智能选矿|唐山像素)\s*")
+TAIL_ARTIFACTS = ["海山像素", "山缘素", "唐山像麦", "唐山像素智能选矿", "唐山像素", "唐山像", "像素", "唐山"]
+
+
+def clean_transcript(text: str) -> str:
+    """去掉句中品牌水印、尾部水印碎片与与开头重复的尾巴，并规整空白。"""
+    text = (text or "").strip()
+    if not text:
+        return text
+    text = BRAND_RE.sub(" ", text)
+    changed = True
+    while changed and text:
+        changed = False
+        for token in TAIL_ARTIFACTS:
+            if text.endswith(token) and len(text) > len(token):
+                text = text[: -len(token)].strip()
+                changed = True
+    for size in range(10, 3, -1):
+        if len(text) <= size + 12:
+            continue
+        if difflib.SequenceMatcher(None, text[-size:], text[:size]).ratio() >= 0.7:
+            text = text[:-size].strip()
+            break
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def default_ocr():
@@ -134,6 +160,7 @@ def run(inbox=INBOX_DIR, db_path=None, dry_run=False, keep_files=False, show=pri
                 if len(ocr_text) > len(text):
                     text = ocr_text
                     source = "画面文字"
+            text = clean_transcript(text)
             if not text:
                 failures += 1
                 show(f"[失败] {label} | 转录与画面文字均为空")
