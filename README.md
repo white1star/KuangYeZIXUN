@@ -176,6 +176,7 @@ python -m scripts.publish_data_branch      # 推送数据库到 data 分支，Ac
 - 转录链路：ffmpeg 抽 16k 单声道 wav → 本地 FunASR（SenseVoiceSmall，CPU 约 4 倍速，单文件超时 900 秒）→ 剥离 `<|...|>` 标签 → 入库；相关参数在 `config/settings.yaml` 的 `transcribe`（venv 解释器/脚本/语言），作者名在 `marketing.author`
 - 入库规则：`short_uri=file:<文件名>`（按文件名幂等），`published_at` 取文件修改时间，`description` 留空，正文写入 `transcript`
 - 页面上每条主区块为「口播文案」；「复制文案」按钮优先复制转录文本，没有转录时回退复制视频简介并给出灰字提示
+- **链接+文件组合（完整口播）**：先用 `python -m tools.wxvideo_download <分享链接> --download` 把链接对应视频下载进收件箱，再 `python -m tools.transcribe_inbox`——转录结果按短链**回填到原链接条目**（口播为空时自动回退画面字幕 OCR），不产生重复记录；`--dry-run` 预览、`--keep-files` 保留视频
 - 权限/环境要求：本机装有 FunASR 环境（`E:\software\funasr`）且 `ffmpeg` 在 PATH（转录脚本已内置 `--language zh`）；`video_inbox\` 已在 `.gitignore`，视频文件不会提交入库
 
 ---
