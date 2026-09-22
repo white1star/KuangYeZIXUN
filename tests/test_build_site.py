@@ -1,4 +1,4 @@
-import json
+﻿import json
 from datetime import datetime, timedelta
 
 from crawler import store
@@ -42,7 +42,7 @@ def make_site(tmp_path):
     db = tmp_path / "t.db"
     seed(db)
     out = tmp_path / "dist"
-    result = build(db_path=db, out_dir=out, feedback_key="")
+    result = build(db_path=db, out_dir=out, feedback_email="")
     return out, result
 
 
@@ -85,23 +85,24 @@ def test_index_contains_stats_and_feedback(tmp_path):
     assert "3103631561@qq.com" not in index
 
 
-def test_feedback_form_rendered_when_key_configured(tmp_path):
+def test_feedback_form_rendered_when_email_configured(tmp_path):
     db = tmp_path / "t.db"
     seed(db)
     out = tmp_path / "dist"
-    build(db_path=db, out_dir=out, feedback_key="test-key-123")
+    build(db_path=db, out_dir=out, feedback_email="3103631561@qq.com")
     index = (out / "index.html").read_text(encoding="utf-8")
-    assert "api.web3forms.com" in index
-    assert "test-key-123" in index
+    assert "formsubmit.co" in index
+    assert "MzEwMzYzMTU2MUBxcS5jb20=" in index
+    assert "3103631561@qq.com" not in index
     assert 'id="feedback-dialog"' in index
     assert "mailto:" not in index
 
 
-def test_feedback_mailto_without_key(tmp_path):
+def test_feedback_mailto_without_email(tmp_path):
     out, _ = make_site(tmp_path)
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "mailto:" in index
-    assert "api.web3forms.com" not in index
+    assert "formsubmit.co" not in index
 
 
 def test_news_contains_seed_title(tmp_path):
@@ -161,7 +162,7 @@ def test_copy_page_prefers_transcript(tmp_path):
     conn.commit()
     conn.close()
     out = tmp_path / "dist"
-    build(db_path=db, out_dir=out, feedback_key="")
+    build(db_path=db, out_dir=out, feedback_email="")
     copy = (out / "copy.html").read_text(encoding="utf-8")
     assert "文案正文" in copy
     assert "大家好，这里是口播文案。" in copy
@@ -190,7 +191,7 @@ def test_copy_page_no_fake_link_for_file_sources(tmp_path):
         "cover_url": "", "link": "", "fetched_at": store.now_iso()})
     conn.close()
     out = tmp_path / "dist"
-    build(db_path=db, out_dir=out, feedback_key="")
+    build(db_path=db, out_dir=out, feedback_email="")
     copy = (out / "copy.html").read_text(encoding="utf-8")
     assert "画面文字文案" in copy
     assert "sph/file:" not in copy
@@ -207,7 +208,7 @@ def test_copy_page_uses_real_link(tmp_path):
         "cover_url": "", "link": "https://weixin.qq.com/sph/A7d0lShgp8", "fetched_at": store.now_iso()})
     conn.close()
     out = tmp_path / "dist"
-    build(db_path=db, out_dir=out, feedback_key="")
+    build(db_path=db, out_dir=out, feedback_email="")
     copy = (out / "copy.html").read_text(encoding="utf-8")
     assert 'href="https://weixin.qq.com/sph/A7d0lShgp8"' in copy
 
@@ -231,7 +232,7 @@ def test_copy_page_empty_state(tmp_path):
     conn.commit()
     conn.close()
     out = tmp_path / "dist"
-    build(db_path=db, out_dir=out, feedback_key="")
+    build(db_path=db, out_dir=out, feedback_email="")
     copy = (out / "copy.html").read_text(encoding="utf-8")
     assert "暂无文案" in copy
     assert 'class="card copy-card"' not in copy
