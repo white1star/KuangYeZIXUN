@@ -58,14 +58,11 @@
 
 ```python
 import json
-import os
 from pathlib import Path
 
 import pytest
 
 from tools import build_portal
-
-PORTAL_DIR = Path(os.environ.get("PORTAL_DIR", r"E:\矿_news\.superpowers\sdd\portal"))
 
 
 def _write(path: Path, payload) -> Path:
@@ -173,7 +170,6 @@ Expected: 收集阶段报错 `ModuleNotFoundError: No module named 'tools.build_
     python -m tools.build_portal --portal .superpowers/sdd/portal
     python -m tools.build_portal --portal .superpowers/sdd/portal --check
 """
-import argparse
 import json
 import re
 from datetime import datetime
@@ -190,12 +186,20 @@ class NoticeError(ValueError):
     """通知数据不合法，或门户页面缺少注入标记。"""
 
 
-def load_notices(path) -> list:
+def _read_json(path: Path):
+    """读 JSON，把解码/语法错误收敛成 NoticeError，让调用方只需捕获一种异常。"""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise NoticeError("%s 不是合法 JSON：%s" % (path.name, exc)) from exc
+
+
+def load_notices(path: Path) -> list:
     """读并校验 notices.json；文件不存在按"无通知"处理。"""
     path = Path(path)
     if not path.exists():
         return []
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw = _read_json(path)
     if not isinstance(raw, list):
         raise NoticeError("notices.json 顶层必须是数组")
     seen = set()
@@ -205,12 +209,20 @@ def load_notices(path) -> list:
         for key in ("id", "date", "title", "body"):
             if not str(item.get(key, "")).strip():
                 raise NoticeError(f"通知缺少 {key}：{item}")
-        if item["id"] in seen:
-            raise NoticeError(f"通知 id 重复：{item['id']}")
-        seen.add(item["id"])
+        try:
+            if item["id"] in seen:
+                raise NoticeError(f"通知 id 重复：{item['id']}")
+            seen.add(item["id"])
+        except TypeError as exc:
+            # id 若是数组/对象，in/add 会抛 unhashable TypeError，一并收敛成 NoticeError
+            raise NoticeError(f"id 必须是字符串或数字：{item['id']}") from exc
         if not DATE_RE.match(str(item["date"])):
             raise NoticeError(f"date 必须是 YYYY-MM-DD：{item['date']}")
-        datetime.strptime(str(item["date"]), "%Y-%m-%d")
+        try:
+            datetime.strptime(str(item["date"]), "%Y-%m-%d")
+        except ValueError as exc:
+            # 拦下 2026-13-45 这类格式对但日历非法的日期，统一抛 NoticeError
+            raise NoticeError(f"date 不是合法日期：{item['date']}") from exc
         if len(str(item["title"])) > MAX_TITLE:
             raise NoticeError(f"title 超长（>{MAX_TITLE}）：{item['id']}")
         if len(str(item["body"])) > MAX_BODY:
@@ -236,7 +248,7 @@ def latest_notice_id(notices: list) -> str:
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `.venv\Scripts\python.exe -m pytest tests\test_portal_notice.py -v`
-Expected: 17 passed
+Expected: 25 passed
 
 - [ ] **Step 5: 提交**
 
@@ -498,9 +510,14 @@ Expected: 克隆成功，目录内只有 `index.html` 与 `.git`。若目录已�
 
 - [ ] **Step 2: 写失败测试**
 
-在 `tests/test_portal_notice.py` 末尾追加：
+先在 `tests/test_portal_notice.py` 的导入区补一行 `import os`（排在 `import json` 之后）——Task 3 才用到它。
+
+然后在文件末尾追加：
 
 ```python
+PORTAL_DIR = Path(os.environ.get("PORTAL_DIR", r"E:\矿_news\.superpowers\sdd\portal"))
+
+
 def _portal_page():
     index = PORTAL_DIR / "index.html"
     if not index.exists():
