@@ -398,3 +398,23 @@ python -m scripts.publish_data_branch  # 只发布当前数据库、不抓取（
 - 想只更新站点不抓取：Actions 页手动 Run 一次工作流
 - 国内访问较慢，文档第五节给出「迁移到国内对象存储」的说明（同一份 `dist/`，无需改版面）
 - 静态站不含管理页（源健康仅内网提供），反馈按钮改为 `mailto` 邮件
+
+### 发通知（全员可见）
+
+门户页右上角的铃铛是通知入口。在项目目录执行：
+
+```powershell
+# 1. 编辑 .superpowers\sdd\portal\notices.json，按 schema 填 id / date / title / body（可加 pinned）
+# 2. 注入页面（校验不通过会报错且不改动线上页面）
+.venv\Scripts\python.exe -m tools.build_portal --portal .superpowers\sdd\portal
+# 3. 提交推送，Pages 自动部署
+git -C .superpowers\sdd\portal commit -am "docs: 发布通知"
+git -C .superpowers\sdd\portal push origin main
+# 4. 核验两个地址
+Invoke-WebRequest "https://white1star.github.io/" -UseBasicParsing | Select-Object -Expand Content
+Invoke-WebRequest "http://39.96.27.206/" -UseBasicParsing | Select-Object -Expand Content
+# 5. 需要立刻在服务器生效时，手动同步门户镜像
+.venv\Scripts\python.exe .superpowers\sdd\server.py run "cd /opt/news && .venv/bin/python scripts/mirror_portal.py"
+```
+
+通知是全员公开广播，只写可以公开说的内容；员工右下角的「反馈」按钮仍可私信管理员。
