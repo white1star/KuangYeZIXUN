@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -268,6 +269,23 @@ def _portal_page():
     return index.read_text(encoding="utf-8")
 
 
+def _css_rule_body(html, selector):
+    """取出某条 CSS 规则自身花括号内的声明。
+
+    整页字符串搜索没有鉴别力：页面里 .e-head/.foot-inner/.np-head 以及中文注释
+    都含 `justify-content:space-between`，删掉 .head-inner 的那条声明照样能命中。
+    所以必须按选择器定位到规则起点，再按花括号配平取到声明体。
+    """
+    m = re.search(r"(?<![\w.-])" + re.escape(selector) + r"\s*\{", html)
+    assert m, "找不到 CSS 规则 %s" % selector
+    i, depth = m.end(), 1
+    while depth and i < len(html):
+        depth += (html[i] == "{") - (html[i] == "}")
+        i += 1
+    assert depth == 0, "CSS 规则 %s 花括号不配平" % selector
+    return html[m.end():i - 1]
+
+
 def test_portal_has_notice_elements():
     html = _portal_page()
     for token in ('id="notice-bell"', 'id="notice-dot"', 'id="notice-mask"',
@@ -290,14 +308,19 @@ def test_portal_read_state_logic_present():
 
 
 def test_portal_renders_notice_text_safely():
-    """正文必须走 textContent，不能用 innerHTML 拼接。"""
+    """正文必须走 textContent，不能用 innerHTML 拼接。
+
+    整页禁 innerHTML：注入时 < > & 已转义、不会截断 </script>，该页也没有任何
+    正当的 innerHTML 需求；按字段逐一断言 textContent，防止有人只改标题就蒙混过关。
+    """
     html = _portal_page()
-    assert "textContent" in html
-    inner_html_lines = [line for line in html.splitlines()
-                        if "innerHTML" in line and "notice" in line.lower()]
-    assert not inner_html_lines, "通知渲染禁止 innerHTML：%s" % inner_html_lines
+    assert "innerHTML" not in html, "门户页面禁止 innerHTML（通知内容是纯文本）"
+    for field in ("n.title", "n.body", "n.date"):
+        assert re.search(r"\.textContent\s*=\s*" + re.escape(field) + r"\b", html), \
+            "%s 必须用 textContent 渲染" % field
 
 
 def test_portal_bell_is_top_right():
-    html = _portal_page().replace(" ", "")
-    assert "justify-content:space-between" in html, "铃铛要靠右，head-inner 需要 space-between"
+    body = _css_rule_body(_portal_page(), ".head-inner")
+    assert "justify-content:space-between" in body.replace(" ", ""), \
+        "铃铛要靠右，.head-inner 规则本身必须含 justify-content:space-between"
