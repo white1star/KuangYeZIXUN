@@ -32,6 +32,20 @@ def test_not_top_level_list_rejected(tmp_path):
         build_portal.load_notices(path)
 
 
+@pytest.mark.parametrize("broken", ["{不是合法 JSON", "", '{"id": "a",}'])
+def test_broken_json_rejected(tmp_path, broken):
+    path = tmp_path / "notices.json"
+    path.write_text(broken, encoding="utf-8")
+    with pytest.raises(build_portal.NoticeError, match="JSON"):
+        build_portal.load_notices(path)
+
+
+def test_non_object_element_rejected(tmp_path):
+    path = _write(tmp_path / "notices.json", [123])
+    with pytest.raises(build_portal.NoticeError, match="对象"):
+        build_portal.load_notices(path)
+
+
 @pytest.mark.parametrize("field", ["id", "date", "title", "body"])
 def test_missing_field_rejected(tmp_path, field):
     bad = _notice()
@@ -44,6 +58,19 @@ def test_missing_field_rejected(tmp_path, field):
 def test_duplicate_id_rejected(tmp_path):
     path = _write(tmp_path / "notices.json", [_notice(), _notice()])
     with pytest.raises(build_portal.NoticeError, match="id 重复"):
+        build_portal.load_notices(path)
+
+
+@pytest.mark.parametrize("bad_id", [["20260929-01"], {"k": "v"}])
+def test_unhashable_id_rejected(tmp_path, bad_id):
+    path = _write(tmp_path / "notices.json", [_notice(id=bad_id)])
+    with pytest.raises(build_portal.NoticeError, match="id"):
+        build_portal.load_notices(path)
+
+
+def test_blank_field_rejected(tmp_path):
+    path = _write(tmp_path / "notices.json", [_notice(title="   ")])
+    with pytest.raises(build_portal.NoticeError, match="title"):
         build_portal.load_notices(path)
 
 
@@ -81,6 +108,19 @@ def test_sort_keeps_date_desc_inside_pinned_group():
         _notice(id="new", date="2026-09-20", pinned=True),
     ]
     assert [n["id"] for n in build_portal.sort_notices(items)] == ["new", "old"]
+
+
+def test_sort_does_not_mutate_input():
+    items = [
+        _notice(id="old", date="2026-09-28"),
+        _notice(id="pin", date="2026-09-01", pinned=True),
+    ]
+    before = [dict(n) for n in items]
+    ordered = build_portal.sort_notices(items)
+    assert [n["id"] for n in ordered] == ["pin", "old"]
+    assert items == before
+    assert [n["id"] for n in items] == ["old", "pin"]
+    assert ordered is not items
 
 
 def test_latest_notice_id_after_sort():

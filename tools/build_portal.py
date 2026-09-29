@@ -20,12 +20,25 @@ class NoticeError(ValueError):
     """通知数据不合法，或门户页面缺少注入标记。"""
 
 
+def _read_json(path: Path):
+    """读并解析 notices.json。
+
+    文件内容损坏或为空时 json.loads 抛的是 JSONDecodeError 而非 NoticeError，
+    调用方（Task 2 的 CLI）只按 NoticeError 提示中文错误，会因此漏出 traceback，
+    故在此处统一收敛成本项目的异常类型。
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise NoticeError(f"notices.json 不是合法 JSON：{exc}") from exc
+
+
 def load_notices(path: Path) -> list:
     """读并校验 notices.json；文件不存在按"无通知"处理。"""
     path = Path(path)
     if not path.exists():
         return []
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw = _read_json(path)
     if not isinstance(raw, list):
         raise NoticeError("notices.json 顶层必须是数组")
     seen = set()
@@ -35,9 +48,14 @@ def load_notices(path: Path) -> list:
         for key in ("id", "date", "title", "body"):
             if not str(item.get(key, "")).strip():
                 raise NoticeError(f"通知缺少 {key}：{item}")
-        if item["id"] in seen:
-            raise NoticeError(f"通知 id 重复：{item['id']}")
-        seen.add(item["id"])
+        # id 若是数组/对象，set 查重会抛 TypeError，调用方 except NoticeError 接不住；
+        # 统一转成 NoticeError，并带出原值便于定位是哪条数据的问题
+        try:
+            if item["id"] in seen:
+                raise NoticeError(f"通知 id 重复：{item['id']}")
+            seen.add(item["id"])
+        except TypeError as exc:
+            raise NoticeError(f"id 必须是字符串或数字：{item['id']}") from exc
         if not DATE_RE.match(str(item["date"])):
             raise NoticeError(f"date 必须是 YYYY-MM-DD：{item['date']}")
         try:
