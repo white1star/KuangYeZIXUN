@@ -443,6 +443,7 @@ def test_main_check_returns_0_with_no_notices_at_all(tmp_path, capsys):
 
 
 PORTAL_DIR = Path(os.environ.get("PORTAL_DIR", r"E:\矿_news\.superpowers\sdd\portal"))
+DOM_HARNESS = Path(__file__).with_name("notice_dom_harness.js")
 
 
 def _portal_index() -> Path:
@@ -455,6 +456,100 @@ def _portal_index() -> Path:
 def _portal_page():
     return _portal_index().read_text(encoding="utf-8")
 
+
+def _run_dom_harness() -> dict:
+    """用 node 跑通知交互脚本的行为测试，返回 {场景名: {ok, error?}}。
+
+    页面一个字节都不改：脚本原文从 index.html 抽取，生产代码里没有测试钩子。
+    node 不在 PATH 时由 requires_node 标记整体 skip，不让没装 node 的机器红。
+    """
+    proc = subprocess.run([NODE, str(DOM_HARNESS), str(_portal_index())],
+                          capture_output=True, encoding="utf-8")
+    assert proc.returncode == 0, \
+        "harness 自身失败（退出码 %d）：%s%s" % (proc.returncode, proc.stdout, proc.stderr)
+    return json.loads(proc.stdout)
+
+
+def _assert_scenario(report: dict, name: str) -> None:
+    got = report.get(name)
+    assert got is not None, "harness 没有执行场景 %s" % name
+    assert got.get("ok") is True, "场景 %s 失败：%s" % (name, got.get("error", "未知原因"))
+
+
+@requires_node
+def test_notice_dom_harness_found_real_script():
+    """先确认 harness 真的从页面里抽到了脚本与数据，夹具失效时能立刻定位。"""
+    report = _run_dom_harness()
+    _assert_scenario(report, "page_has_notices")
+
+
+@requires_node
+def test_fresh_visit_shows_dot():
+    """有通知且从未读过 → 红点可见。"""
+    _assert_scenario(_run_dom_harness(), "fresh_visit_dot_visible")
+
+
+@requires_node
+def test_open_panel_clears_dot_and_marks_read():
+    """打开面板 → 红点消失，且已读 id 落盘为最新一条。"""
+    _assert_scenario(_run_dom_harness(), "open_marks_read")
+
+
+@requires_node
+def test_reload_after_read_shows_no_dot():
+    """已读状态里有最新 id → 刷新不再亮红点。"""
+    _assert_scenario(_run_dom_harness(), "reload_after_read_no_dot")
+
+
+@requires_node
+def test_storage_unavailable_degrades_silently():
+    """localStorage 抛错（隐私模式）→ 不亮红点、面板照常打开、不抛异常。
+
+    删掉 paint() 里的 seen !== null 守卫后，本用例变红。
+    """
+    _assert_scenario(_run_dom_harness(), "storage_unavailable_degrades_silently")
+
+
+@requires_node
+def test_empty_notices_show_placeholder():
+    """一条通知都没有 → 不亮红点，列表渲染"暂无通知"。"""
+    _assert_scenario(_run_dom_harness(), "empty_notices_render_placeholder")
+
+
+@requires_node
+def test_open_toggles_inert_aria_and_focus():
+    """打开面板 → 摘 inert、aria-hidden=false、焦点移进面板。"""
+    _assert_scenario(_run_dom_harness(), "open_toggles_inert_aria_and_focus")
+
+
+@requires_node
+def test_close_restores_inert_aria_and_focus():
+    """关闭面板 → 加回 inert、aria-hidden=true、焦点交还铃铛。"""
+    _assert_scenario(_run_dom_harness(), "close_restores_inert_aria_and_focus")
+
+
+@requires_node
+def test_escape_only_while_open():
+    """Esc 只在面板打开时生效，关闭态按 Esc 不抢焦点。"""
+    _assert_scenario(_run_dom_harness(), "escape_only_while_open")
+
+
+@requires_node
+def test_tab_is_trapped_while_open():
+    """aria-modal 声明了模态，Tab 就必须被关在面板里。"""
+    _assert_scenario(_run_dom_harness(), "tab_is_trapped_in_open_panel")
+
+
+@requires_node
+def test_tab_not_trapped_while_closed():
+    """关闭态不得抢 Tab，页面其余部分保持浏览器默认顺序。"""
+    _assert_scenario(_run_dom_harness(), "tab_not_trapped_while_closed")
+
+
+@requires_node
+def test_pinned_badge_rendered():
+    """置顶通知在日期旁渲染"置顶"徽标，未置顶的不渲染。"""
+    _assert_scenario(_run_dom_harness(), "pinned_badge_rendered")
 
 
 def _css_rule_body(html, selector):
