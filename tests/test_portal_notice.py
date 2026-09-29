@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -255,3 +256,48 @@ def test_main_returns_0_on_success(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "通知 1 条" in out
     assert "20260929-01" in out
+
+
+PORTAL_DIR = Path(os.environ.get("PORTAL_DIR", r"E:\矿_news\.superpowers\sdd\portal"))
+
+
+def _portal_page():
+    index = PORTAL_DIR / "index.html"
+    if not index.exists():
+        pytest.skip("未找到门户工作副本（%s），先 clone white1star.github.io" % index)
+    return index.read_text(encoding="utf-8")
+
+
+def test_portal_has_notice_elements():
+    html = _portal_page()
+    for token in ('id="notice-bell"', 'id="notice-dot"', 'id="notice-mask"',
+                  'id="notice-panel"', 'id="notice-close"', 'id="notice-list"'):
+        assert token in html, "门户页面缺少 %s" % token
+
+
+def test_portal_has_notice_markers():
+    html = _portal_page()
+    assert build_portal.NOTICES_BEGIN in html
+    assert build_portal.NOTICES_END in html
+
+
+def test_portal_read_state_logic_present():
+    html = _portal_page()
+    assert "portal_notice_read_id" in html
+    assert "localStorage.getItem" in html
+    assert "localStorage.setItem" in html
+    assert "window.__NOTICE_LATEST__" in html
+
+
+def test_portal_renders_notice_text_safely():
+    """正文必须走 textContent，不能用 innerHTML 拼接。"""
+    html = _portal_page()
+    assert "textContent" in html
+    inner_html_lines = [line for line in html.splitlines()
+                        if "innerHTML" in line and "notice" in line.lower()]
+    assert not inner_html_lines, "通知渲染禁止 innerHTML：%s" % inner_html_lines
+
+
+def test_portal_bell_is_top_right():
+    html = _portal_page().replace(" ", "")
+    assert "justify-content:space-between" in html, "铃铛要靠右，head-inner 需要 space-between"
