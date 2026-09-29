@@ -401,20 +401,41 @@ python -m scripts.publish_data_branch  # 只发布当前数据库、不抓取（
 
 ### 发通知（全员可见）
 
-门户页右上角的铃铛是通知入口。在项目目录执行：
+门户页右上角的铃铛是通知入口。首次发通知前先准备门户工作副本（只克隆，不改别处）：
 
 ```powershell
-# 1. 编辑 .superpowers\sdd\portal\notices.json，按 schema 填 id / date / title / body（可加 pinned）
-# 2. 注入页面（校验不通过会报错且不改动线上页面）
+git clone https://github.com/white1star/white1star.github.io.git .superpowers\sdd\portal
+```
+
+然后在项目目录执行：
+
+```powershell
+# 1. 编辑 .superpowers\sdd\portal\notices.json，追加一条通知，字段要求：
+#      id     全局唯一，建议 YYYYMMDD-NN（如 20261005-01），改过的 id 不要复用
+#      date   YYYY-MM-DD，必须是真实存在的日历日期
+#      title  ≤40 字
+#      body   ≤300 字纯文本，不要塞 HTML（页面按纯文本渲染）
+#      pinned 可选，true 时置顶
+#    不要删 notices.json：文件不存在会被当成"没有通知"，门户通知区直接清空成"暂无通知"。
+#    要下架某条通知，就改它的 title/body 把它说清，或把 pinned 置 false，不要删条目。
+# 2. 注入页面（只改本地工作副本；校验不通过会报错且不写盘，线上页面此刻还没动）
 .venv\Scripts\python.exe -m tools.build_portal --portal .superpowers\sdd\portal
+# 2b. 核验闸门：页面必须与 notices.json 同步，否则返回 1 并报错
+.venv\Scripts\python.exe -m tools.build_portal --portal .superpowers\sdd\portal --check
 # 3. 提交推送，Pages 自动部署
 git -C .superpowers\sdd\portal commit -am "docs: 发布通知"
 git -C .superpowers\sdd\portal push origin main
-# 4. 核验两个地址
-Invoke-WebRequest "https://white1star.github.io/" -UseBasicParsing | Select-Object -Expand Content
-Invoke-WebRequest "http://39.96.27.206/" -UseBasicParsing | Select-Object -Expand Content
-# 5. 需要立刻在服务器生效时，手动同步门户镜像
+# 4. 机器核验：抓页面并检查是否含最新通知的 id（把 20261005-01 换成刚发的 id）
+#    只看"命令没报错"不算核验——HTTP 200 的可能是旧页面缓存
+$id = "20261005-01"
+foreach ($u in "https://white1star.github.io/", "http://39.96.27.206/") {
+  $c = (Invoke-WebRequest $u -UseBasicParsing).Content
+  "{0} -> {1}" -f $u, $(if ($c -match [regex]::Escape($id)) { "已含 $id" } else { "未含 $id，通知没上线" })
+}
+# 5. 需要立刻在服务器生效时，手动同步门户镜像（平时等服务器 cron 自动同步即可）
 .venv\Scripts\python.exe .superpowers\sdd\server.py run "cd /opt/news && .venv/bin/python scripts/mirror_portal.py"
 ```
+
+`--check` 是发布前的防错闸门：改了 `notices.json` 却忘了跑第 2 步（或第 2 步报错被忽略）时，它返回**非零**并提示"页面未注入最新通知"，必须先把第 2 步跑通才能往下走。已经同步时它返回 0 并打印"校验通过（页面已与 notices.json 同步）"。
 
 通知是全员公开广播，只写可以公开说的内容；员工右下角的「反馈」按钮仍可私信管理员。

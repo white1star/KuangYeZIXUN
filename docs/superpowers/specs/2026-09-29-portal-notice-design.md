@@ -115,19 +115,53 @@
   - 判定：`localStorage` 中的值 ≠ 最新一条 `id` → 显示红点
   - 打开面板时写入最新 `id` 并立即隐藏红点
   - `localStorage` 不可用（隐私模式等）时**静默降级**：不显示红点，功能其余部分正常，不报错
+    - 关键：读失败（`getItem` 抛错 → 返回 `null`）与读到空串（从未读过）必须区分。
+      红点判定的三个条件是"有通知" ∧ "读得到" ∧ "读到的 ≠ 最新"。
+      漏掉"读得到"这一条，隐私模式下 `null !== latest` 成立 → 红点亮起，
+      而 `markRead()` 同样写不进去，红点永远消不掉。
+
+**无障碍层（实际交付，设计时低估了）**：面板一开工就是 `role="dialog"` + `aria-modal="true"`，
+`aria-modal` 等于向辅助技术承诺"焦点被关在面板里"，于是下面几项从"可选优化"变成**必要配套**：
+
+- `aria-hidden` 随开合在 `"true"`/`"false"` 之间切换；关闭态同时挂 `inert`。
+  `inert` 一举两得：把抽屉移出 Tab 序列（否则关闭后按 Tab 会落到屏幕外的「关闭」按钮上），
+  也把它移出无障碍树（否则是 axe 的 `aria-hidden-focus`：隐藏容器里裹着可聚焦元素）。
+  注意 `inert` 只作用于面板自己，管不到页面其余部分，那一半要靠下面的焦点陷阱。
+- **进入焦点**：打开面板后 `closeBtn.focus()`，否则屏幕阅读器停在铃铛上、不会播报抽屉里的通知。
+- **退出焦点**：`close()` 把焦点交还触发它的铃铛，键盘用户不会掉回文档开头。
+- **焦点陷阱**：`keydown` 时现查一遍面板内可聚焦元素（选择器
+  `a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])`，
+  并过滤 `hidden`），到边界就绕回另一端；焦点在面板外时先收回来。
+  面板关闭时一律不拦——关闭态由 `inert` 负责，页面其余部分必须保持浏览器默认的 Tab 顺序。
+- **Esc 守卫**：Esc 只在面板打开时才关闭。关闭态响应 Esc 会让"关闭"在关闭瞬间
+  又执行一次 `close()`，把焦点从页面里任何位置抢到铃铛上——键盘用户随手按一下键焦点就跳走。
+- 铃铛同步 `aria-expanded`（`"false"`/`"true"`）。
 
 ### 5.4 发布工具 `build_portal.py`
 
-放在门户仓库根目录，`python3 build_portal.py`（办公端也可用 `python build_portal.py` 运行同一脚本）：
+**实际位置**：`矿_news/tools/build_portal.py`（**不放进门户仓库**）。
+门户仓库 `white1star/white1star.github.io` 是纯产物仓库，只有一个 `index.html`；
+服务器镜像只同步这一个文件，门户仓库里多一个文件就会在服务器上 404。
+而 `矿_news` 侧本来就有 pytest 与 venv，测试也在这边，工具跟测试放一起才跑得起来。
 
-1. 读并校验 `notices.json`
+调用方式 `python -m tools.build_portal --portal .superpowers\sdd\portal`（加 `--check` 只校验不写盘）：
+
+1. 读并校验 `notices.json`（文件不存在按"无通知"处理）
 2. 读 `index.html`，定位标记，替换数据块
 3. 写回 `index.html`
-4. 打印通知条数、最新日期，便于人工核对
+4. 打印通知条数、最新 `id`、是否改动，便于人工核对
 
-**注入安全性**：`title`/`body` 经 HTML 转义后写入 `window.__NOTICES__` 的 JSON 字面量（`json.dumps` + 替换 `<` `>` `&`），避免正文中的引号或尖括号破坏脚本语法。校验不通过时**不写文件**，已发布页面保持原样。
+**注入安全性**：JSON 里的 `<` `>` `&` 转成 `\uXXXX` 后写入 `window.__NOTICES__`。
+**同一个转义函数也用在 `window.__NOTICE_LATEST__` 的 id 上**——id 来自 `notices.json` 的自由文本，
+与 title/body 同源；裸插值时 id 里的 `</script>` 会提前截断脚本、id 里的 `"` 会让整段数据脚本
+语法错误。校验不通过时**不写文件**，已发布页面保持原样。
 
-幂等：连续跑两次输出完全一致（避免 git 里出现无意义 diff）。
+幂等：内容没变就不写盘，连续跑两次输出完全一致（避免 git 里出现无意义 diff，也避免每次 build
+都刷新 mtime 搅动增量备份）。
+
+**`--check` 是发布流程的防错闸门**：页面与 `notices.json` 不同步时返回**非零**并提示
+"页面未注入最新通知，先跑不带 `--check` 的 build"。漏跑 build 时它不再放行——
+否则页面原样推上线，通知静默不出现，读者只会以为没人发通知。
 
 ## 6. 数据流
 
@@ -159,14 +193,49 @@
 用例：
 
 1. 合法 `notices.json` → 注入成功，HTML 内含全部通知 `id`
-2. 连续两次构建 → 文件字节一致（幂等）
+2. 连续两次构建 → 文件字节一致，且第二次没有再写盘（`st_mtime_ns` 不变，见用例 8）
 3. `id` 重复 / 缺 `title` / `body` 超长 / 日期格式错 → 报错退出且 `index.html` 未被改动
 4. `notices.json` 缺失 → 注入空数组，不抛异常
 5. 标记注释缺失 → 报错退出
-6. 已读逻辑：把红点判定抽成纯函数 `shouldShowDot(storedId, notices)`（随 `build_portal.py` 提供），用 Python 镜像同样的判定规则测「相等/不等/空值」三态；页面 JS 与该函数保持同一规则，注释互相指明
-7. 注入内容转义：`body` 中的 `<` `&` `"` 不得破坏 HTML 与 JS 语法（用含尖括号的样例断言输出）
+6. ~~已读逻辑：把红点判定抽成纯函数 `shouldShowDot(storedId, notices)`，用 Python 镜像同样的判定规则测「相等/不等/空值」三态~~ → **实际做法：对页面真实脚本做 node 行为测试**（见下）
+7. 注入内容转义：`<` `>` `&` `"` 不得破坏 HTML 与 JS 语法。三者逐一断言转义形式存在**且**原字符消失——只断言 `<` 的话，把 `>`/`&` 两行转义删掉照样全绿。`" ` 会让数据脚本语法错误，由 node 真实解析注入后的页面来暴露
+8. 幂等的 I/O 层：连跑两次 `build()`，比对 `index.html` 的 `st_mtime_ns`。只钉 `changed` 返回值的话，把无条件 `write_bytes` 加回来全部用例照样绿
+9. `--check` 闸门：页面陈旧时退出码非 0；已同步时仍为 0（含"从未发过通知"的情况）
+10. JS 交互行为（红点、已读、存储降级、空态、置顶徽标、inert/焦点/Esc）：`tests/notice_dom_harness.js` 用 `node:vm` 把 `index.html` 里那段真实 IIFE 原文跑起来，配最小 DOM / `localStorage` 桩；`tests/test_portal_notice.py` 用 `subprocess` 调 node 逐场景断言，node 不在 PATH 时整体 skip
+
+### 8.6 已读逻辑的测试：为什么不是 `shouldShowDot` 纯函数
+
+**原设计**（已废弃）：在 `build_portal.py` 里抽一个 Python 侧的 `shouldShowDot(storedId, notices)` 纯函数，
+用 Python 镜像同一套判定规则，测「相等 / 不等 / 空值」三态，注释里互相指明页面 JS 与该函数保持同一规则。
+
+**实际交付**：改成用 node 跑**页面里那段真实脚本**（`tests/notice_dom_harness.js`），12 个场景：
+
+1. 首次访问（有通知、`localStorage` 空）→ 红点可见
+2. 打开面板 → 红点消失，且 `localStorage` 落盘 = 最新 `id`
+3. 刷新（已存最新 `id`）→ 红点不再出现
+4. `localStorage` 抛错（隐私模式）→ 红点**不**显示，脚本不抛异常，面板照常能开
+5. 无通知 → 红点不显示，列表渲染"暂无通知"空态
+6. 打开态：`on` 类、摘 `inert`、`aria-hidden="false"`、`aria-expanded="true"`、焦点移进面板
+7. 关闭态：`inert` 与 `aria-hidden="true"` 复位、焦点交还铃铛
+8. Esc 只在打开态生效（关闭态按 Esc 不抢焦点）
+9. 焦点陷阱：Tab / Shift+Tab 在面板首尾绕回，焦点在面板外时先收进来
+10. 关闭态不拦 Tab
+11. 置顶徽标：`pinned` 渲染"置顶"、未置顶不渲染；标题/正文走 `textContent`
+12. 夹具自检：页面里确实抽到了脚本与通知数据
+
+**为什么换**：Python 侧的镜像函数测的是**副本**，页面 JS 才是**唯一真实实现**。
+两者可以悄悄分叉——改页面忘了改副本、副本成了摆设，测试照样全绿。
+"空值"这一态在真实实现里是 `null`（`getItem` 抛错）而不是 Python 侧的 `None`/空串，
+镜像函数根本表达不出这个区别，而它恰恰是最容易出错的一态。
+真跑脚本直接测真实实现，且不需要在生产代码里留测试钩子。
+
+**代价与对策**：要写 DOM 桩。桩刻意做窄——只实现脚本真正用到的成员
+（`hidden` / `classList` / `focus()` / `setAttribute` / `querySelectorAll` / `appendChild` 等），
+桩太宽容就等于测不出问题。脚本与通知数据都从 `index.html` 原文抽取，页面不改一个字节。
 
 人工核验（发布后）：桌面与手机各打开一次，确认铃铛可点、面板可开可关、红点按预期出现与消失。
+核验方式是**机器抓页面比对最新通知的 id**（见 README 第 12 节 step 4），不是把整份 HTML dump 出来用眼看——
+HTTP 200 的也可能是旧缓存，肉眼在几千行 HTML 里找一个 id 迟早看漏。
 
 ## 9. 上线与回滚
 
