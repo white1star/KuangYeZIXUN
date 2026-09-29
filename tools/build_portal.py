@@ -84,17 +84,37 @@ def latest_notice_id(notices: list) -> str:
     return str(ordered[0]["id"]) if ordered else ""
 
 
+def _escape_json(text: str) -> str:
+    """把 JSON 文本里的 < > & 转成 \\u 形式。
+
+    三个字符在 HTML 语境下都可能提前闭合 script 标签或开启新标签；转成
+    \\uXXXX 后对 JSON 解析结果完全等价，但落到页面上不再是裸字符。
+    payload 与 __NOTICE_LATEST__ 的 id 共用这一个函数，不另写第二套转义。
+    """
+    return (text.replace("<", "\\u003c")
+                .replace(">", "\\u003e")
+                .replace("&", "\\u0026"))
+
+
+def _js_string(value: str) -> str:
+    """把字符串渲染成 JS 字符串字面量（含两侧引号）并同样转义。
+
+    id 来自 notices.json 的自由文本，和 title/body 一样会原样落进页面。
+    早先这里是裸 %s 插值，于是 id 里带 </script> 会截断脚本、带 " 会造成
+    JS 语法错误——整段数据脚本随之失效，页面静默显示"暂无通知"且零报错，
+    排查成本极高。id 与 payload 是同一份不可信输入，必须走同一套转义。
+    """
+    return _escape_json(json.dumps(str(value), ensure_ascii=False))
+
+
 def render_block(notices: list) -> str:
     """生成注入块。JSON 里的 < > & 转成 \\u 形式，防止 </script> 截断脚本。"""
     ordered = sort_notices(notices)
-    payload = json.dumps(ordered, ensure_ascii=False, separators=(",", ":"))
-    payload = (payload.replace("<", "\\u003c")
-                      .replace(">", "\\u003e")
-                      .replace("&", "\\u0026"))
+    payload = _escape_json(json.dumps(ordered, ensure_ascii=False, separators=(",", ":")))
     return "\n".join([
         NOTICES_BEGIN,
-        "<script>window.__NOTICES__=%s;window.__NOTICE_LATEST__=\"%s\";</script>"
-        % (payload, latest_notice_id(ordered)),
+        "<script>window.__NOTICES__=%s;window.__NOTICE_LATEST__=%s;</script>"
+        % (payload, _js_string(latest_notice_id(ordered))),
         NOTICES_END,
     ])
 
@@ -129,15 +149,25 @@ def build(portal_dir, check: bool = False) -> dict:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="把 notices.json 注入门户 index.html")
     parser.add_argument("--portal", required=True, help="门户仓库目录（含 index.html 与 notices.json）")
-    parser.add_argument("--check", action="store_true", help="只校验并打印，不写文件")
+    parser.add_argument("--check", action="store_true",
+                        help="只校验不写文件；页面与 notices.json 不同步时返回非零（发布前防错闸门）")
     args = parser.parse_args(argv)
     try:
         result = build(args.portal, check=args.check)
     except NoticeError as exc:
         print("通知处理失败：%s" % exc)
         return 1
+    if args.check and result["changed"]:
+        # --check 是发布流程的防错闸门：改了 notices.json 却忘了跑 build
+        #（或 build 报错被忽略）时，页面会原样推上线，通知静默不出现，
+        # 读者只会以为没人发通知。所以"不同步"必须返回非零挡住后续 push。
+        print("通知 %d 条，最新 %s，页面未注入最新通知：%s"
+              % (result["notices"], result["latest"] or "（无）", result["index"]))
+        print("请先跑不带 --check 的 build 确认写入，再提交推送："
+              "python -m tools.build_portal --portal %s" % args.portal)
+        return 1
     if args.check:
-        state = "校验通过" if result["changed"] else "无需改动"
+        state = "校验通过（页面已与 notices.json 同步）"
     else:
         state = "已写入" if result["changed"] else "无需改动"
     print("通知 %d 条，最新 %s，%s：%s"
