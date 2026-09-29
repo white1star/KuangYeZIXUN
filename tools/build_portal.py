@@ -4,6 +4,7 @@
     python -m tools.build_portal --portal .superpowers/sdd/portal
     python -m tools.build_portal --portal .superpowers/sdd/portal --check
 """
+import argparse
 import json
 import re
 from datetime import datetime
@@ -81,3 +82,68 @@ def latest_notice_id(notices: list) -> str:
     """排序后第一条的 id 即最新；无通知返回空串。"""
     ordered = sort_notices(notices)
     return str(ordered[0]["id"]) if ordered else ""
+
+
+def render_block(notices: list) -> str:
+    """生成注入块。JSON 里的 < > & 转成 \\u 形式，防止 </script> 截断脚本。"""
+    ordered = sort_notices(notices)
+    payload = json.dumps(ordered, ensure_ascii=False, separators=(",", ":"))
+    payload = (payload.replace("<", "\\u003c")
+                      .replace(">", "\\u003e")
+                      .replace("&", "\\u0026"))
+    return "\n".join([
+        NOTICES_BEGIN,
+        "<script>window.__NOTICES__=%s;window.__NOTICE_LATEST__=\"%s\";</script>"
+        % (payload, latest_notice_id(ordered)),
+        NOTICES_END,
+    ])
+
+
+def inject(html: str, block: str) -> str:
+    """把标记之间的内容换成 block。标记缺失、重复或顺序颠倒都报错。"""
+    if html.count(NOTICES_BEGIN) != 1 or html.count(NOTICES_END) != 1:
+        raise NoticeError("index.html 缺少成对的 NOTICES 标记")
+    if html.index(NOTICES_BEGIN) > html.index(NOTICES_END):
+        raise NoticeError("index.html 的 NOTICES 标记顺序颠倒")
+    head, _, rest = html.partition(NOTICES_BEGIN)
+    _, _, tail = rest.partition(NOTICES_END)
+    return "%s%s%s" % (head, block, tail)
+
+
+def build(portal_dir, check: bool = False) -> dict:
+    """读 notices → 校验排序 → 注入 index.html。内容没变就不写，保证幂等。"""
+    portal_dir = Path(portal_dir)
+    index = portal_dir / "index.html"
+    if not index.exists():
+        raise NoticeError("找不到门户页面：%s" % index)
+    notices = load_notices(portal_dir / "notices.json")
+    raw = index.read_bytes()
+    new_bytes = inject(raw.decode("utf-8"), render_block(notices)).encode("utf-8")
+    changed = new_bytes != raw
+    if not check and changed:
+        index.write_bytes(new_bytes)
+    return {"notices": len(notices), "latest": latest_notice_id(notices),
+            "changed": changed, "checked": check, "index": str(index)}
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="把 notices.json 注入门户 index.html")
+    parser.add_argument("--portal", required=True, help="门户仓库目录（含 index.html 与 notices.json）")
+    parser.add_argument("--check", action="store_true", help="只校验并打印，不写文件")
+    args = parser.parse_args(argv)
+    try:
+        result = build(args.portal, check=args.check)
+    except NoticeError as exc:
+        print("通知处理失败：%s" % exc)
+        return 1
+    if args.check:
+        state = "校验通过" if result["changed"] else "无需改动"
+    else:
+        state = "已写入" if result["changed"] else "无需改动"
+    print("通知 %d 条，最新 %s，%s：%s"
+          % (result["notices"], result["latest"] or "（无）", state, result["index"]))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
