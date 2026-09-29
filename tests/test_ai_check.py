@@ -1,5 +1,5 @@
 import dataclasses
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from crawler import store
 from crawler.config import load_settings
@@ -75,3 +75,69 @@ def test_write_report(tmp_path):
     assert path.exists()
     assert path.name == "ai_check_" + datetime.now().strftime("%Y%m%d") + ".md"
     assert path.read_text(encoding="utf-8") == text
+
+
+def _add_run(conn, key, started_at, status="ok", items_found=0):
+    """直接插轮次记录：既有 store.start_crawl_run 只能写"现在"，测不了 3 天前。"""
+    conn.execute(
+        "INSERT INTO crawl_runs(source_key,started_at,finished_at,status,items_found,items_new)"
+        " VALUES(?,?,?,?,?,0)", (key, started_at, started_at, status, items_found))
+    conn.commit()
+
+
+def _run_days_ago(conn, key, days_ago, **kw):
+    ts = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d %H:%M:%S")
+    _add_run(conn, key, ts, **kw)
+
+
+def test_silent_sources_flags_three_day_zero(tmp_path):
+    """近 3 天有成功轮次但一条都没抓到 → 疑似静默。"""
+    settings = make_settings(tmp_path)
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    _run_days_ago(conn, "dead_source", 2, items_found=0)
+    _run_days_ago(conn, "dead_source", 1, items_found=0)
+    rows = ai_check.silent_sources(conn, ["dead_source"], days=3)
+    assert [r["key"] for r in rows] == ["dead_source"]
+    assert rows[0]["reason"] == "3 天零产出"
+    conn.close()
+
+
+def test_silent_sources_ignores_sources_with_recent_output(tmp_path):
+    settings = make_settings(tmp_path)
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    _run_days_ago(conn, "ok_source", 2, items_found=0)
+    _run_days_ago(conn, "ok_source", 1, items_found=7)
+    assert ai_check.silent_sources(conn, ["ok_source"], days=3) == []
+    conn.close()
+
+
+def test_silent_sources_separates_never_run(tmp_path):
+    """从未成功抓过的启用源单独表述，不和'零产出'混为一谈。"""
+    settings = make_settings(tmp_path)
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    rows = ai_check.silent_sources(conn, ["never_run"], days=3)
+    assert rows[0]["reason"] == "从未成功抓取"
+    conn.close()
+
+
+def test_silent_sources_ignores_disabled_sources(tmp_path):
+    """传入的 enabled_keys 之外（已停用/已删除）的源不报。"""
+    settings = make_settings(tmp_path)
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    _run_days_ago(conn, "old_source", 1, items_found=0)
+    assert ai_check.silent_sources(conn, [], days=3) == []
+    conn.close()
+
+
+def test_silent_sources_ignores_failed_runs(tmp_path):
+    """失败轮次不算'零产出'（那种由既有的失败源段落负责报）。"""
+    settings = make_settings(tmp_path)
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    _run_days_ago(conn, "err_source", 1, status="error", items_found=0)
+    assert ai_check.silent_sources(conn, ["err_source"], days=3) == []
+    conn.close()

@@ -1,12 +1,45 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from crawler import store
-from crawler.config import load_settings
+from crawler.config import load_settings, load_sources
 
 ROOT = Path(__file__).resolve().parent.parent
 BOARD_NAMES = {"news": "新闻", "policy": "政策", "price": "价格"}
 STATUS_NAMES = {"ok": "成功", "error": "失败", "running": "进行中"}
+SILENT_DAYS = 3
+
+
+def silent_sources(conn, enabled_keys, days=SILENT_DAYS, now=None) -> list:
+    """近 N 天有成功轮次、却一条都没抓到的启用源；从未成功抓取的单独表述。
+
+    与"失败源"互补：失败源报的是 status=error，这里报的是"跑成功了但颗粒无收"，
+    源站改版/被反爬最常表现为后者（静默 0 行，不报错）。
+    """
+    now = now or datetime.now()
+    cutoff = (now - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    enabled = {k for k in (enabled_keys or [])}
+    rows = conn.execute(
+        "SELECT source_key, COUNT(*) runs, SUM(items_found) found,"
+        " MAX(CASE WHEN items_found > 0 THEN started_at END) last_nonzero"
+        " FROM crawl_runs WHERE status='ok' AND started_at >= ?"
+        " GROUP BY source_key", (cutoff,)).fetchall()
+    by_key = {r["source_key"]: r for r in rows}
+    ran = {r["source_key"] for r in conn.execute(
+        "SELECT DISTINCT source_key FROM crawl_runs WHERE started_at >= ?", (cutoff,))}
+    out = []
+    for key in sorted(enabled):
+        r = by_key.get(key)
+        if r is None:
+            if key in ran:
+                continue  # 窗口内有轮次但没成功：交给既有"失败源"段落报
+            out.append({"key": key, "runs": 0, "last_nonzero": "",
+                        "reason": "从未成功抓取"})
+        elif not r["found"]:
+            out.append({"key": key, "runs": r["runs"],
+                        "last_nonzero": r["last_nonzero"] or "",
+                        "reason": "%d 天零产出" % days})
+    return out
 
 HEALTH_SQL = (
     "SELECT s.key, s.name, s.board, r.status, r.finished_at, r.items_found, r.items_new, r.error "
@@ -54,12 +87,16 @@ def generate_report(settings=None) -> tuple:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     issues = []
     lines = [f"# AI 巡检报告（{now}）", ""]
+    silent, source_names = [], {}
     try:
         conn = store.connect(settings.db_path)
         try:
             store.init_db(conn)
             health = [dict(r) for r in conn.execute(HEALTH_SQL).fetchall()]
             overview = _overview(conn)
+            enabled_sources = [s for s in load_sources() if s.get("enabled", True)]
+            source_names = {s["key"]: s.get("name", s["key"]) for s in enabled_sources}
+            silent = silent_sources(conn, [s["key"] for s in enabled_sources])
         finally:
             conn.close()
     except Exception as exc:
@@ -102,6 +139,21 @@ def generate_report(settings=None) -> tuple:
                 lines.append(f"- {h['name']}（{h['key']}）：未留下快照（连接级失败），先看 logs/crawler_*.log")
     else:
         lines.append("全部源最近一轮正常。")
+
+    lines.append("")
+    lines.append("### 疑似静默源（近 3 天零产出）")
+    lines.append("")
+    if silent:
+        for item in silent:
+            name = source_names.get(item["key"], item["key"])
+            if item["reason"] == "从未成功抓取":
+                lines.append(f"- {name}（从未成功抓取）")
+            else:
+                detail = (f"最后有产出：{item['last_nonzero']}" if item["last_nonzero"]
+                          else "窗口内无产出记录")
+                lines.append(f"- {name}（{detail}）")
+    else:
+        lines.append("（无）")
 
     lines.append("")
     lines.append("## 三、数据概览")
