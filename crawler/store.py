@@ -26,6 +26,7 @@ def _ensure_column(conn, table, column, ddl) -> None:
 def init_db(conn) -> None:
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
     _ensure_column(conn, "marketing_copy", "transcript", "transcript TEXT NOT NULL DEFAULT ''")
+    _ensure_column(conn, "crawl_runs", "rules_version", "rules_version TEXT NOT NULL DEFAULT ''")
     conn.commit()
 
 
@@ -38,10 +39,10 @@ def upsert_source(conn, key, name, board, url, enabled=True) -> None:
     conn.commit()
 
 
-def start_crawl_run(conn, source_key) -> int:
+def start_crawl_run(conn, source_key, rules_version="") -> int:
     cur = conn.execute(
-        "INSERT INTO crawl_runs(source_key,started_at,status) VALUES(?,?,?)",
-        (source_key, now_iso(), "running"),
+        "INSERT INTO crawl_runs(source_key,started_at,status,rules_version) VALUES(?,?,?,?)",
+        (source_key, now_iso(), "running", rules_version),
     )
     conn.commit()
     return cur.lastrowid

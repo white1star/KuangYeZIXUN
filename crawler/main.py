@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from crawler import classify, dedup, parse, price_sources, report, store
 from crawler.config import load_settings, load_sources, load_tags
 from crawler.fetch import fetch
+from crawler.rules_version import compute_rules_version
 
 
 def _iter_urls(src: dict) -> list:
@@ -67,6 +68,8 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
     tags = tags or load_tags()
     sources = [s for s in load_sources(sources_dir) if s.get("enabled", True)]
     fetcher = fetcher or fetch
+    rv = compute_rules_version(settings.config_dir)
+    report.log(f"[规则版本] {rv}")
     conn = store.connect(settings.db_path)
     store.init_db(conn)
     summary = {"sources_total": len(sources), "sources_ok": 0, "sources_error": 0,
@@ -79,7 +82,7 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
             try:
                 store.upsert_source(conn, src["key"], src.get("name", src["key"]),
                                     src["board"], _iter_urls(src)[0], True)
-                run_id = store.start_crawl_run(conn, src["key"])
+                run_id = store.start_crawl_run(conn, src["key"], rv)
                 for url in _iter_urls(src):
                     result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
                                      timeout=settings.request_timeout, retries=settings.request_retries,

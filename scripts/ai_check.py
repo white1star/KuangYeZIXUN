@@ -3,6 +3,7 @@ from pathlib import Path
 
 from crawler import store
 from crawler.config import load_settings, load_sources
+from crawler.rules_version import compute_rules_version
 
 ROOT = Path(__file__).resolve().parent.parent
 BOARD_NAMES = {"news": "新闻", "policy": "政策", "price": "价格"}
@@ -86,7 +87,8 @@ def generate_report(settings=None) -> tuple:
     settings = settings or load_settings()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     issues = []
-    lines = [f"# AI 巡检报告（{now}）", ""]
+    lines = [f"# AI 巡检报告（{now}）",
+             f"规则版本：{compute_rules_version(settings.config_dir)}", ""]
     silent, source_names = [], {}
     try:
         conn = store.connect(settings.db_path)

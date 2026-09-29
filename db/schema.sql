@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS crawl_runs (
   status TEXT NOT NULL DEFAULT 'running',
   items_found INTEGER NOT NULL DEFAULT 0,
   items_new INTEGER NOT NULL DEFAULT 0,
-  error TEXT NOT NULL DEFAULT ''
+  error TEXT NOT NULL DEFAULT '',
+  rules_version TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS marketing_copy (

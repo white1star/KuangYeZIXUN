@@ -17,6 +17,7 @@ class Settings:
     db_path: Path
     data_dir: Path
     logs_dir: Path
+    config_dir: Path
 
 
 def _data_dir() -> Path:
@@ -45,6 +46,7 @@ def load_settings(path=None) -> Settings:
         db_path=data_dir / "news.db",
         data_dir=data_dir,
         logs_dir=_logs_dir(),
+        config_dir=p.parent,
     )
 
 
