@@ -278,7 +278,7 @@ git commit -m "feat(portal): 通知数据校验、排序与最新 id"
 在 `tests/test_portal_notice.py` 末尾追加：
 
 ```python
-HTML = "<html><body>\n%s\n<script>console.log(1)</script>\n%s\n</body></html>\n"
+HTML = "<html><body>\n%s\n%s\n<script>console.log(1)</script>\n</body></html>\n"
 
 
 def _portal_html():
@@ -286,7 +286,9 @@ def _portal_html():
 
 
 def test_inject_replaces_between_markers():
-    out = build_portal.inject(_portal_html(), "BLOCK")
+    # 注入块来自 render_block，自带首尾标记；build 也只传这种块
+    block = "%s\nBLOCK\n%s" % (build_portal.NOTICES_BEGIN, build_portal.NOTICES_END)
+    out = build_portal.inject(_portal_html(), block)
     assert "BLOCK" in out
     assert "console.log(1)" in out
     assert out.count(build_portal.NOTICES_BEGIN) == 1
@@ -472,7 +474,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `.venv\Scripts\python.exe -m pytest tests\test_portal_notice.py -v`
-Expected: 31 passed
+Expected: 39 passed
 
 - [ ] **Step 5: 跑全量测试确认没打破别的**
 
