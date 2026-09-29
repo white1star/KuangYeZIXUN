@@ -69,3 +69,34 @@ def test_shfe_picks_max_open_interest_month():
 def test_parse_unknown_parser_raises():
     with pytest.raises(ValueError):
         price_sources.parse("nope", "", {})
+
+
+def test_ccmn_quota_averages_same_day_quotes():
+    """长江有色报价接口：同一天多家报价商取均价，日期按接口 publishDate 归一。"""
+    text = (FIXTURES / "ccmn_sn_list.json").read_text(encoding="utf-8")
+    cfg = _cfg("ccmn_sn", price_type="现货",
+               items="quotaVoList",
+               quote={"name": "productSortName", "price": "avgPrice", "date": "publishDate"},
+               commodity_map={"锡": ["1#锡", "锡"]})
+    rows = price_sources.parse_ccmn_quota(text, cfg)
+    assert rows, "未解析出任何报价"
+    assert {r["commodity"] for r in rows} == {"锡"}
+    assert all(r["price_type"] == "现货" and r["value"] > 0 for r in rows)
+    assert all(re.match(r"^\d{4}-\d{2}-\d{2}$", r["price_date"]) for r in rows)
+    # 每天一行，且该行等于当天所有报价商 avgPrice 的算术平均
+    payload = json.loads(text)
+    items = payload["body"]["quotaVoList"]
+    by_day: dict = {}
+    for item in items:
+        by_day.setdefault(item["publishDate"], []).append(item["avgPrice"])
+    assert len(rows) == len(by_day)
+    for row in rows:
+        day = row["price_date"][5:].replace("-", "-")
+        quotes = by_day[day]
+        expected = round(sum(quotes) / len(quotes), 2)
+        assert row["value"] == expected, f"{day} 均价不符: {row['value']} != {expected}"
+
+
+def test_ccmn_quota_non_json_raises():
+    with pytest.raises(ValueError):
+        price_sources.parse_ccmn_quota("<html>被拦截</html>", _cfg("ccmn_sn"))

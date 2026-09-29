@@ -1,0 +1,23 @@
+key: ccmn_sn
+name: 长江有色·1#锡
+board: price
+parser: ccmn_quota
+# 列表页（/priceinfo/）已把 1#锡 下架，锡只在专属页的报价接口里出数
+url: https://mall.ccmn.cn/shop/quotaData/getQuotaData
+referer: https://www.ccmn.cn/priceinfo/sn
+method: POST
+post_data:
+  colName: sn
+  pageNo: 1
+  pageSize: 20
+headers:
+  X-Requested-With: XMLHttpRequest
+price_type: 现货
+unit: 元/吨
+items: quotaVoList
+quote:
+  name: productSortName
+  price: avgPrice
+  date: publishDate
+commodity_map:
+  锡: [1#锡, 锡]

@@ -82,7 +82,9 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                 run_id = store.start_crawl_run(conn, src["key"])
                 for url in _iter_urls(src):
                     result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
-                                     timeout=settings.request_timeout, retries=settings.request_retries)
+                                     timeout=settings.request_timeout, retries=settings.request_retries,
+                                     method=src.get("method", "GET"), data=src.get("post_data"),
+                                     extra_headers=src.get("headers"))
                     last_result = result
                     if not result.ok:
                         raise RuntimeError(result.error or f"HTTP {result.status}")

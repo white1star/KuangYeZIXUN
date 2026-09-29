@@ -18,16 +18,24 @@ class FetchResult:
     elapsed: float = 0.0
 
 
-def fetch(url, referer="", encoding=None, timeout=15, retries=2, session=None, sleep=time.sleep):
+def fetch(url, referer="", encoding=None, timeout=15, retries=2, session=None, sleep=time.sleep,
+          method="GET", data=None, extra_headers=None):
     sess = session or requests.Session()
     headers = {"User-Agent": DEFAULT_UA}
     if referer:
         headers["Referer"] = referer
+    if extra_headers:
+        headers.update(extra_headers)
+    verb = (method or "GET").upper()
     result = FetchResult(ok=False, final_url=url)
     for attempt in range(retries + 1):
         started = time.time()
         try:
-            resp = sess.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+            if verb == "POST":
+                resp = sess.post(url, headers=headers, data=data, timeout=timeout,
+                                 allow_redirects=True)
+            else:
+                resp = sess.get(url, headers=headers, timeout=timeout, allow_redirects=True)
             result.status = resp.status_code
             result.final_url = resp.url
             if encoding:

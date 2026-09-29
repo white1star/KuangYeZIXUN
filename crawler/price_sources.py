@@ -165,6 +165,52 @@ def _cell_float(cells, idx):
     return _to_float(re.sub(r"[^\d.\-]", "", _cell_text(cells, idx)))
 
 
+def parse_ccmn_quota(text: str, cfg: dict) -> list:
+    """长江有色报价接口：同一品种当天多家报价商，取当日全部报价商的均价。
+
+    源站列表页已把 1#锡 下架，锡只在专属页的接口里出数（body.quotaVoList）。
+    一天可能有多家报价商，按 publishDate 分组后取均价，与列表页口径一致。
+    """
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        raise ValueError("长江有色报价接口返回不是 JSON")
+    items = ((data.get("body") or {}).get(cfg.get("items", "quotaVoList"))) or []
+    q = cfg.get("quote", {})
+    date_field = q.get("date", "publishDate")
+    price_field = q.get("price", "avgPrice")
+    name_field = q.get("name", "productSortName")
+    # 同一商品下把当天各家的报价聚合起来
+    groups: dict = {}
+    for item in items:
+        label = str(item.get(name_field, "") or "").strip()
+        commodity = _match_commodity(label, cfg.get("commodity_map", {}))
+        if not commodity:
+            continue
+        value = _to_float(item.get(price_field))
+        if value is None or value <= 0:
+            continue
+        day = parse_date(item.get(date_field)) or _today()
+        key = (commodity, day)
+        bucket = groups.setdefault(key, {"values": [], "labels": []})
+        bucket["values"].append(value)
+        bucket["labels"].append(label)
+
+    rows = []
+    for (commodity, day), bucket in sorted(groups.items()):
+        values = bucket["values"]
+        rows.append(_make_row(
+            commodity, cfg.get("price_type", "现货"),
+            round(sum(values) / len(values), 2), cfg,
+            f"{bucket['labels'][0]}等{len(values)}家均价",
+            price_date=day,
+        ))
+    return rows
+
+
+PARSERS["ccmn_quota"] = parse_ccmn_quota
+
+
 def parse_table(html: str, cfg: dict) -> list:
     t = cfg["table"]
     soup = BeautifulSoup(html, "lxml")
