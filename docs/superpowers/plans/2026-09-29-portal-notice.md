@@ -887,3 +887,5 @@ git commit -m "docs: 公网部署补充通知发布流程"
 - 通知过期/自动隐藏（需要写 `expires` 字段并改渲染过滤）
 - 通知按站点区分（矿业资讯站 vs 竞品站）
 - 服务器镜像改为每次构建后自动触发，去掉 cron 延迟
+
+> **注意（Task 3 完成后补记）**：本页 Task 3 的代码块是发布前的基线，实际实现经过 4 轮审查修复（eadId 返回 null 区分存储不可用、加固两条契约测试、抽屉补 inert+焦点管理+焦点陷阱、Esc 加打开态守卫），与下方代码块**不完全一致**。以 .superpowers\sdd/portal/index.html 实际代码与 .superpowers/sdd/task-3-report.md 为准。
