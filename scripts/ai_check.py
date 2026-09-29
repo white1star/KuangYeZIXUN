@@ -26,6 +26,8 @@ def silent_sources(conn, enabled_keys, days=SILENT_DAYS, now=None) -> list:
         " FROM crawl_runs WHERE status='ok' AND started_at >= ?"
         " GROUP BY source_key", (cutoff,)).fetchall()
     by_key = {r["source_key"]: r for r in rows}
+    # 窗口内跑过的源（含 error/running）：只要没有任何 ok 轮次就不算静默——
+    # error 由失败源段落负责，running 只是瞬时状态，都不能下"零产出"结论
     ran = {r["source_key"] for r in conn.execute(
         "SELECT DISTINCT source_key FROM crawl_runs WHERE started_at >= ?", (cutoff,))}
     out = []
@@ -87,18 +89,35 @@ def generate_report(settings=None) -> tuple:
     settings = settings or load_settings()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     issues = []
+    try:
+        rules_version = compute_rules_version(settings.config_dir)
+    except Exception:
+        rules_version = "未知"  # 配置读坏时版本降级，不能让报告头先炸掉
     lines = [f"# AI 巡检报告（{now}）",
-             f"规则版本：{compute_rules_version(settings.config_dir)}", ""]
-    silent, source_names = [], {}
+             f"规则版本：{rules_version}", ""]
+
+    # 源配置必须与 DB 分开兜底：修源四步法每天都在改 config/sources/*.yaml，
+    # YAML 语法错误若落进下面 DB 的 except，会被误报成"数据库读取失败"并吞掉
+    # ## 一/二/三 整份报告；这里失败只跳过静默检测，其余段落照常。
+    silent, source_names, config_error = [], {}, ""
+    try:
+        enabled_sources = [s for s in load_sources() if s.get("enabled", True)]
+        source_names = {s["key"]: s.get("name", s["key"]) for s in enabled_sources}
+    except Exception as exc:
+        # YAML 报错含多行定位、且会回显文件内容（如 Notepad 误存的 BOM \ufeff）：
+        # 压单行、滤不可打印字符并截断，避免 cp936 控制台 print 二次崩溃或报告被撑爆
+        config_error = "".join(c for c in " ".join(str(exc).split()) if c.isprintable())
+        if len(config_error) > 200:
+            config_error = config_error[:200] + "…"
+        enabled_sources = []
     try:
         conn = store.connect(settings.db_path)
         try:
             store.init_db(conn)
             health = [dict(r) for r in conn.execute(HEALTH_SQL).fetchall()]
             overview = _overview(conn)
-            enabled_sources = [s for s in load_sources() if s.get("enabled", True)]
-            source_names = {s["key"]: s.get("name", s["key"]) for s in enabled_sources}
-            silent = silent_sources(conn, [s["key"] for s in enabled_sources])
+            if not config_error:
+                silent = silent_sources(conn, [s["key"] for s in enabled_sources])
         finally:
             conn.close()
     except Exception as exc:
@@ -143,9 +162,11 @@ def generate_report(settings=None) -> tuple:
         lines.append("全部源最近一轮正常。")
 
     lines.append("")
-    lines.append("### 疑似静默源（近 3 天零产出）")
+    lines.append(f"### 疑似静默源（近 {SILENT_DAYS} 天零产出）")
     lines.append("")
-    if silent:
+    if config_error:
+        lines.append(f"- （静默源检查已跳过：配置读取失败：{config_error}）")
+    elif silent:
         for item in silent:
             name = source_names.get(item["key"], item["key"])
             if item["reason"] == "从未成功抓取":

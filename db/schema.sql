@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS crawl_runs (
   error TEXT NOT NULL DEFAULT '',
   rules_version TEXT NOT NULL DEFAULT ''
 );
+CREATE INDEX IF NOT EXISTS idx_crawl_runs_started ON crawl_runs(started_at);
 
 CREATE TABLE IF NOT EXISTS marketing_copy (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

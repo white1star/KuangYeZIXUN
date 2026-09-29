@@ -141,3 +141,89 @@ def test_silent_sources_ignores_failed_runs(tmp_path):
     _run_days_ago(conn, "err_source", 1, status="error", items_found=0)
     assert ai_check.silent_sources(conn, ["err_source"], days=3) == []
     conn.close()
+
+
+def test_silent_sources_ignores_running_only_runs(tmp_path):
+    """窗口内只有 running 轮次：瞬时状态，不能当'从未成功抓取'报进静默列表。"""
+    settings = make_settings(tmp_path)
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    _run_days_ago(conn, "running_source", 1, status="running", items_found=0)
+    assert ai_check.silent_sources(conn, ["running_source"], days=3) == []
+    conn.close()
+
+
+def _boom(*args, **kwargs):
+    raise ValueError("while parsing a block mapping:\n    \ufeffbroken: [unclosed")
+
+
+def test_report_survives_sources_config_error(tmp_path, monkeypatch):
+    """源配置读坏只跳过静默检测：DB 的 ## 一/二/三 与退出码照常（回归：曾被 DB 的 except 吞掉）。"""
+    settings = make_settings(tmp_path)
+    seed(settings.db_path, with_bad=False)
+    monkeypatch.setattr(ai_check, "load_sources", _boom)
+
+    text, issues, code = ai_check.generate_report(settings)
+    assert "## 一、各源最近一轮" in text
+    assert "## 二、失败源与快照" in text
+    assert "## 三、数据概览" in text
+    assert "静默源检查已跳过" in text
+    assert "配置读取失败" in text
+    assert "数据库读取失败" not in text
+    assert "\ufeff" not in text  # 异常回显里的 BOM 等不可打印字符必须滤掉
+    assert issues == []
+    assert code == 0
+
+
+def test_report_rules_version_unknown_on_config_error(tmp_path, monkeypatch):
+    """规则版本计算失败降级为'未知'，不影响 DB 段落。"""
+    settings = make_settings(tmp_path)
+    seed(settings.db_path, with_bad=False)
+    monkeypatch.setattr(ai_check, "compute_rules_version", _boom)
+
+    text, issues, code = ai_check.generate_report(settings)
+    assert "规则版本：未知" in text
+    assert "## 一、各源最近一轮" in text
+    assert issues == []
+    assert code == 0
+
+
+def test_report_renders_three_day_zero_source(tmp_path, monkeypatch):
+    """报告渲染'3 天零产出'分支：受控源近 3 天成功跑过但一条没抓到。"""
+    settings = make_settings(tmp_path)
+    monkeypatch.setattr(ai_check, "load_sources",
+                        lambda: [{"key": "dead", "name": "死源", "enabled": True}])
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    store.upsert_source(conn, "dead", "死源", "news", "https://dead.example/", True)
+    _run_days_ago(conn, "dead", 2, items_found=0)
+    _run_days_ago(conn, "dead", 1, items_found=0)
+    conn.commit()
+    conn.close()
+
+    text, issues, code = ai_check.generate_report(settings)
+    assert f"### 疑似静默源（近 {ai_check.SILENT_DAYS} 天零产出）" in text
+    assert "- 死源（窗口内无产出记录）" in text
+    assert "3 天零产出" in text
+    assert issues == []
+    assert code == 0
+
+
+def test_report_silent_section_none(tmp_path, monkeypatch):
+    """报告渲染'（无）'分支：受控源近期有产出时静默段落为空。"""
+    settings = make_settings(tmp_path)
+    monkeypatch.setattr(ai_check, "load_sources",
+                        lambda: [{"key": "alive", "name": "活跃源", "enabled": True}])
+    conn = store.connect(settings.db_path)
+    store.init_db(conn)
+    store.upsert_source(conn, "alive", "活跃源", "news", "https://alive.example/", True)
+    _run_days_ago(conn, "alive", 1, items_found=5)
+    conn.commit()
+    conn.close()
+
+    text, issues, code = ai_check.generate_report(settings)
+    assert "### 疑似静默源" in text
+    assert "（无）" in text
+    assert "窗口内无产出记录" not in text
+    assert issues == []
+    assert code == 0
