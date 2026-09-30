@@ -14,6 +14,8 @@ from scripts import alert_health
 
 # 固定"现在"，让 age_days / 静默窗口 / 24 小时窗口都可复现
 NOW = datetime(2026, 9, 30, 8, 0, 0)
+# run() 内部用真实时钟（不接 now 参数），所以走 CLI 的用例要拿真实"今天"当报价日期
+TODAY = datetime.now().strftime("%Y-%m-%d")
 NAMES = {
     "good": "正常源",
     "broken": "改版源",
@@ -21,6 +23,11 @@ NAMES = {
     "dead": "静默源",
     "never_run": "从未抓过的源",
     "stopped": "已停用源",
+    "eastmoney_futures": "东方财富期货（备用）",
+    "sina_futures": "新浪期货行情",
+    "solo_price": "唯一铜价源",
+    "alt_price": "备用现货源",
+    "news_src": "政策新闻源",
 }
 
 
@@ -62,10 +69,17 @@ def price(commodity, price_type, source_key, price_date, value=100.0):
             "fetched_at": NOW.strftime("%Y-%m-%d %H:%M:%S")}
 
 
-def patch_sources(monkeypatch, *enabled, disabled=()):
-    """受控的源配置：位置参数为启用源，disabled 为已停用源。"""
+def patch_sources(monkeypatch, *enabled, disabled=(), extra=None):
+    """受控的源配置：位置参数为启用源，disabled 为已停用源。
+
+    extra 是按 key 追加的配置字段（如 board/commodity_map），用来模拟真实
+    load_sources 返回的"完整配置"——降级判定要读这两个字段。
+    """
+    extra = extra or {}
+
     def _load(*args, **kwargs):
-        return ([{"key": k, "name": NAMES.get(k, k), "enabled": True} for k in enabled]
+        return ([{"key": k, "name": NAMES.get(k, k), "enabled": True, **extra.get(k, {})}
+                 for k in enabled]
                 + [{"key": k, "name": NAMES.get(k, k), "enabled": False} for k in disabled])
     monkeypatch.setattr(alert_health, "load_sources", _load)
 
@@ -131,6 +145,191 @@ def test_failed_and_silent_do_not_double_report(tmp_path, monkeypatch):
 
     assert [f["key"] for f in issues["failed"]] == ["broken"]
     assert issues["silent"] == []
+
+
+# ------------------------------------------------- 冗余降级（价格源失败但无数据缺口）
+
+# 两个期货源覆盖同一批品种（真实配置就是这样的：sina_futures 与 eastmoney_futures）
+FUTURES_MAIN = {"JM0": "焦煤", "J0": "焦炭", "I0": "铁矿石"}
+
+
+def seed_failed_price_source(settings, monkeypatch, key="eastmoney_futures",
+                             main_key="sina_futures", commodity_map=None,
+                             board="price", main_prices=None):
+    """造一个"价格源刚失败 + 主源照常供数"的现场，返回已连接的 conn。
+
+    降级判定的三个输入一次备齐：源配置里的 board/commodity_map、prices 里的供数情况。
+    """
+    conn = open_db(settings)
+    add_source(conn, key, board=board)
+    add_source(conn, main_key, board="price")
+    add_run(conn, key, NOW - timedelta(hours=1), status="error", error="ProxyError: 连不上")
+    add_run(conn, main_key, NOW - timedelta(hours=1), status="ok", found=3)
+    add_prices(conn, main_prices or [price(c, "期货", main_key, "2026-09-30")
+                                     for c in FUTURES_MAIN.values()])
+    patch_sources(monkeypatch, key, main_key,
+                  extra={key: {"board": board, "commodity_map": commodity_map},
+                         main_key: {"board": "price", "commodity_map": FUTURES_MAIN}})
+    return conn
+
+
+def test_failed_price_source_degraded_when_all_commodities_covered_elsewhere(tmp_path, monkeypatch):
+    """期货备用源挂了但主源把覆盖的品种都供上了 → 降级（不进邮件）。
+
+    这就是上线第一天的真实情况：eastmoney_futures 失败，期货价格一条不少。
+    """
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=FUTURES_MAIN)
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert issues["failed"] == []
+    assert [(d["key"], d["name"]) for d in issues["degraded"]] == [
+        ("eastmoney_futures", NAMES["eastmoney_futures"])]
+    # 每个覆盖品种都记下了"现在是谁在供数"，便于事后回溯为什么降级
+    assert issues["degraded"][0]["covered_by"] == {
+        "焦煤": "sina_futures", "焦炭": "sina_futures", "铁矿石": "sina_futures"}
+    assert alert_health.has_issues(issues) is False  # 只有降级不算有事要说
+
+
+def test_failed_price_source_kept_when_one_commodity_has_no_other_source(tmp_path, monkeypatch):
+    """覆盖品种里只要有一个没有别的源供数 → 保留在 failed 照报（单点源失败是真风险）。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=FUTURES_MAIN,
+                                    main_prices=[price("焦煤", "期货", "sina_futures", "2026-09-30"),
+                                                 price("焦炭", "期货", "sina_futures", "2026-09-30")])
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert [f["key"] for f in issues["failed"]] == ["eastmoney_futures"]
+    assert issues["degraded"] == []
+
+
+def test_degradation_requires_a_different_source_key(tmp_path, monkeypatch):
+    """"别的源"必须是另一个 source_key：失败源自己库里的数据不算它在供数。
+
+    否则昨天刚抓到、今天失败的源会拿自己的旧行给自己背书，单点源失败被永久掩盖。
+    """
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(
+        settings, monkeypatch, commodity_map=FUTURES_MAIN,
+        main_prices=[price(c, "期货", "eastmoney_futures", "2026-09-30")
+                     for c in FUTURES_MAIN.values()])
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert [f["key"] for f in issues["failed"]] == ["eastmoney_futures"]
+    assert issues["degraded"] == []
+
+
+def test_failed_news_source_reported_even_when_covered_elsewhere(tmp_path, monkeypatch):
+    """board != price 的源没有冗余概念：一律照报，哪怕它也写了 commodity_map。"""
+    settings = make_settings(tmp_path)
+    conn = open_db(settings)
+    add_source(conn, "news_src", board="news")
+    add_run(conn, "news_src", NOW - timedelta(hours=1), status="error", error="500")
+    add_prices(conn, [price("焦煤", "期货", "sina_futures", "2026-09-30")])
+    patch_sources(monkeypatch, "news_src", "sina_futures",
+                  extra={"news_src": {"board": "news", "commodity_map": FUTURES_MAIN},
+                         "sina_futures": {"board": "price", "commodity_map": FUTURES_MAIN}})
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert [f["key"] for f in issues["failed"]] == ["news_src"]
+    assert issues["degraded"] == []
+
+
+@pytest.mark.parametrize("commodity_map", [None, {}], ids=["missing", "empty"])
+def test_failed_price_source_without_commodity_map_always_reported(tmp_path, monkeypatch,
+                                                                   commodity_map):
+    """判不出覆盖范围就不降级：判不了就保守报，宁可多报一次也不能漏掉单点源。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=commodity_map)
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert [f["key"] for f in issues["failed"]] == ["eastmoney_futures"]
+    assert issues["degraded"] == []
+
+
+def test_degradation_flattens_commodity_map_list_values(tmp_path, monkeypatch):
+    """ccmn 那种 '铅锌: [铅, 锌]' 的列表写法也要拍平成品种集合（漏一个就误判成有缺口）。"""
+    settings = make_settings(tmp_path)
+    conn = open_db(settings)
+    add_source(conn, "solo_price", board="price")
+    add_source(conn, "alt_price", board="price")
+    add_run(conn, "solo_price", NOW - timedelta(hours=1), status="error", error="timeout")
+    add_run(conn, "alt_price", NOW - timedelta(hours=1), status="ok", found=2)
+    add_prices(conn, [price("铜", "现货", "alt_price", "2026-09-30"),
+                      price("铅", "现货", "alt_price", "2026-09-30"),
+                      price("锌", "现货", "alt_price", "2026-09-30")])
+    patch_sources(monkeypatch, "solo_price", "alt_price",
+                  extra={"solo_price": {"board": "price",
+                                        "commodity_map": {"铜": "铜", "铅锌": ["铅", "锌"]}}})
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert issues["failed"] == []
+    assert issues["degraded"][0]["covered_by"] == {"铜": "alt_price", "铅": "alt_price",
+                                                  "锌": "alt_price"}
+
+
+def test_degradation_requires_other_source_inside_stale_window(tmp_path, monkeypatch):
+    """别的源的报价超出新鲜窗口（≥ today - stale_days）就不算还在供数。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(
+        settings, monkeypatch, commodity_map=FUTURES_MAIN,
+        main_prices=[price("焦煤", "期货", "sina_futures", "2026-09-29"),   # 1 天，新鲜
+                     price("焦炭", "期货", "sina_futures", "2026-09-30"),
+                     price("铁矿石", "期货", "sina_futures", "2026-09-26")])  # 4 天，已陈旧
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert [f["key"] for f in issues["failed"]] == ["eastmoney_futures"]
+
+
+def test_degradation_accepts_other_source_exactly_at_stale_threshold(tmp_path, monkeypatch):
+    """刚好卡在 today - stale_days 那天的报价仍算"还在供数"（>= 边界）。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(
+        settings, monkeypatch, commodity_map=FUTURES_MAIN,
+        main_prices=[price(c, "期货", "sina_futures", "2026-09-28") for c in FUTURES_MAIN.values()])
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    assert issues["failed"] == []
+
+
+def test_degradation_respects_custom_stale_days(tmp_path, monkeypatch):
+    """新鲜窗口跟着传入的 stale_days 走（放宽到 4 天后，同一份数据就该判成冗余）。"""
+    settings = make_settings(tmp_path)
+    rows = [price("焦煤", "期货", "sina_futures", "2026-09-29"),
+            price("焦炭", "期货", "sina_futures", "2026-09-30"),
+            price("铁矿石", "期货", "sina_futures", "2026-09-26")]
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=FUTURES_MAIN,
+                                    main_prices=rows)
+    issues = alert_health.collect_issues(conn, settings=settings, stale_days=4, now=NOW)
+    conn.close()
+
+    assert issues["failed"] == []
+    assert issues["degraded"][0]["key"] == "eastmoney_futures"
+
+
+def test_degraded_source_excluded_from_signature_and_email(tmp_path, monkeypatch):
+    """降级既不进邮件正文也不改指纹——否则每轮都会因"多一个问题"重新触发告警。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=FUTURES_MAIN)
+    issues = alert_health.collect_issues(conn, settings=settings, now=NOW)
+    conn.close()
+
+    only_degraded = alert_health.signature_of(issues)
+    issues["failed"] = [{"key": "broken", "name": NAMES["broken"], "error": "500"}]
+    assert alert_health.signature_of(issues) != only_degraded  # 真失败才改指纹
+    del issues["failed"]
+    assert alert_health.signature_of(issues) == only_degraded
+
+    subject, body = alert_health.build_email(issues, "rv-abc1234567")
+    assert "eastmoney_futures" not in subject + body
 
 
 # ---------------------------------------------------------------- 疑似静默
@@ -737,3 +936,43 @@ def test_run_reports_db_failure(tmp_path, monkeypatch, capsys):
 def test_state_path_under_data_dir(tmp_path):
     settings = make_settings(tmp_path)
     assert alert_health.state_path(settings) == tmp_path / ".alert_state.json"
+
+
+def test_run_logs_degraded_source_and_sends_no_mail(tmp_path, monkeypatch, capsys):
+    """只有冗余降级时不发信，但绝不能悄悄消失：stdout 与 logs/alert_health.log 各留一行。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=FUTURES_MAIN,
+                                    main_prices=[price(c, "期货", "sina_futures", TODAY)
+                                                 for c in FUTURES_MAIN.values()])
+    conn.close()
+    sender = FakeSender()
+
+    assert alert_health.run([], settings=settings, sender=sender, config_loader=lambda: {}) == 0
+    assert sender.calls == []
+    out = capsys.readouterr().out
+    assert f"已降级（冗余）：{NAMES['eastmoney_futures']}（eastmoney_futures）" in out
+    text = (settings.logs_dir / "alert_health.log").read_text(encoding="utf-8")
+    assert "已降级（冗余）" in text and "eastmoney_futures" in text
+    assert "焦煤←sina_futures" in text
+
+
+def test_run_dry_run_lists_degraded_alongside_real_failure(tmp_path, monkeypatch, capsys):
+    """降级与真失败同场时：dry-run 里都要看见，但邮件正文里只有真失败。"""
+    settings = make_settings(tmp_path)
+    conn = seed_failed_price_source(settings, monkeypatch, commodity_map=FUTURES_MAIN,
+                                    main_prices=[price(c, "期货", "sina_futures", TODAY)
+                                                 for c in FUTURES_MAIN.values()])
+    add_run(conn, "broken", NOW - timedelta(hours=1), status="error", error="HTTP 403")
+    conn.close()
+    patch_sources(monkeypatch, "eastmoney_futures", "sina_futures", "broken",
+                  extra={"eastmoney_futures": {"board": "price", "commodity_map": FUTURES_MAIN},
+                         "sina_futures": {"board": "price", "commodity_map": FUTURES_MAIN}})
+    sender = FakeSender()
+
+    code = alert_health.run(["--dry-run"], settings=settings, sender=sender,
+                            config_loader=lambda: {"enabled": True})
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "已降级（冗余）：东方财富期货（备用）（eastmoney_futures）" in out
+    assert "改版源（broken）：HTTP 403" in out
+    assert sender.calls == []
