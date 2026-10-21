@@ -107,7 +107,7 @@ E:\矿_news\
 | 页面 | 地址 | 用途 |
 |---|---|---|
 | 首页 | `/` | 今日新增条数 + 每个源最近一轮的状态点（绿=成功、红=失败，悬停看详情） + 最新动态 + 矿价速览 + 最新政策 |
-| 行情 | `/prices` | 按品种最新价/涨跌/涨跌幅/日期/来源，点击品种看 7/30/90 天走势图 |
+| 行情 | `/prices` | 按品种看 **市场（长江现货/无锡现货/秦皇岛…）× 口径（期货/现货/指数/长协）× 规格** 的最新价、涨跌、市场间价差，7/30/90 天多线走势 |
 | 政策 | `/policy` | 按发布机关/地区筛选，时间倒序 |
 | 搜索 | `/search` | 关键词 + 矿种/板块/来源组合筛选（FTS5，万级数据 <1 秒） |
 | 源健康 | `/sources` | 各源最近成功/失败/条数、错误信息、日志下载、"立即抓取一次"、"立即备份数据库" |
@@ -148,6 +148,7 @@ python -c "from web import notify; print(notify.send_feedback_email('测试邮�
 python -m tools.fetch_sph https://weixin.qq.com/sph/AIUEY9XuiH   # 支持分享链接/预览链接/shortUri，可一次传多条
 python -m scripts.build_site        # 本地构建（生成 dist\copy.html）
 python -m scripts.publish_data_branch   # 推送数据库到 data 分支，Actions 自动重新部署
+python -m tools.sync_copy            # 同步到北京服务器（62.234.24.246）并重建，线上 /KuangYeZIXUN/copy.html 立即生效
 ```
 
 实现说明与限制：
@@ -156,6 +157,7 @@ python -m scripts.publish_data_branch   # 推送数据库到 data 分支，Actio
 - 微信生态封闭，无法像新闻源那样自动发现新内容：需要人（老板）把链接发给 AI，AI 再执行上述命令，这是刻意保留的人工环节
 - 抓取按 `short_uri` 幂等入库，重复抓同一条只更新文案与封面，不产生重复记录；每个链接独立容错，失败退出码为 1 并打印原因
 - 依赖 `playwright`（调用系统已装的 Edge，无需另外下载浏览器内核）；静态站文案页模板为 `site_build/templates/copy.html`，导航名称"文案"
+- `tools.sync_copy` 走 `config/server.local.yaml` 里的服务器账号（当前 ubuntu + 免密 sudo）：JSON 传到 `/tmp/marketing.json`，服务器用 `scripts.apply_marketing` 覆盖文案表后 `scripts.build_site` 重建；线上核验看 `http://62.234.24.246/KuangYeZIXUN/copy.html` 是否出现新短链
 
 ### 4.3 营销文案（视频号·文件方式）
 
@@ -209,11 +211,15 @@ python -m scripts.publish_data_branch      # 推送数据库到 data 分支，Ac
 | `detail.enabled` | 否 | 是否进详情页抓摘要（每轮限 `limit` 条，控制请求量） |
 | `detail.content` | 否 | 正文容器选择器（如 `div.TRS_Editor`）；摘要截断到 200 字 |
 | `detail.limit` | 否 | 每轮最多抓几条详情，默认 10 |
-| `parser` | 价格源必填 | 价格解析器：`table` / `regex` / `sina_futures` / `eastmoney_futures` / `shfe_daily` |
-| `price_type` | 否 | 价格类型：`期货` / `现货` / `指数`（默认按解析器） |
-| `unit` / `unit_map` | 否 | 默认单位 / 按品种覆盖单位（如黄金 `元/克`） |
-| `table` | 否 | `parser: table` 时必填：`row` 行选择器、`cell` 单元格选择器（默认 `td`）、`columns` 列号映射 `{name, price, change, change_pct, date}` |
-| `regex` | 否 | `parser: regex` 时必填：`pattern` 带 `(?P<name>…)`、`(?P<price>…)` 命名组；可用 `name_group`/`price_group` 指定组名 |
+| `parser` | 价格源必填 | 价格解析器：`table` / `regex` / `ccmn_quota` / `sina_futures` / `eastmoney_futures` / `shfe_daily` |
+| `price_type` | 价格源必填 | 价格口径：`期货` / `现货` / `指数` / `港口现货` / `月度长协` / `年度长协`（默认按解析器） |
+| `unit` / `unit_map` | 价格源必填 | 默认单位 / 按品种覆盖单位（如黄金`元/克`）；源站自带单位时（如"金属/干吨"）以源站为准 |
+| `table` | `parser: table` 时必填 | `row` 行选择器、`cell` 单元格选择器（默认 `td`）、`columns` 列号映射 `{name, price, change, change_pct, date, spec, market, origin, basis, unit}`、`index` 只解析第几张表 |
+| `regex` | `parser: regex` 时必填 | `pattern` 必含 `(?P<name>…)`、`(?P<price>…)` 命名组；可用 `name_group`/`price_group` 指定组名；另有 `market`/`spec`/`change`/`change_pct`/`date` 组 |
+| `market_map` / `spec_map` / `price_type_map` | 价格源可选 | 从名称里抽市场（`吕梁`→吕梁）、规格（`5500`→Q5500）、并按市场改口径（`秦皇岛`→港口现货） |
+| `exact_match` | 价格源可选 | `true` 时只认完全一致的产品名，防止把废铜/废铝当成电解铜报价 |
+| `covered_commodities` | 价格源可选 | 该源应覆盖的**库里品种名**（告警降级判定用；长江多品类源的 commodity_map 存的是源站产品名，必须单独声明） |
+| `stale_days` | 价格源可选 | 该源的报价陈旧阈值（默认 2 天）；长协这类按月定价的源写 35 |
 | `commodity_map` | 价格源必填 | 页面标签 → 标准品种名映射；值为字符串精确匹配，值为列表时按子串/数字关键词匹配 |
 | `field_map` `scale` `close_field` | 否 | 内置行情解析器（新浪/东财/上期所）的字段位置/缩放配置 |
 | `enabled` | 否 | `false` 停用该源，抓取与测试自动跳过 |
