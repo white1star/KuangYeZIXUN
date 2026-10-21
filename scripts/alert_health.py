@@ -235,10 +235,16 @@ def collect_issues(conn, settings=None, stale_days=STALE_DAYS, now=None) -> dict
     # 配置错误时 enabled 传 None：failed 退化为按 DB 判断，silent 直接跳过
     usable = None if config_error else enabled
     failed, degraded = _failed_sources(conn, names, usable, configs, stale_days, now)
+    # 同一源只进一类：failed/degraded 已经报过的不再算 silent——
+    # 错误轮次老到掉出静默窗口后会同时命中"失败""从未成功抓取"，
+    # 降级源同理（本该只留痕不进邮件，曾从 silent 段落漏进过邮件）
+    known = {item["key"] for item in failed} | {item["key"] for item in degraded}
+    silent = [item for item in _silent_sources(conn, names, usable, now)
+              if item["key"] not in known]
     return {
         "failed": failed,
         "degraded": degraded,
-        "silent": _silent_sources(conn, names, usable, now),
+        "silent": silent,
         "stale": _stale_prices(conn, stale_days, now),
         "config_error": config_error,
     }
@@ -399,7 +405,7 @@ def _parse_args(argv):
     return parser.parse_args(argv)
 
 
-def run(argv=None, settings=None, sender=None, config_loader=None) -> int:
+def run(argv=None, settings=None, sender=None, config_loader=None, now=None) -> int:
     """CLI 主体，返回进程退出码。sender/config_loader 可注入（测试用假实现，不发真邮件）。"""
     args = _parse_args(argv)
     settings = settings or load_settings()
@@ -414,7 +420,7 @@ def run(argv=None, settings=None, sender=None, config_loader=None) -> int:
         return 1
     try:
         store.init_db(conn)
-        issues = collect_issues(conn, settings=settings)
+        issues = collect_issues(conn, settings=settings, now=now)
     except Exception as exc:
         print(f"数据健康检测失败：{_clean_error(exc)}")
         return 1
@@ -439,7 +445,7 @@ def run(argv=None, settings=None, sender=None, config_loader=None) -> int:
 
     signature = signature_of(issues)
     state = state_path(settings)
-    if not args.force and not should_send(state, signature):
+    if not args.force and not should_send(state, signature, now=now):
         print(f"同样的问题（指纹 {signature}）在 24 小时内已发过邮件，本次跳过")
         return 0
 
@@ -447,7 +453,7 @@ def run(argv=None, settings=None, sender=None, config_loader=None) -> int:
         # 不写状态：发失败时不能记成"已发"，否则这一轮的问题会被 24 小时去重吃掉
         print("邮件未发送（通知配置未启用或 SMTP 报错），状态未记录，下次 cron 会重试")
         return 1
-    mark_sent(state, signature)
+    mark_sent(state, signature, now=now)
     print(f"告警邮件已发送：{subject}")
     return 0
 

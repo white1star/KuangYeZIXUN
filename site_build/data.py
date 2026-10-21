@@ -150,6 +150,14 @@ def _series(conn, commodity, price_type, cutoff) -> list:
     return [[r["price_date"], r["value"], r["unit"]] for r in conn.execute(sql, params).fetchall()]
 
 
+def _carry_forward(rows, today):
+    # 休市/上游未发布日（周末、节假日）把最后报价带到今天：价不变、日期跟到今天，
+    # 与指数类源"抓取日盖戳"口径一致。数据层不造假，告警仍按真实报价日判陈旧。
+    if rows and rows[-1][0] < today:
+        rows = rows + [[today, rows[-1][1], rows[-1][2]]]
+    return rows
+
+
 def _change_pct(row) -> float:
     if row["change_pct"] is not None:
         return float(row["change_pct"])
@@ -161,6 +169,7 @@ def _change_pct(row) -> float:
 
 
 def prices_payload(conn, days=SERIES_DAYS) -> dict:
+    today = datetime.now().strftime("%Y-%m-%d")
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     type_map = {}
     for row in conn.execute(
@@ -168,9 +177,9 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
         type_map.setdefault(row["commodity"], []).append(row["price_type"])
     series = {}
     for commodity, types in type_map.items():
-        entry = {"全部": _series(conn, commodity, None, cutoff)}
+        entry = {"全部": _carry_forward(_series(conn, commodity, None, cutoff), today)}
         for price_type in types:
-            entry[price_type] = _series(conn, commodity, price_type, cutoff)
+            entry[price_type] = _carry_forward(_series(conn, commodity, price_type, cutoff), today)
         series[commodity] = entry
     latest = []
     rows = conn.execute(
@@ -181,6 +190,9 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
         "ON r.id=p.id WHERE r.rn=1 "
         "ORDER BY p.price_date DESC, p.commodity").fetchall()
     for row in rows:
+        quote_date = row["price_date"]
+        carried = bool(quote_date and quote_date < today)
+        price_date = today if carried else quote_date
         latest.append({
             "commodity": row["commodity"],
             "price_type": row["price_type"],
@@ -189,7 +201,9 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
             "change": row["change"],
             "change_pct": row["change_pct"],
             "pct": _change_pct(row),
-            "price_date": row["price_date"],
+            "price_date": price_date,
+            "quote_date": quote_date,
+            "carried": carried,
             "source": row["source_name"] or row["source_key"] or "",
         })
     return {

@@ -368,6 +368,17 @@ table.prices tbody tr:nth-child(even) { background: #FBFCFC; }
 table.prices tbody tr:last-child td { border-bottom: 0; }
 table.prices .num { text-align: right; font-variant-numeric: tabular-nums; }
 table.prices td.src { font-size: 12px; color: var(--muted); }
+table.prices .carry {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 18px;
+  background: #FEF3C7;
+  color: #92400E;
+  cursor: help;
+}
 table.prices td.err { max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
 .ptype { margin-left: 6px; font-size: 11px; color: #98A1AC; }
 

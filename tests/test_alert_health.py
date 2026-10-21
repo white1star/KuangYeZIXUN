@@ -787,7 +787,7 @@ def test_run_dry_run_all_clean(tmp_path, monkeypatch, capsys):
     sender = FakeSender()
 
     code = alert_health.run(["--dry-run"], settings=settings, sender=sender,
-                            config_loader=lambda: {"enabled": True})
+                            config_loader=lambda: {"enabled": True}, now=NOW)
     out = capsys.readouterr().out
     assert code == 0
     assert "一切正常，无需告警" in out
@@ -820,7 +820,7 @@ def test_run_all_clean_sends_nothing(tmp_path, monkeypatch):
     sender = FakeSender()
 
     assert alert_health.run([], settings=settings, sender=sender,
-                            config_loader=lambda: {"enabled": True}) == 0
+                            config_loader=lambda: {"enabled": True}, now=NOW) == 0
     assert sender.calls == []
     assert not alert_health.state_path(settings).exists()
 
@@ -831,7 +831,7 @@ def test_run_sends_and_marks_state(tmp_path, monkeypatch):
     sender = FakeSender()
 
     assert alert_health.run([], settings=settings, sender=sender,
-                            config_loader=lambda: {"enabled": True}) == 0
+                            config_loader=lambda: {"enabled": True}, now=NOW) == 0
     assert len(sender.calls) == 1
     assert "改版源" in sender.calls[0][1]
     state = json.loads(alert_health.state_path(settings).read_text(encoding="utf-8"))
@@ -947,7 +947,8 @@ def test_run_logs_degraded_source_and_sends_no_mail(tmp_path, monkeypatch, capsy
     conn.close()
     sender = FakeSender()
 
-    assert alert_health.run([], settings=settings, sender=sender, config_loader=lambda: {}) == 0
+    assert alert_health.run([], settings=settings, sender=sender, config_loader=lambda: {},
+                            now=NOW) == 0
     assert sender.calls == []
     out = capsys.readouterr().out
     assert f"已降级（冗余）：{NAMES['eastmoney_futures']}（eastmoney_futures）" in out

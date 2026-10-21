@@ -47,7 +47,7 @@
               <td class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
               <td class="num">{{ ui.change_cell(p) }}</td>
               <td class="num">{{ ui.price_cell(p) }}</td>
-              <td>{{ p.price_date }}</td>
+              <td>{{ p.price_date }}{% if p.carried %} <span class="carry" title="沿用 {{ p.quote_date }} 报价，暂无新报价，有新价后自动刷新">昨收</span>{% endif %}</td>
               <td class="src">{{ p.source }}</td>
             </tr>
             {% else %}
