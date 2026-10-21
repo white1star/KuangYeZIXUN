@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.apply_marketing import export
 
 CONFIG_PATH = ROOT / "config" / "server.local.yaml"
+REMOTE_TMP = "/tmp/marketing.json"
 
 
 def load_settings(path=CONFIG_PATH):
@@ -35,12 +36,12 @@ def sync(settings=None, db_path=None, show=print) -> int:
         client.connect(host, username=user, password=password, timeout=25)
         try:
             sftp = client.open_sftp()
-            sftp.put(str(json_path), "/root/marketing.json")
+            sftp.put(str(json_path), REMOTE_TMP)
             sftp.close()
             show("文案文件已上传，服务器正在更新…")
             cmd = (
-                f"cd {remote_dir} && .venv/bin/python -m scripts.apply_marketing --apply /root/marketing.json"
-                f" && .venv/bin/python -m scripts.build_site"
+                f"cd {remote_dir} && sudo -n .venv/bin/python -m scripts.apply_marketing --apply {REMOTE_TMP}"
+                f" && sudo -n .venv/bin/python -m scripts.build_site"
             )
             stdin, stdout, stderr = client.exec_command(cmd, timeout=300)
             out = stdout.read().decode("utf-8", "replace").strip()
