@@ -46,10 +46,16 @@ CREATE TABLE IF NOT EXISTS prices (
   price_date TEXT NOT NULL,
   source_key TEXT NOT NULL,
   raw_label TEXT NOT NULL DEFAULT '',
+  market TEXT NOT NULL DEFAULT '',
+  origin TEXT NOT NULL DEFAULT '',
+  spec TEXT NOT NULL DEFAULT '',
+  basis TEXT NOT NULL DEFAULT '',
+  contract TEXT NOT NULL DEFAULT '',
   fetched_at TEXT NOT NULL,
-  UNIQUE(commodity, price_type, price_date, source_key)
+  UNIQUE(commodity, price_type, market, spec, price_date, source_key)
 );
 CREATE INDEX IF NOT EXISTS idx_prices_commodity ON prices(commodity, price_date DESC);
+CREATE INDEX IF NOT EXISTS idx_prices_market ON prices(commodity, price_type, market, price_date);
 
 CREATE TABLE IF NOT EXISTS feedback (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

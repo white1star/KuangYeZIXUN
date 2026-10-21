@@ -3,6 +3,7 @@ name: 东方财富期货（备用）
 board: price
 parser: eastmoney_futures
 url: "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:113&fields=f2,f3,f4,f12,f14"
+referer: "https://quote.eastmoney.com/"
 fixture_ext: json
 unit: 元/吨
 unit_map:
@@ -10,6 +11,7 @@ unit_map:
   白银: 元/千克
 field_map: {name: f14, last: f2, change: f4, change_pct: f3}
 scale: {}
+covered_commodities: [焦煤, 焦炭, 铁矿石, 铜, 铝, 锌, 铅, 锡, 黄金, 白银, 锰硅, 硅铁]
 commodity_map:
   焦煤连续: 焦煤
   焦炭连续: 焦炭

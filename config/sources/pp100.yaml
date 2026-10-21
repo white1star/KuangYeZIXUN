@@ -11,7 +11,10 @@ urls:
   - https://www.100ppi.com/mprice/plist-1-1173-1.html
   - https://www.100ppi.com/mprice/plist-1-995-1.html
   - https://www.100ppi.com/mprice/plist-1-712-1.html
+  - https://www.100ppi.com/mprice/plist-1-712-2.html
+  - https://www.100ppi.com/mprice/plist-1-712-3.html
   - https://www.100ppi.com/mprice/plist-1-870-1.html
+  - https://www.100ppi.com/mprice/plist-1-870-2.html
 price_type: 现货
 unit: 元/吨
 unit_map:
@@ -19,7 +22,9 @@ unit_map:
 table:
   row: "table tr"
   cell: "td"
-  columns: {name: 0, price: 3}
+  # 品名/规格/产地属性/价格/价格类型/地区/报价企业/报价日期
+  columns: {name: 0, spec: 1, origin: 2, price: 3, basis: 4, market: 5, date: 7}
+covered_commodities: [磷矿石, 萤石, 石英砂, 锰, 钨, 钼, 锑, 焦炭, 焦煤, 动力煤]
 commodity_map:
   磷矿石: [磷矿石]
   萤石: [萤石]

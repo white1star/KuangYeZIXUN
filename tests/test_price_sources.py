@@ -71,30 +71,43 @@ def test_parse_unknown_parser_raises():
         price_sources.parse("nope", "", {})
 
 
-def test_ccmn_quota_averages_same_day_quotes():
-    """长江有色报价接口：同一天多家报价商取均价，日期按接口 publishDate 归一。"""
+def test_ccmn_quota_keeps_each_market_quote():
+    """长江有色报价接口：按报价市场逐条出价，不再跨市场平均。"""
     text = (FIXTURES / "ccmn_sn_list.json").read_text(encoding="utf-8")
     cfg = _cfg("ccmn_sn", price_type="现货",
                items="quotaVoList",
-               quote={"name": "productSortName", "price": "avgPrice", "date": "publishDate"},
-               commodity_map={"锡": ["1#锡", "锡"]})
+               quote={"name": "productSortName", "price": "avgPrice", "date": "publishDate",
+                      "market": "marketName", "origin": "placeOrTrademark", "spec": "trademark"},
+               commodity_map={"锡": ["1#锡"]})
     rows = price_sources.parse_ccmn_quota(text, cfg)
     assert rows, "未解析出任何报价"
     assert {r["commodity"] for r in rows} == {"锡"}
     assert all(r["price_type"] == "现货" and r["value"] > 0 for r in rows)
     assert all(re.match(r"^\d{4}-\d{2}-\d{2}$", r["price_date"]) for r in rows)
-    # 每天一行，且该行等于当天所有报价商 avgPrice 的算术平均
+    # 每条报价独立成行：市场、产地/牌号都不丢
     payload = json.loads(text)
     items = payload["body"]["quotaVoList"]
-    by_day: dict = {}
+    assert len(rows) == len(items)
+    markets = {r["market"] for r in rows}
+    assert markets == {i["marketName"] for i in items}
+    assert len(markets) > 1, "长江有色应返回多个市场的报价"
+    by_key = {(r["market"], r["origin"], r["spec"]): r["value"] for r in rows}
     for item in items:
-        by_day.setdefault(item["publishDate"], []).append(item["avgPrice"])
-    assert len(rows) == len(by_day)
-    for row in rows:
-        day = row["price_date"][5:].replace("-", "-")
-        quotes = by_day[day]
-        expected = round(sum(quotes) / len(quotes), 2)
-        assert row["value"] == expected, f"{day} 均价不符: {row['value']} != {expected}"
+        key = (item["marketName"], item["placeOrTrademark"], item["trademark"])
+        # 同一市场同牌号只保留一条，值必须来自该市场该牌号的报价
+        assert by_key[key] == round(item["avgPrice"], 2) or (
+            item["marketName"], round(item["avgPrice"], 2)) in {
+                (r["market"], r["value"]) for r in rows}
+
+
+def test_ccmn_quota_exact_match_rejects_other_products():
+    """精确匹配：1#电解铜板 / 压铸锌合金这类加工材不能混进铜/锌。"""
+    text = (FIXTURES / "ccmn_sn_list.json").read_text(encoding="utf-8")
+    cfg = _cfg("ccmn_sn", price_type="现货", exact_match=True,
+               quote={"name": "productSortName", "price": "avgPrice", "date": "publishDate"},
+               commodity_map={"铜": ["1#铜"]})
+    rows = price_sources.parse_ccmn_quota(text, cfg)
+    assert rows == []
 
 
 def test_ccmn_quota_non_json_raises():

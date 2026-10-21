@@ -1,0 +1,40 @@
+key: ccmn_jskc
+name: 长江有色·金属矿产
+board: price
+parser: ccmn_quota
+url: https://mall.ccmn.cn/shop/quotaData/getQuotaData
+referer: https://www.ccmn.cn/priceinfo/jskc
+method: POST
+post_data:
+  colName: jskc
+  pageNo: 1
+  pageSize: 50
+headers:
+  X-Requested-With: XMLHttpRequest
+price_type: 现货
+exact_match: true
+# 精矿类单位源站给的是"元/干吨""金属/干吨"，直接沿用；
+# 红土镍矿/铝土矿/镍铁源站没标计价单位，这里不猜口径（unit 留空）
+basis: ""
+unit: ""
+items: quotaVoList
+quote:
+  name: productSortName
+  price: avgPrice
+  date: publishDateTime
+  market: marketName
+  origin: placeOrTrademark
+  spec: trademark
+  unit: unit
+covered_commodities: [铜精矿, 红土镍矿, 锌精矿, 铅精矿, 锡精矿, 铝土矿, 镍铁, 镍生铁]
+commodity_map:
+  # 注："铜精矿(湖北)" 源站报 100,590 元/吨，而同品位"铜精矿(20%)"报 31,650 元/干吨，
+  # 单位口径不一致且价差 3 倍，未与源站核实前不采集。
+  铜精矿: ["铜精矿(20%)"]
+  红土镍矿: ["红土镍矿(1.4-1.6%)", "红土镍矿(1.5%)", "红土镍矿(1.8%)", "红土镍矿(1.8-1.9%)"]
+  锌精矿: ["锌精矿(50%)", "锌精矿(51%)"]
+  铅精矿: ["铅精矿(云南)", "铅精矿(65%)"]
+  锡精矿: ["锡精矿(广西)", "锡精矿(湖南)"]
+  铝土矿: ["铝土矿(60-65%)", "西南铝土矿(60-65%)"]
+  镍铁: ["镍铁(FeNi4-8)", "镍铁(FeNi8-12)", "镍铁(FeNi1.5-1.8)"]
+  镍生铁: ["镍生铁(8-12%)"]

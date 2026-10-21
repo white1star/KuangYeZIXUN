@@ -17,7 +17,7 @@ EXPECTED = {
     "pp100_list_6.html": ("钨", 600.0, "元/千克"),
     "pp100_list_7.html": ("钼", 285000.0, "元/吨"),
     "pp100_list_8.html": ("焦煤", 2540.0, "元/吨"),
-    "ccmn_list.html": ("铜", 108900.0, "元/吨"),
+    "ccmn_list.html": ("铜", 107960.0, "元/吨"),
     "sxcoal_list.html": ("动力煤", 673.03, "元/吨"),
     "cctd_list.html": ("动力煤", 754.0, "元/吨"),
     "mysteel_list.html": ("铁矿石", 774.12, "元/吨"),

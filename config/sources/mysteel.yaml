@@ -8,6 +8,7 @@ price_type: 指数
 unit: 元/吨
 regex:
   pattern: "(?P<name>[^\\s]{2,6})\\s+(?P<price>\\d{3,6}(?:\\.\\d+)?)\\s+[+-]?\\d"
+covered_commodities: [铁矿石, 焦煤, 焦炭, 锰硅]
 commodity_map:
   铁矿石: [62%, 澳粉, 铁矿石, 铁矿, 进口矿, 国产矿]
   焦煤: [焦煤, 主焦]

@@ -6,17 +6,23 @@
 <section class="page-body">
   <div class="container">
     <h1 class="page-title">矿价行情</h1>
-    <p class="page-sub">实时追踪主要矿产品现货与期货价格动态</p>
+    <p class="page-sub">按品种、市场、口径追踪矿产品现货与期货价格动态</p>
     <div class="card toolbar">
       <label>品种
         <select id="commodity">
           {% for c in commodities %}<option value="{{ c }}" {{ 'selected' if c == commodity else '' }}>{{ c }}</option>{% endfor %}
         </select>
       </label>
-      <label>类型
+      <label>口径
         <select id="ptype">
-          <option value="">全部类型</option>
+          <option value="">全部口径</option>
           {% for t in type_map.get(commodity, []) %}<option value="{{ t }}" {{ 'selected' if t == ptype else '' }}>{{ t }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>市场
+        <select id="market">
+          <option value="">全部市场</option>
+          {% for m in markets %}<option value="{{ m }}" {{ 'selected' if m == market else '' }}>{{ m }}</option>{% endfor %}
         </select>
       </label>
       <label>周期
@@ -28,29 +34,31 @@
       </label>
     </div>
     <div class="card chart-card">
-      <div class="card-head"><span id="chart-title">{{ commodity }} 价格走势 · {{ ptype or '全部类型' }} · 近{{ days }}天</span></div>
+      <div class="card-head"><span id="chart-title">{{ commodity }} 价格走势</span></div>
       <div id="chart"></div>
       <p class="empty" id="chart-empty" hidden>暂无数据</p>
     </div>
     <div class="card table-card">
-      <div class="card-head">最新报价</div>
+      <div class="card-head">最新报价<span class="ptype" id="table-count"></span></div>
       <table class="prices wide">
         <thead>
-          <tr><th>品种</th><th>类型</th><th class="num">最新价</th><th class="num">涨跌</th><th class="num">涨跌幅</th><th>日期</th><th>来源</th></tr>
+          <tr><th>品种</th><th>市场</th><th>口径</th><th>规格</th><th class="num">最新价</th><th class="num">涨跌</th><th class="num">涨跌幅</th><th>日期</th><th>来源</th></tr>
         </thead>
         <tbody>
           {% for p in prices %}
-          <tr>
+          <tr data-market="{{ p.market }}">
             <td>{{ p.commodity }}</td>
+            <td>{% if p.market %}<span class="market-tag">{{ p.market }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
             <td>{{ p.price_type }}</td>
+            <td class="spec">{{ p.spec or p.origin or '—' }}</td>
             <td class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
             <td class="num">{{ ui.change_cell(p) }}</td>
             <td class="num">{{ ui.price_cell(p) }}</td>
             <td>{{ p.price_date }}</td>
-            <td class="src">{{ p.source_label }}</td>
+            <td class="src">{{ p.source_label }}{% if p.basis %}<br><span class="ptype">{{ p.basis }}</span>{% endif %}</td>
           </tr>
           {% else %}
-          <tr><td colspan="7"><p class="empty">暂无数据</p></td></tr>
+          <tr><td colspan="9"><p class="empty">暂无数据</p></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -62,10 +70,13 @@ const TYPE_MAP = {{ type_map|tojson }};
 const chartEl = document.getElementById('chart');
 const emptyEl = document.getElementById('chart-empty');
 const titleEl = document.getElementById('chart-title');
+const countEl = document.getElementById('table-count');
 const selCommodity = document.getElementById('commodity');
 const selPtype = document.getElementById('ptype');
+const selMarket = document.getElementById('market');
 const selDays = document.getElementById('days');
 const INIT_PTYPE = {{ ptype|tojson }};
+const INIT_MARKET = {{ market|tojson }};
 const chart = echarts.init(chartEl);
 
 function fmtNum(v) {
@@ -78,7 +89,7 @@ function fmtNum(v) {
 
 function syncTypes() {
   const types = TYPE_MAP[selCommodity.value] || [];
-  selPtype.innerHTML = '<option value="">全部类型</option>';
+  selPtype.innerHTML = '<option value="">全部口径</option>';
   for (const t of types) {
     const opt = document.createElement('option');
     opt.value = t;
@@ -88,44 +99,69 @@ function syncTypes() {
   if (types.indexOf(INIT_PTYPE) >= 0) selPtype.value = INIT_PTYPE;
 }
 
+function applyTableFilter() {
+  const market = selMarket.value;
+  const rows = document.querySelectorAll('table.prices tbody tr[data-market]');
+  let shown = 0;
+  for (const row of rows) {
+    const hit = !market || row.getAttribute('data-market') === market;
+    row.style.display = hit ? '' : 'none';
+    if (hit) shown++;
+  }
+  if (countEl) countEl.textContent = (market ? market + ' ' : '') + shown + ' 条';
+}
+
 async function load() {
   const c = selCommodity.value;
   const t = selPtype.value;
+  const m = selMarket.value;
   const d = selDays.value;
-  titleEl.textContent = c + ' 价格走势 · ' + (t || '全部类型') + ' · 近' + d + '天';
+  titleEl.textContent = c + ' 价格走势 · ' + (t || '全部口径') + (m ? ' · ' + m : '') + ' · 近' + d + '天';
   let url = '/api/prices/' + encodeURIComponent(c) + '?days=' + d;
   if (t) url += '&price_type=' + encodeURIComponent(t);
+  if (m) url += '&market=' + encodeURIComponent(m);
   const resp = await fetch(url);
   const data = await resp.json();
-  const points = data.points || [];
-  emptyEl.hidden = points.length > 0;
-  chartEl.style.display = points.length ? '' : 'none';
-  if (!points.length) return;
-  const values = points.map(p => p.value);
-  const lo = Math.min.apply(null, values);
-  const hi = Math.max.apply(null, values);
+  const series = (data.series || []).filter(s => s.points && s.points.length);
+  emptyEl.hidden = series.length > 0;
+  chartEl.style.display = series.length ? '' : 'none';
+  applyTableFilter();
+  if (!series.length) return;
+  const allValues = [];
+  series.forEach(s => s.points.forEach(p => allValues.push(p.value)));
+  const lo = Math.min.apply(null, allValues);
+  const hi = Math.max.apply(null, allValues);
   const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 1;
   function roundTo(v, dir) {
     const span = hi + pad - (lo - pad);
     const mag = Math.pow(10, Math.floor(Math.log10(span / 4 || 1)));
     return dir > 0 ? Math.ceil(v / mag) * mag : Math.floor(v / mag) * mag;
   }
-  const lastIndex = points.length - 1;
-  const unit = points[lastIndex].unit || '';
+  const dates = {};
+  series.forEach(s => s.points.forEach(p => { dates[p.price_date] = true; }));
+  const axis = Object.keys(dates).sort();
+  const idx = {};
+  axis.forEach((d, i) => { idx[d] = i; });
   chart.setOption({
+    color: ['#289048', '#2f6fb5', '#c8622f', '#8a4fbf', '#b0902f', '#2f8f8f', '#b5455a', '#5a5f6b'],
+    legend: { type: 'scroll', top: 0, textStyle: { fontSize: 12, color: '#6C7784' } },
     tooltip: {
       trigger: 'axis',
       formatter: function (items) {
         if (!items || !items.length) return '';
-        const it = items[0];
-        return it.axisValue + '<br/>' + fmtNum(it.value) + (unit ? ' ' + unit : '');
+        let out = items[0].axisValue;
+        for (const it of items) {
+          if (it.value === null || it.value === undefined) continue;
+          out += '<br/>' + it.marker + it.seriesName + ' ' + fmtNum(it.value);
+        }
+        return out;
       }
     },
-    grid: { left: 64, right: 32, top: 32, bottom: 40 },
+    grid: { left: 64, right: 32, top: 48, bottom: 40 },
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: points.map(p => p.price_date),
+      data: axis,
       axisLine: { lineStyle: { color: '#DFE6EA' } },
       axisTick: { show: false },
       axisLabel: {
@@ -142,34 +178,27 @@ async function load() {
       splitLine: { lineStyle: { color: '#EEF2F0' } },
       axisLabel: { color: '#6C7784', fontSize: 11 }
     },
-    series: [{
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 5,
-      connectNulls: true,
-      data: points.map(p => p.value),
-      lineStyle: { color: '#289048', width: 2 },
-      itemStyle: { color: '#289048' },
-      areaStyle: { color: 'rgba(40,144,72,0.08)' },
-      label: {
-        show: true,
-        position: 'top',
-        color: '#111418',
-        fontSize: 12,
-        formatter: function (params) {
-          return params.dataIndex === lastIndex
-            ? fmtNum(params.value) + (unit ? ' ' + unit : '')
-            : '';
-        }
-      }
-    }]
-  });
+    series: series.map(s => {
+      const values = axis.map(() => null);
+      s.points.forEach(p => { values[idx[p.price_date]] = p.value; });
+      return {
+        name: s.label,
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 4,
+        connectNulls: true,
+        data: values,
+        lineStyle: { width: 2 }
+      };
+    })
+  }, true);
   chart.resize();
 }
 
 selCommodity.addEventListener('change', function () { syncTypes(); load(); });
 selPtype.addEventListener('change', load);
+selMarket.addEventListener('change', load);
 selDays.addEventListener('change', load);
 window.addEventListener('resize', function () { chart.resize(); });
 syncTypes();

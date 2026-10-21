@@ -60,7 +60,7 @@ def _process_articles(conn, src, html, base_url, settings, tags, fetcher):
 
 def _process_prices(conn, src, text):
     rows = price_sources.parse(src["parser"], text, src)
-    return store.upsert_prices(conn, rows)
+    return store.upsert_prices(conn, rows), rows
 
 
 def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
@@ -83,6 +83,7 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                 store.upsert_source(conn, src["key"], src.get("name", src["key"]),
                                     src["board"], _iter_urls(src)[0], True)
                 run_id = store.start_crawl_run(conn, src["key"], rv)
+                price_rows = []
                 for url in _iter_urls(src):
                     result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
                                      timeout=settings.request_timeout, retries=settings.request_retries,
@@ -92,7 +93,8 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                     if not result.ok:
                         raise RuntimeError(result.error or f"HTTP {result.status}")
                     if src["board"] == "price":
-                        price_count = _process_prices(conn, src, result.text)
+                        price_count, rows = _process_prices(conn, src, result.text)
+                        price_rows.extend(rows)
                         found += price_count
                         new += price_count
                         summary["prices"] += price_count
@@ -104,6 +106,9 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                         summary["articles_found"] += item_count
                         summary["articles_new"] += new_count
                     time.sleep(settings.request_interval)
+                if src["board"] == "price" and price_rows:
+                    # 整源抓完再对账：源今天没再出的报价要清掉
+                    store.sync_price_source_day(conn, src["key"], price_rows)
                 store.finish_crawl_run(conn, run_id, "ok", found, new)
                 summary["sources_ok"] += 1
                 report.log(f"[{src['key']}] 完成：抓到 {found} 条，新增 {new} 条")

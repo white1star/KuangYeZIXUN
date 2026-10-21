@@ -19,6 +19,25 @@ def _to_float(s):
         return None
 
 
+def _num_text(s):
+    """从 '1,050 元/吨' / '-0.12%' / '+1.88%' 里取数值。"""
+    if s is None:
+        return None
+    cleaned = re.sub(r"[^\d.+-]", "", str(s))
+    if cleaned in {"", "-", "+", ".", "-."}:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _opt_num(s):
+    """可选数值：没有数字时返回 None，0 原样返回。"""
+    value = _num_text(s)
+    return value
+
+
 def _scaled(v, scale):
     f = _to_float(v)
     if f is None:
@@ -31,8 +50,9 @@ def _today() -> str:
 
 
 def _make_row(commodity, price_type, value, cfg, raw_label,
-              change=None, change_pct=None, price_date=None):
-    unit = (cfg.get("unit_map") or {}).get(commodity) or cfg.get("unit", "")
+              change=None, change_pct=None, price_date=None,
+              market="", origin="", spec="", basis="", contract="", unit=None):
+    unit = unit or (cfg.get("unit_map") or {}).get(commodity) or cfg.get("unit", "")
     return {
         "commodity": commodity,
         "price_type": price_type,
@@ -43,15 +63,33 @@ def _make_row(commodity, price_type, value, cfg, raw_label,
         "price_date": price_date or cfg.get("price_date") or _today(),
         "source_key": cfg["key"],
         "raw_label": raw_label,
+        "market": market or "",
+        "origin": origin or "",
+        "spec": spec or "",
+        "basis": basis or "",
+        "contract": contract or "",
         "fetched_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
 
-def _match_commodity(label, mapping):
+def _match_commodity(label, mapping, exact=False):
     label = (label or "").strip()
+    if not label:
+        return None
     if label in mapping:
-        value = mapping[label]
-        return label if isinstance(value, list) else value
+        return label if isinstance(mapping[label], list) else mapping[label]
+    if exact:
+        # 只认完全一致的产品名：宁可漏抓，也不能把废铜当成电解铜
+        for key, value in mapping.items():
+            if isinstance(value, list) and label in [str(w).strip() for w in value if w is not None]:
+                return key
+            if isinstance(value, str) and value == label:
+                return value
+        return None
+    # 精确命中列表项优先，避免 "1#铜" 被 "铜" 这类宽泛关键字抢先（会抓到废铜）
+    for key, value in mapping.items():
+        if isinstance(value, list) and label in [str(w).strip() for w in value if w is not None]:
+            return key
     for key, value in mapping.items():
         if isinstance(value, list):
             if any(str(w) and str(w) in label for w in value if w is not None):
@@ -59,6 +97,15 @@ def _match_commodity(label, mapping):
         elif isinstance(value, str) and value and value in label:
             return value
     return None
+
+
+def _match_by_keywords(label, mapping):
+    """按关键字在名称里找市场/产地/规格，返回第一个命中的值。"""
+    label = (label or "").strip()
+    for key, value in (mapping or {}).items():
+        if key and str(key) in label:
+            return value
+    return ""
 
 
 SINA_VAR = re.compile(r'var\s+hq_str_nf_([A-Za-z0-9]+)="([^"]*)"')
@@ -86,8 +133,14 @@ def parse_futures_sina(text: str, cfg: dict) -> list:
         prev = _to_float(field("prev_settle"))
         change = round(value - prev, 4) if prev else None
         change_pct = round((value - prev) / prev * 100, 2) if prev else None
+        name = (field("name") or "").strip()
+        contract = "连续" if "连续" in name else name
         rows.append(_make_row(commodity, "期货", value, cfg, code,
-                              change=change, change_pct=change_pct))
+                              change=change, change_pct=change_pct,
+                              market=cfg.get("market", ""),
+                              spec=cfg.get("spec", ""),
+                              basis=cfg.get("basis", "不含税·昨结算"),
+                              contract=contract))
     return rows
 
 
@@ -110,8 +163,14 @@ def parse_futures_eastmoney(text: str, cfg: dict) -> list:
             continue
         change = _scaled(item.get(fm.get("change", "f4")), scale.get("change"))
         change_pct = _scaled(item.get(fm.get("change_pct", "f3")), scale.get("change_pct"))
+        code = str(item.get(fm.get("code", "f12"), ""))
+        contract = "".join(ch for ch in code if ch.isdigit())
         rows.append(_make_row(commodity, "期货", value, cfg, label,
-                              change=change, change_pct=change_pct))
+                              change=change, change_pct=change_pct,
+                              market=cfg.get("market", ""),
+                              spec=cfg.get("spec", ""),
+                              basis=cfg.get("basis", "不含税"),
+                              contract=contract or cfg.get("contract", "")))
     return rows
 
 
@@ -137,7 +196,10 @@ def parse_shfe_daily(text: str, cfg: dict) -> list:
         if value is None or value <= 0:
             continue
         label = f"{product}{item.get('DELIVERYMONTH', '')}"
-        rows.append(_make_row(commodity, "期货", value, cfg, label))
+        rows.append(_make_row(commodity, "期货", value, cfg, label,
+                              market=cfg.get("market", ""),
+                              basis=cfg.get("basis", "不含税"),
+                              contract=cfg.get("contract", "")))
     return rows
 
 
@@ -162,14 +224,14 @@ def _cell_text(cells, idx):
 
 
 def _cell_float(cells, idx):
-    return _to_float(re.sub(r"[^\d.\-]", "", _cell_text(cells, idx)))
+    return _num_text(_cell_text(cells, idx))
 
 
 def parse_ccmn_quota(text: str, cfg: dict) -> list:
-    """长江有色报价接口：同一品种当天多家报价商，取当日全部报价商的均价。
+    """长江有色报价接口：按报价市场逐条出价，不做跨市场平均。
 
-    源站列表页已把 1#锡 下架，锡只在专属页的接口里出数（body.quotaVoList）。
-    一天可能有多家报价商，按 publishDate 分组后取均价，与列表页口径一致。
+    一天同���可能有几十家报价商、覆盖十几个市场，平均会把"哪个地区多少钱"抹掉，
+    所以每条报价独立成行，地区记在 market、产地/牌号记在 origin、品位牌号记在 spec。
     """
     try:
         data = json.loads(text)
@@ -177,33 +239,32 @@ def parse_ccmn_quota(text: str, cfg: dict) -> list:
         raise ValueError("长江有色报价接口返回不是 JSON")
     items = ((data.get("body") or {}).get(cfg.get("items", "quotaVoList"))) or []
     q = cfg.get("quote", {})
-    date_field = q.get("date", "publishDate")
+    date_field = q.get("date", "publishDateTime")
     price_field = q.get("price", "avgPrice")
     name_field = q.get("name", "productSortName")
-    # 同一商品下把当天各家的报价聚合起来
-    groups: dict = {}
+    market_field = q.get("market", "marketName")
+    origin_field = q.get("origin", "placeOrTrademark")
+    spec_field = q.get("spec", "trademark")
+    unit_field = q.get("unit", "unit")
+    rows = []
     for item in items:
         label = str(item.get(name_field, "") or "").strip()
-        commodity = _match_commodity(label, cfg.get("commodity_map", {}))
+        commodity = _match_commodity(label, cfg.get("commodity_map", {}),
+                                     exact=bool(cfg.get("exact_match")))
         if not commodity:
             continue
         value = _to_float(item.get(price_field))
         if value is None or value <= 0:
             continue
         day = parse_date(item.get(date_field)) or _today()
-        key = (commodity, day)
-        bucket = groups.setdefault(key, {"values": [], "labels": []})
-        bucket["values"].append(value)
-        bucket["labels"].append(label)
-
-    rows = []
-    for (commodity, day), bucket in sorted(groups.items()):
-        values = bucket["values"]
         rows.append(_make_row(
-            commodity, cfg.get("price_type", "现货"),
-            round(sum(values) / len(values), 2), cfg,
-            f"{bucket['labels'][0]}等{len(values)}家均价",
+            commodity, cfg.get("price_type", "现货"), round(value, 2), cfg, label,
             price_date=day,
+            market=str(item.get(market_field, "") or "").strip(),
+            origin=str(item.get(origin_field, "") or "").strip(),
+            spec=str(item.get(spec_field, "") or "").strip(),
+            basis=cfg.get("basis", ""),
+            unit=str(item.get(unit_field, "") or "").strip() or None,
         ))
     return rows
 
@@ -214,27 +275,38 @@ PARSERS["ccmn_quota"] = parse_ccmn_quota
 def parse_table(html: str, cfg: dict) -> list:
     t = cfg["table"]
     soup = BeautifulSoup(html, "lxml")
+    tables = soup.select("table")
+    index = t.get("index")
+    if index is not None:
+        tables = [tables[index]] if len(tables) > int(index) else []
     rows = []
-    for tr in soup.select(t["row"]):
-        cells = [c.get_text(" ", strip=True) for c in tr.select(t.get("cell", "td"))]
-        cols = t.get("columns", {})
-        if "name" not in cols or "price" not in cols:
-            raise ValueError("表格价格源缺少 columns.name/price")
-        if len(cells) <= max(cols[k] for k in ("name", "price")):
-            continue
-        label = cells[cols["name"]]
-        commodity = _match_commodity(label, cfg.get("commodity_map", {}))
-        if not commodity:
-            continue
-        value = _to_float(re.sub(r"[^\d.\-]", "", cells[cols["price"]]))
-        if value is None or value <= 0:
-            continue
-        rows.append(_make_row(
-            commodity, cfg.get("price_type", "现货"), value, cfg, label,
-            change=_cell_float(cells, cols.get("change")),
-            change_pct=_cell_float(cells, cols.get("change_pct")),
-            price_date=parse_date(_cell_text(cells, cols.get("date"))) or None,
-        ))
+    for tbl in tables:
+        for tr in tbl.select(t.get("row", "tr")):
+            cells = [c.get_text(" ", strip=True) for c in tr.select(t.get("cell", "td"))]
+            cols = t.get("columns", {})
+            if "name" not in cols or "price" not in cols:
+                raise ValueError("表格价格源缺少 columns.name/price")
+            if len(cells) <= max(cols[k] for k in ("name", "price")):
+                continue
+            label = cells[cols["name"]]
+            commodity = _match_commodity(label, cfg.get("commodity_map", {}),
+                                         exact=bool(cfg.get("exact_match")))
+            if not commodity:
+                continue
+            value = _num_text(_cell_text(cells, cols["price"]))
+            if value is None or value <= 0:
+                continue
+            rows.append(_make_row(
+                commodity, cfg.get("price_type", "现货"), value, cfg, label,
+                change=_cell_float(cells, cols.get("change")),
+                change_pct=_cell_float(cells, cols.get("change_pct")),
+                price_date=parse_date(_cell_text(cells, cols.get("date"))) or None,
+                market=_cell_text(cells, cols.get("market")),
+                origin=_cell_text(cells, cols.get("origin")),
+                spec=_cell_text(cells, cols.get("spec")),
+                basis=_cell_text(cells, cols.get("basis")),
+                unit=_cell_text(cells, cols.get("unit")) or None,
+            ))
     return rows
 
 
@@ -244,14 +316,38 @@ def parse_regex(html: str, cfg: dict) -> list:
     text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
     rows = []
     for m in re.finditer(r["pattern"], text):
-        label = (m.group(r.get("name_group", "name")) or "").strip()
-        commodity = _match_commodity(label, cfg.get("commodity_map", {}))
+        def group(name):
+            key = r.get(f"{name}_group", name)
+            try:
+                return (m.group(key) or "").strip()
+            except (IndexError, re.error):
+                return ""
+
+        label = group("name")
+        commodity = _match_commodity(label, cfg.get("commodity_map", {}),
+                                     exact=bool(cfg.get("exact_match")))
         if not commodity:
             continue
-        value = _to_float(m.group(r.get("price_group", "price")))
+        value = _num_text(group("price"))
         if value is None or value <= 0:
             continue
-        rows.append(_make_row(commodity, cfg.get("price_type", "指数"), value, cfg, label))
+        price_type = cfg.get("price_type", "指数")
+        market = group("market")
+        if not market:
+            market = _match_by_keywords(label, cfg.get("market_map") or {})
+        if market in (cfg.get("price_type_map") or {}):
+            price_type = cfg["price_type_map"][market]
+        spec = group("spec") or _match_by_keywords(label, cfg.get("spec_map") or {})
+        rows.append(_make_row(
+            commodity, price_type, value, cfg, label,
+            change=_opt_num(group("change")),
+            change_pct=_opt_num(group("change_pct")),
+            price_date=parse_date(group("date")) or None,
+            market=market,
+            origin=_match_by_keywords(label, cfg.get("origin_map") or {}),
+            spec=spec,
+            basis=cfg.get("basis", ""),
+        ))
     return rows
 
 

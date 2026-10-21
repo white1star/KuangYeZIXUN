@@ -76,9 +76,10 @@ def test_price_api(tmp_path):
     data = resp.json()
     assert data["commodity"] == "铜"
     expected_days = [(datetime.now() - timedelta(days=delta)).strftime("%Y-%m-%d") for delta in (2, 1, 0)]
-    assert [p["price_date"] for p in data["points"]] == expected_days
-    assert data["points"][0]["value"] == 71000
-    assert data["points"][0]["unit"] == "元/吨"
+    points = data["series"][0]["points"]
+    assert [p["price_date"] for p in points] == expected_days
+    assert points[0]["value"] == 71000
+    assert points[0]["unit"] == "元/吨"
 
 
 def test_price_api_same_day_multi_source_latest(tmp_path):
@@ -88,8 +89,8 @@ def test_price_api_same_day_multi_source_latest(tmp_path):
     resp = client.get("/api/prices/焦炭?days=7")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data["points"]) == 1
-    assert data["points"][0]["value"] == 2140.0
+    assert len(data["series"][0]["points"]) == 1
+    assert data["series"][0]["points"][0]["value"] == 2140.0
 
 
 def test_price_api_filters_by_price_type(tmp_path):
@@ -99,7 +100,7 @@ def test_price_api_filters_by_price_type(tmp_path):
     resp = client.get("/api/prices/铜?days=7&price_type=现货")
     assert resp.status_code == 200
     data = resp.json()
-    assert [p["value"] for p in data["points"]] == [60000, 60100, 60200]
+    assert [p["value"] for p in data["series"][0]["points"]] == [60000, 60100, 60200]
 
 
 def test_prices_page_embeds_type_selector(tmp_path):

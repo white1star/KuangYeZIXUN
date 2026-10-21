@@ -4,9 +4,24 @@ board: price
 parser: regex
 url: https://www.cctd.com.cn/
 encoding: gb18030
-price_type: 现货
 unit: 元/吨
+# 长协价按月定价，报价日落在月初，用统一阈值会天天误报"报价陈旧"
+stale_days: 35
 regex:
-  pattern: "(?P<name>秦皇岛\\s*动力煤|(?:综合交易|年度长协)(?:5500|5000|4500))\\s*(?P<price>\\d{3,4})"
+  pattern: "(?P<name>秦皇岛\\s*动力煤|(?:综合交易|年度长协)(?:5500|5000|4500))\\s*(?P<price>\\d{3,4})[^\\d]{0,8}变化：\\s*(?P<change>-?\\d+)\\s+(?P<change_pct>-?[\\d.]+)%\\s*日期：\\s*(?P<date>\\d{1,2}-\\d{1,2})"
+# 秦皇岛=港口现货，综合交易=月度长协，年度长协=年度长协，三者不是同一个口径
+market_map:
+  秦皇岛: 秦皇岛
+  综合交易: 综合交易
+  年度长协: 年度长协
+price_type_map:
+  秦皇岛: 港口现货
+  综合交易: 月度长协
+  年度长协: 年度长协
+spec_map:
+  "5500": Q5500
+  "5000": Q5000
+  "4500": Q4500
+covered_commodities: [动力煤]
 commodity_map:
   动力煤: ["5500", "5000", "4500", 动力煤]

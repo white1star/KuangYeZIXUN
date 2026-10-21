@@ -51,25 +51,52 @@ def price_latest(conn, limit=20) -> list:
     rows = conn.execute(
         "SELECT p.*, (SELECT s.name FROM sources s WHERE s.key=p.source_key) AS source_name "
         "FROM prices p JOIN "
-        "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type "
+        "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type, market, spec "
         "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices) r "
         "ON r.id=p.id WHERE r.rn=1 "
-        "ORDER BY p.price_date DESC, p.commodity LIMIT ?", (limit,)).fetchall()
+        "ORDER BY p.price_date DESC, p.commodity, p.market LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]
 
 
-def price_series(conn, commodity, days=30, price_type=None) -> list:
+def price_series(conn, commodity, days=30, price_type=None, market=None) -> list:
+    """按 (口径, 市场, 规格) 分组出曲线，不同口径不拼线。"""
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    sql = ("SELECT price_date, value, unit FROM ("
-           "SELECT price_date, value, unit, ROW_NUMBER() OVER "
-           "(PARTITION BY price_date ORDER BY fetched_at DESC, id DESC) rn "
+    sql = ("SELECT price_type, market, spec, price_date, value, unit, "
+           "ROW_NUMBER() OVER (PARTITION BY price_type, market, spec, price_date "
+           "ORDER BY fetched_at DESC, id DESC) rn "
            "FROM prices WHERE commodity=? AND price_date>=?")
     params = [commodity, cutoff]
     if price_type:
         sql += " AND price_type=?"
         params.append(price_type)
-    sql += ") WHERE rn=1 ORDER BY price_date"
-    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+    if market:
+        sql += " AND market=?"
+        params.append(market)
+    groups: dict = {}
+    for row in conn.execute(sql, params).fetchall():
+        if row["rn"] != 1:
+            continue
+        key = (row["price_type"], row["market"], row["spec"])
+        groups.setdefault(key, []).append({
+            "price_date": row["price_date"], "value": row["value"], "unit": row["unit"]})
+    out = []
+    for (ptype, mkt, spec), points in sorted(groups.items()):
+        points.sort(key=lambda p: p["price_date"])
+        out.append({
+            "key": f"{ptype}|{mkt}|{spec}",
+            "price_type": ptype,
+            "market": mkt,
+            "spec": spec,
+            "label": ptype + (f"·{mkt}" if mkt else "") + (f" {spec}" if spec else ""),
+            "points": points,
+        })
+    return out
+
+
+def commodity_markets(conn) -> list:
+    rows = conn.execute(
+        "SELECT DISTINCT market FROM prices WHERE market<>'' ORDER BY market").fetchall()
+    return [r["market"] for r in rows]
 
 
 def source_dots(conn) -> list:

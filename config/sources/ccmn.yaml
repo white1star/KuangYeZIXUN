@@ -4,13 +4,17 @@ board: price
 parser: table
 url: https://www.ccmn.cn/priceinfo/
 price_type: 现货
+exact_match: true
 unit: 元/吨
 table:
-  row: "table tr:not(:-soup-contains(加工费))"
+  index: 0
+  row: "table tr"
   cell: "td"
-  columns: {name: 0, price: 5, change: 6}
+  columns: {name: 0, spec: 1, market: 2, price: 5, change: 6, unit: 7, basis: 8, date: 9}
+covered_commodities: [铜, 铅锌]
 commodity_map:
-  铜: [铜]
-  铅锌: [铅, 锌]
-  铝: [铝]
-# 注：1#锡 已从列表页下架，改由 ccmn_sn 源（专属页报价接口）提供
+  铜: ["1#铜"]
+  铅锌: ["还原铅(98%)", "再生精铅"]
+# 注：列表页第 1 张表是常规有色，第 2 张是废料表（破碎黄铜/破碎熟铝等）。
+# 只取第 0 张表 + 精确品名，避免把废铜废铝当成电解铜/电解铝报价。
+# 1#锡已从列表页下架，改由 ccmn_sn 源（专属页报价接口）提供。

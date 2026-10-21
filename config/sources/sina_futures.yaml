@@ -11,6 +11,7 @@ unit_map:
   黄金: 元/克
   白银: 元/千克
 field_map: {name: 0, last: 8, prev_settle: 10}
+covered_commodities: [焦煤, 焦炭, 铁矿石, 铜, 铝, 锌, 铅, 锡, 黄金, 白银, 锰硅, 硅铁]
 commodity_map:
   JM0: 焦煤
   J0: 焦炭

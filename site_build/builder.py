@@ -126,7 +126,8 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
             **base, page="prices", prices=prices["latest"],
             commodities=prices["commodities"],
             commodity=prices["commodities"][0] if prices["commodities"] else "",
-            type_map=prices["type_map"]),
+            type_map=prices["type_map"],
+            markets=prices["markets"]),
         "search.html": env.get_template("search.html").render(**base, page="search"),
     }
     sizes = {}

@@ -123,7 +123,8 @@ def create_app(db_path=None) -> FastAPI:
             "types": list(NEWS_TYPES.keys())})
 
     @app.get("/prices", response_class=HTMLResponse)
-    def prices_page(request: Request, commodity: str = "", price_type: str = "", days: int = 30):
+    def prices_page(request: Request, commodity: str = "", price_type: str = "",
+                    market: str = "", days: int = 30):
         conn = get_conn()
         try:
             commodity_list = queries.distinct_commodities(conn)
@@ -134,22 +135,25 @@ def create_app(db_path=None) -> FastAPI:
             ctx = {"commodities": commodity_list,
                    "commodity": commodity,
                    "ptype": price_type,
+                   "market": market,
                    "days": days,
                    "type_map": queries.commodity_types(conn),
-                   "prices": [_decorate_price(r) for r in queries.price_latest(conn, limit=80)]}
+                   "markets": queries.commodity_markets(conn),
+                   "prices": [_decorate_price(r) for r in queries.price_latest(conn, limit=400)]}
         finally:
             conn.close()
         return templates.TemplateResponse(request, "prices.html", ctx)
 
     @app.get("/api/prices/{commodity}")
-    def price_api(commodity: str, days: int = 30, price_type: str = ""):
+    def price_api(commodity: str, days: int = 30, price_type: str = "", market: str = ""):
         conn = get_conn()
         try:
-            points = queries.price_series(conn, commodity, days=days,
-                                          price_type=price_type or None)
+            series = queries.price_series(conn, commodity, days=days,
+                                          price_type=price_type or None,
+                                          market=market or None)
         finally:
             conn.close()
-        return {"commodity": commodity, "days": days, "points": points}
+        return {"commodity": commodity, "days": days, "series": series}
 
     @app.get("/policy", response_class=HTMLResponse)
     def policy_page(request: Request, region: str = "", source: str = ""):

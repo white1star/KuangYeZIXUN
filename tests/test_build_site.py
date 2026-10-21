@@ -251,10 +251,13 @@ def test_prices_json_series_and_latest(tmp_path):
     payload = json.loads((out / "prices.json").read_text(encoding="utf-8"))
     assert payload["commodities"] == ["铜"]
     assert payload["type_map"]["铜"] == ["期货"]
-    futures = payload["series"]["铜"]["期货"]
-    assert len(futures) == 3
-    assert all(len(point) == 3 for point in futures)
-    assert payload["series"]["铜"]["全部"] == futures
+    futures = payload["series"]["铜"]
+    assert len(futures) == 1
+    entry = futures[0]
+    assert entry["price_type"] == "期货"
+    assert entry["main"] is True
+    assert len(entry["points"]) == 3
+    assert all(len(point) == 3 for point in entry["points"])
     latest = payload["latest"][0]
     assert latest["commodity"] == "铜"
     assert latest["value"] == 71200

@@ -23,13 +23,20 @@ def build_payload(db, tmp_path):
     return json.loads((out / "prices.json").read_text(encoding="utf-8"))
 
 
+def series_of(payload, commodity, price_type):
+    for entry in payload["series"][commodity]:
+        if entry["price_type"] == price_type:
+            return entry["points"]
+    raise AssertionError(f"没有 {commodity}/{price_type} 的曲线")
+
+
 def test_carry_forward_appends_today_when_last_quote_old(tmp_path):
     db = tmp_path / "t.db"
     old = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
     seed(db, [old])
     payload = build_payload(db, tmp_path)
     today = datetime.now().strftime("%Y-%m-%d")
-    spot = payload["series"]["锡"]["现货"]
+    spot = series_of(payload, "锡", "现货")
     assert spot[0] == [old, 393303.33, "元/吨"]
     assert spot[-1] == [today, 393303.33, "元/吨"]
     assert payload["latest"][0]["price_date"] == today
@@ -73,7 +80,7 @@ def test_no_duplicate_when_last_quote_is_today(tmp_path):
     old = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
     seed(db, [old, today])
     payload = build_payload(db, tmp_path)
-    dates = [p[0] for p in payload["series"]["锡"]["现货"]]
+    dates = [p[0] for p in series_of(payload, "锡", "现货")]
     assert dates.count(today) == 1
     assert dates[-1] == today
     assert payload["latest"][0]["price_date"] == today

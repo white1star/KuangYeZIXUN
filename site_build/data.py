@@ -137,19 +137,6 @@ def policy_meta(articles) -> dict:
     return {"sources": sorted(names), "regions": sorted(regions)}
 
 
-def _series(conn, commodity, price_type, cutoff) -> list:
-    sql = ("SELECT price_date, value, unit FROM ("
-           "SELECT price_date, value, unit, ROW_NUMBER() OVER "
-           "(PARTITION BY price_date ORDER BY fetched_at DESC, id DESC) rn "
-           "FROM prices WHERE commodity=? AND price_date>=?")
-    params = [commodity, cutoff]
-    if price_type:
-        sql += " AND price_type=?"
-        params.append(price_type)
-    sql += ") WHERE rn=1 ORDER BY price_date"
-    return [[r["price_date"], r["value"], r["unit"]] for r in conn.execute(sql, params).fetchall()]
-
-
 def _carry_forward(rows, today):
     # 休市/上游未发布日（周末、节假日）把最后报价带到今天：价不变、日期跟到今天，
     # 与指数类源"抓取日盖戳"口径一致。数据层不造假，告警仍按真实报价日判陈旧。
@@ -168,27 +155,86 @@ def _change_pct(row) -> float:
     return None
 
 
+# 主市场优先顺序：同品种多市场时，"全国/主市场"那条线才是默认展示的代表
+MAIN_MARKET_ORDER = ("长江现货", "长江综合", "长江有色", "无锡现货", "上海地区",
+                     "佛山现货", "广东现货", "国内市场", "全国")
+
+
+def _market_rank(market: str) -> int:
+    try:
+        return MAIN_MARKET_ORDER.index(market)
+    except ValueError:
+        return len(MAIN_MARKET_ORDER)
+
+
+def _series(conn, cutoff) -> dict:
+    """按 (品种, 类型, 市场, 规格) 分组出曲线。
+
+    绝不把不同口径拼成一条线：过去"全部类型"是按日期取最后写入的那条，
+    会出现同一天在期货价和现货价之间来回跳的假曲线。
+    """
+    rows = conn.execute(
+        "SELECT commodity, price_type, market, spec, price_date, value, unit, "
+        "ROW_NUMBER() OVER (PARTITION BY commodity, price_type, market, spec, price_date "
+        "ORDER BY fetched_at DESC, id DESC) rn "
+        "FROM prices WHERE price_date>=?", (cutoff,)).fetchall()
+    groups: dict = {}
+    for r in rows:
+        if r["rn"] != 1:
+            continue
+        key = (r["commodity"], r["price_type"], r["market"], r["spec"])
+        groups.setdefault(key, []).append([r["price_date"], r["value"], r["unit"]])
+    for key in groups:
+        groups[key].sort(key=lambda p: p[0])
+    return groups
+
+
 def prices_payload(conn, days=SERIES_DAYS) -> dict:
     today = datetime.now().strftime("%Y-%m-%d")
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    type_map = {}
-    for row in conn.execute(
-            "SELECT DISTINCT commodity, price_type FROM prices ORDER BY commodity, price_type"):
-        type_map.setdefault(row["commodity"], []).append(row["price_type"])
-    series = {}
-    for commodity, types in type_map.items():
-        entry = {"全部": _carry_forward(_series(conn, commodity, None, cutoff), today)}
-        for price_type in types:
-            entry[price_type] = _carry_forward(_series(conn, commodity, price_type, cutoff), today)
-        series[commodity] = entry
+    groups = _series(conn, cutoff)
+
+    type_map: dict = {}
+    market_map: dict = {}
+    series: dict = {}
+    for (commodity, price_type, market, spec), points in sorted(groups.items()):
+        type_map.setdefault(commodity, [])
+        if price_type not in type_map[commodity]:
+            type_map[commodity].append(price_type)
+        if market:
+            market_map.setdefault(commodity, {}).setdefault(price_type, [])
+            if market not in market_map[commodity][price_type]:
+                market_map[commodity][price_type].append(market)
+        label = price_type + (f"·{market}" if market else "")
+        series.setdefault(commodity, []).append({
+            "key": f"{price_type}|{market}|{spec}",
+            "price_type": price_type,
+            "market": market,
+            "spec": spec,
+            "label": label + (f" {spec}" if spec else ""),
+            "points": _carry_forward([list(p) for p in points], today),
+        })
+
+    # 每种口径挑一条主线（主市场优先），供"全部类型"视图使用
+    for commodity, entries in series.items():
+        by_type: dict = {}
+        for entry in entries:
+            current = by_type.get(entry["price_type"])
+            rank = (_market_rank(entry["market"]), -len(entry["points"]))
+            if current is None or rank < current[0]:
+                by_type[entry["price_type"]] = (rank, entry)
+        mains = {t: e[1]["key"] for t, e in by_type.items()}
+        for entry in entries:
+            entry["main"] = mains.get(entry["price_type"]) == entry["key"]
+
     latest = []
     rows = conn.execute(
         "SELECT p.*, (SELECT s.name FROM sources s WHERE s.key=p.source_key) AS source_name "
         "FROM prices p JOIN "
-        "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type "
+        "(SELECT id, ROW_NUMBER() OVER (PARTITION BY commodity, price_type, market, spec "
         "ORDER BY price_date DESC, fetched_at DESC, id DESC) rn FROM prices) r "
         "ON r.id=p.id WHERE r.rn=1 "
-        "ORDER BY p.price_date DESC, p.commodity").fetchall()
+        "ORDER BY p.price_date DESC, p.commodity, p.market").fetchall()
     for row in rows:
         quote_date = row["price_date"]
         carried = bool(quote_date and quote_date < today)
@@ -196,6 +242,11 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
         latest.append({
             "commodity": row["commodity"],
             "price_type": row["price_type"],
+            "market": row["market"],
+            "origin": row["origin"],
+            "spec": row["spec"],
+            "basis": row["basis"],
+            "contract": row["contract"],
             "value": row["value"],
             "unit": row["unit"],
             "change": row["change"],
@@ -206,11 +257,36 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
             "carried": carried,
             "source": row["source_name"] or row["source_key"] or "",
         })
+
+    # 同品种同口径同规格下各市场的价差：直观看"哪个地区贵"
+    spread: dict = {}
+    for item in latest:
+        key = (item["commodity"], item["price_type"], item["spec"])
+        lo, hi = spread.get(key, (None, None))
+        value = item["value"]
+        spread[key] = (value if lo is None else min(lo, value),
+                        value if hi is None else max(hi, value))
+    for item in latest:
+        lo, hi = spread.get((item["commodity"], item["price_type"], item["spec"]), (None, None))
+        item["market_low"] = lo
+        item["market_high"] = hi
+        item["market_spread"] = round(hi - lo, 2) if lo is not None and hi is not None else None
+        spec = (item["spec"] or "").strip()
+        origin = (item["origin"] or "").strip()
+        if spec and spec != "-":
+            item["spec_label"] = spec if not origin or origin == spec else f"{spec} {origin}"
+        else:
+            item["spec_label"] = origin
+
+    markets = sorted({m for by_type in market_map.values()
+                      for lst in by_type.values() for m in lst if m})
     return {
         "generated_at": store.now_iso(),
         "days": int(days),
         "commodities": sorted(type_map.keys()),
         "type_map": type_map,
+        "market_map": market_map,
+        "markets": markets,
         "series": series,
         "latest": latest,
     }

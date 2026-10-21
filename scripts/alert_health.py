@@ -92,12 +92,21 @@ def _db_names(conn) -> dict:
 
 
 def _covered_commodities(src) -> set:
-    """这个源按配置"应该覆盖"哪些品种——commodity_map 的值。
+    """这个源按配置"应该覆盖"哪些品种。
 
-    值的写法有两种，都拍平成品种名集合：字符串（sina_futures 的 `JM0: 焦煤`）与
+    优先读 `covered_commodities`（显式声明的品种名）。没写时退回 commodity_map 的值：
+    值的写法有两种，都拍平成品种名集合——字符串（sina_futures 的 `JM0: 焦煤`）与
     列表（ccmn 的 `铅锌: [铅, 锌]`）。返回空集合表示配置没写 commodity_map，
     也就是"判不出它该覆盖什么"，调用方要按判不了处理（保守报）。
+
+    注意：长江有色多品类源的 commodity_map 存的是源站产品名（`1#铜`），
+    与库里的品种名（`铜`）不是一回事，所以这些源必须显式写 covered_commodities。
     """
+    declared = src.get("covered_commodities")
+    if isinstance(declared, (list, tuple, set)):
+        out = {str(v).strip() for v in declared if str(v).strip()}
+        if out:
+            return out
     mapping = src.get("commodity_map")
     if not isinstance(mapping, dict):
         return set()
@@ -194,7 +203,7 @@ def _silent_sources(conn, names, enabled_keys, now) -> list:
             for s in silent_sources(conn, enabled_keys, days=SILENT_DAYS, now=now)]
 
 
-def _stale_prices(conn, stale_days, now) -> list:
+def _stale_prices(conn, stale_days, now, configs=None) -> list:
     """按"品种 + 价格类型"找报价陈旧的项。
 
     为什么按品种判而不是按源判：备用源天生低频（eastmoney_futures 十个交易日只有五天
@@ -203,10 +212,14 @@ def _stale_prices(conn, stale_days, now) -> list:
 
     阈值 2 天：上游当天没出价属正常（实测 1#锡 现货就常是昨天），
     连续 2 天没更新才说明上游或解析真出问题了。
+
+    源可以自己声明更宽的阈值 stale_days：报价日本来就是按月/按季定价的源
+    （如煤炭的年度长协价月初才出一次），用统一阈值会天天误报。
     """
     rows = conn.execute(
         "SELECT commodity, price_type, MAX(price_date) latest FROM prices"
         " GROUP BY commodity, price_type").fetchall()
+    configs = configs or {}
     out = []
     for row in rows:
         try:
@@ -214,16 +227,19 @@ def _stale_prices(conn, stale_days, now) -> list:
         except (TypeError, ValueError):
             continue  # 脏日期（历史上有人塞过"9/21"）：跳过这一行，别让整封告警炸掉
         age_days = (now.date() - latest).days
-        if age_days < stale_days:
-            continue
         # 来源取"提供最新那条价"的行：管理员照着 source_key 去修那个源
         src = conn.execute(
             "SELECT source_key FROM prices WHERE commodity=? AND price_type=? AND price_date=?"
             " ORDER BY id DESC LIMIT 1",
             (row["commodity"], row["price_type"], row["latest"])).fetchone()
+        source = (src["source_key"] if src else "")
+        threshold = max(int(stale_days),
+                        int((configs.get(source) or {}).get("stale_days") or 0))
+        if age_days < threshold:
+            continue
         out.append({"commodity": row["commodity"], "price_type": row["price_type"],
                     "latest": row["latest"], "age_days": age_days,
-                    "source": (src["source_key"] if src else "")})
+                    "source": source})
     out.sort(key=lambda s: (-s["age_days"], s["commodity"], s["price_type"]))
     return out
 
@@ -236,7 +252,7 @@ def collect_issues(conn, settings=None, stale_days=STALE_DAYS, now=None) -> dict
     usable = None if config_error else enabled
     failed, degraded = _failed_sources(conn, names, usable, configs, stale_days, now)
     # 同一源只进一类：failed/degraded 已经报过的不再算 silent——
-    # 错误轮次老到掉出静默窗口后会同时命中"失败""从未成功抓取"，
+    # 错误轮次老到掉出静默窗口后会同时命中"失败"和"从未成功抓取"，
     # 降级源同理（本该只留痕不进邮件，曾从 silent 段落漏进过邮件）
     known = {item["key"] for item in failed} | {item["key"] for item in degraded}
     silent = [item for item in _silent_sources(conn, names, usable, now)
@@ -245,7 +261,7 @@ def collect_issues(conn, settings=None, stale_days=STALE_DAYS, now=None) -> dict
         "failed": failed,
         "degraded": degraded,
         "silent": silent,
-        "stale": _stale_prices(conn, stale_days, now),
+        "stale": _stale_prices(conn, stale_days, now, configs),
         "config_error": config_error,
     }
 
@@ -406,7 +422,7 @@ def _parse_args(argv):
 
 
 def run(argv=None, settings=None, sender=None, config_loader=None, now=None) -> int:
-    """CLI 主体，返回进程退出码。sender/config_loader 可注入（测试用假实现，不发真邮件）。"""
+    """CLI 入口，返回进程退出码。sender/config_loader 是注入（测试配置/伪造发信），now 是测试注入。"""
     args = _parse_args(argv)
     settings = settings or load_settings()
     sender = sender or send_mail

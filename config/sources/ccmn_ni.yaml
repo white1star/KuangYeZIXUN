@@ -1,0 +1,29 @@
+key: ccmn_ni
+name: 长江有色·镍
+board: price
+parser: ccmn_quota
+url: https://mall.ccmn.cn/shop/quotaData/getQuotaData
+referer: https://www.ccmn.cn/priceinfo/ni
+method: POST
+post_data:
+  colName: ni
+  pageNo: 1
+  pageSize: 50
+headers:
+  X-Requested-With: XMLHttpRequest
+price_type: 现货
+exact_match: true
+basis: 含税
+unit: 元/吨
+items: quotaVoList
+quote:
+  name: productSortName
+  price: avgPrice
+  date: publishDateTime
+  market: marketName
+  origin: placeOrTrademark
+  spec: trademark
+  unit: unit
+covered_commodities: [镍]
+commodity_map:
+  镍: ["1#镍"]
