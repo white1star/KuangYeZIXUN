@@ -11,6 +11,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 ALIAS_FILE = ROOT / "config" / "price_aliases.yaml"
 PINYIN_FILE = ROOT / "config" / "price_pinyin.json"
+CATEGORY_FILE = ROOT / "config" / "price_categories.yaml"
 
 # 省级行政区（短名），用于把 "河北省/唐山市" "河南有色" 归到省
 PROVINCES = ("北京", "天津", "上海", "重庆", "河北", "山西", "辽宁", "吉林", "黑龙江",
@@ -62,6 +63,7 @@ def province_of(market: str) -> str:
 
 def search_payload(prices: dict) -> dict:
     aliases = _load_yaml(ALIAS_FILE)
+    categories = _load_yaml(CATEGORY_FILE)
     table = _load_pinyin()
 
     commodities = []
@@ -74,7 +76,9 @@ def search_payload(prices: dict) -> dict:
         commodities.append({
             "name": name,
             "pinyin": pinyin_initials(name, table),
+            "full_pinyin": full_pinyin(name),
             "alias_pinyin": [pinyin_initials(a, table) for a in alias_list],
+            "alias_full_pinyin": [full_pinyin(a) for a in alias_list],
             "aliases": alias_list,
             "markets": markets,
             "provinces": sorted({province_of(m) for m in markets if province_of(m)}),
@@ -106,4 +110,27 @@ def search_payload(prices: dict) -> dict:
             "markets": [m["name"] for m in markets if m["province"] == prov],
         })
 
-    return {"commodities": commodities, "markets": markets, "provinces": provinces}
+    # 左侧分面树：分类 → 品种（只保留真的有数据的）
+    known = {c["name"] for c in commodities}
+    cat_list = []
+    mapped = set()
+    for cat, names in (categories or {}).items():
+        items = [n for n in (names or []) if n in known]
+        if items:
+            cat_list.append({"name": str(cat), "commodities": items})
+            mapped.update(items)
+    rest = sorted(known - mapped)
+    if rest:
+        cat_list.append({"name": "其他", "commodities": rest})
+
+    return {"commodities": commodities, "markets": markets,
+            "provinces": provinces, "categories": cat_list}
+
+
+def full_pinyin(text: str) -> str:
+    """整串拼音（不带声调），供 'ying shi' / 'yingshi' 这类输入命中。"""
+    try:
+        from pypinyin import lazy_pinyin
+    except ImportError:
+        return ""
+    return "".join(lazy_pinyin(str(text or ""))).lower()

@@ -415,6 +415,107 @@ a:hover { text-decoration: none; }
 .copy-btn:hover { border-color: var(--brand); color: var(--brand); }
 .copy-btn.done { border-color: var(--brand); color: #fff; background: var(--brand); }
 
+/* 矿价页：左侧分面 + 右侧内容 */
+.price-layout { display: grid; grid-template-columns: 218px minmax(0, 1fr); gap: 16px; align-items: start; }
+.price-main { min-width: 0; }
+.facet-panel {
+  position: sticky;
+  top: 64px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 4px 2px 12px;
+  font-size: 13px;
+}
+.facet-group { margin-bottom: 14px; }
+.facet-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.facet-hint { font-size: 11px; font-weight: 400; color: #98A1AC; }
+.facet-body { display: flex; flex-direction: column; gap: 1px; }
+#cat-tree { max-height: 46vh; overflow-y: auto; }
+#region-list { max-height: 40vh; overflow-y: auto; }
+.facet-cat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.facet-cat-head:hover { background: #F5F7F7; color: var(--text); }
+.facet-cat-body { display: flex; flex-direction: column; gap: 1px; padding-left: 4px; }
+.facet-cat-body.collapsed { display: none; }
+.facet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.facet-item:hover { background: #F2F8F4; }
+.facet-item.active { background: #E8F5EC; color: #1C6B3C; font-weight: 600; }
+.facet-item i { font-style: normal; font-size: 11px; color: #98A1AC; }
+.facet-item.sub { padding-left: 18px; font-size: 12px; color: var(--muted); }
+.facet-item .caret { margin-left: 4px; font-size: 10px; color: #B7BFC7; }
+.facet-sub { display: flex; flex-direction: column; gap: 1px; }
+.facet-empty { padding: 4px 8px; font-size: 12px; color: #98A1AC; }
+.facet-toggle { display: none; }
+
+@media (max-width: 900px) {
+  .price-layout { grid-template-columns: 1fr; }
+  .facet-panel {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 82vw;
+    max-width: 320px;
+    max-height: none;
+    padding: 16px 10px;
+    background: #fff;
+    box-shadow: 8px 0 28px rgba(17, 20, 24, .14);
+    transform: translateX(-105%);
+    transition: transform .18s ease;
+  }
+  .facet-panel.open { transform: translateX(0); }
+  .facet-toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .card-head .check { font-size: 12px; }
+}
+
 .card-head {
   display: flex;
   align-items: center;
