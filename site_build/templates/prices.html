@@ -632,6 +632,7 @@
     var rowsHtml = (card.rows || []).map(function (r) {
       return '<span>' + esc(r.label) + ' <b>' + esc(r.value) + '</b></span>';
     }).join('');
+    var noteHtml = card.note ? '<div class="ans-note">' + esc(card.note) + '</div>' : '';
     var body;
     if (card.export) {
       body = '<pre class="ans-export" id="ans-export-text">' + esc(card.export) + '</pre>';
@@ -646,6 +647,7 @@
     var actions = card.export
       ? '<button type="button" class="ans-btn primary" data-act="copy-export">复制这段</button>'
       : '';
+    body = noteHtml + body;
     el.innerHTML =
       '<div class="ans-head"><span class="ans-title">' + esc(card.title || '') + '</span>' +
       '<span class="ans-actions">' + actions +
@@ -902,10 +904,11 @@
         renderAnswer(parsed);
         return;
       }
+      var hint = (err && err.message && err.message !== '没听懂') ? err.message : '';
       el.innerHTML = '<div class="ans-head"><span class="ans-title">' + esc(q) + '</span>' +
         '<span class="ans-actions"><button type="button" class="ans-btn" data-act="close">收起</button></span></div>' +
-        '<div class="ans-body"><div class="ans-empty">没听懂。试试「广西萤石多少钱」' +
-        '「唐山 青岛 铁矿石 对比」「铜这周跌了多少」</div></div>';
+        '<div class="ans-body"><div class="ans-empty">' +
+        (hint ? esc(hint) : '没听懂。试试「广西萤石多少钱」「唐山 青岛 铁矿石 对比」') + '</div></div>';
       el.querySelector('[data-act="close"]').addEventListener('click', function () { el.hidden = true; });
       console.warn('ask api fallback:', err && err.message);
     });

@@ -10,8 +10,10 @@ POST /ask  {"question": "...", "history": [{"q": "...", "intent": {...}}]}
 2. 所有数字来自 news.db，由本文件计算。
 3. 每次问答写一行 JSONL 到 logs/ask.jsonl（问题/意图/耗时），便于倒查。
 """
+import difflib
 import json
 import os
+import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -38,6 +40,148 @@ app = FastAPI(title="矿价问答")
 class AskRequest(BaseModel):
     question: str = ""
     history: list = []
+
+
+ALIAS_FILE = ROOT / "config" / "price_aliases.yaml"
+ACTIONS = {"price", "compare", "trend", "export", "regions"}
+
+
+def load_aliases() -> dict:
+    """同义词表：{标准品种: [别名...]}。"""
+    try:
+        raw = yaml.safe_load(ALIAS_FILE.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    return {str(k): [str(x) for x in (v or []) if str(x).strip()] for k, v in raw.items()}
+
+
+def _norm(text) -> str:
+    return re.sub(r"\s+", "", str(text or "")).lower()
+
+
+def resolve_commodity(raw, commodities, aliases):
+    """把模型给的名字对到标准品种。返回 (标准名|空, 说明)。"""
+    name = _norm(raw)
+    if not name:
+        return "", ""
+    known = set(commodities)
+    for c in commodities:
+        if _norm(c) == name:
+            return c, ""
+    for c, items in aliases.items():
+        if c not in known:
+            continue
+        for alias in items:
+            if _norm(alias) == name:
+                return c, f"把「{raw}」理解为 {c}"
+    hits = []
+    for c in commodities:
+        if name in _norm(c) or _norm(c) in name:
+            hits.append(c)
+    for c, items in aliases.items():
+        if c not in known:
+            continue
+        if any(_norm(a) and _norm(a) in name for a in items):
+            hits.append(c)
+    uniq = sorted(set(hits), key=lambda c: -len(c))
+    if len(uniq) == 1:
+        return uniq[0], f"把「{raw}」理解为 {uniq[0]}"
+    if raw and _norm(raw) in uniq:
+        return _norm(raw), ""
+    pool = list(commodities)
+    for c, items in aliases.items():
+        if c in known:
+            pool.extend(items)
+    close = difflib.get_close_matches(str(raw), pool, n=1, cutoff=0.6)
+    if close:
+        hit = close[0]
+        target = hit if hit in known else next(
+            (c for c, items in aliases.items() if hit in items and c in known), "")
+        if target:
+            return target, f"把「{raw}」理解为 {target}"
+    return "", f"没找到品种「{raw}」"
+
+
+def resolve_region(raw, provinces, markets):
+    """把模型给的地区对到省或市场。返回 ((kind, name)|None, 说明)。"""
+    name = _norm(raw)
+    if not name:
+        return None, ""
+    for prov in provinces:
+        if _norm(prov) == name:
+            return ("province", prov), ""
+    for market in markets:
+        if _norm(market) == name:
+            return ("market", market), ""
+    for market in markets:
+        parts = str(market).split("/")
+        city = _norm(parts[-1])
+        city = re.sub(r"(市|区|县|盟|地区)$", "", city)
+        short = re.sub(r"(市|区|县|盟|地区)$", "", name)
+        if city and (city == name or city == short):
+            return ("market", market), f"把「{raw}」理解为市场 {market}"
+    for market in markets:
+        if name in _norm(market):
+            return ("market", market), f"把「{raw}」理解为市场 {market}"
+    for prov in provinces:
+        if name in _norm(prov) or _norm(prov) in name:
+            return ("province", prov), f"把「{raw}」理解为 {prov}"
+    close = difflib.get_close_matches(str(raw), list(provinces) + list(markets), n=1, cutoff=0.6)
+    if close:
+        hit = close[0]
+        if hit in provinces:
+            return ("province", hit), f"把「{raw}」理解为 {hit}"
+        return ("market", hit), f"把「{raw}」理解为市场 {hit}"
+    return None, f"没找到地区「{raw}」"
+
+
+def normalize_intent(intent: dict, commodities, provinces, markets, categories, aliases):
+    """白名单强校验：认不出的品种/地区不硬猜，记进 problems 交给前端提示。"""
+    notes, problems = [], []
+    action = str(intent.get("action") or "price")
+    if action not in ACTIONS:
+        action = "unknown"
+
+    commodity, note = resolve_commodity(intent.get("commodity"), commodities, aliases)
+    (notes if note.startswith("把") else problems) and None
+    if note:
+        (notes if note.startswith("把") else problems).append(note)
+
+    category = str(intent.get("category") or "")
+    if category:
+        if category in categories:
+            pass
+        else:
+            close = difflib.get_close_matches(category, list(categories), n=1, cutoff=0.5)
+            if close:
+                notes.append(f"把「{category}」理解为分类 {close[0]}")
+                category = close[0]
+            else:
+                problems.append(f"没找到分类「{category}」")
+                category = ""
+
+    regions = []
+    for raw in (intent.get("regions") or []):
+        hit, note = resolve_region(raw, provinces, markets)
+        if hit:
+            if hit[1] not in regions:
+                regions.append(hit[1])
+            if note:
+                notes.append(note)
+        elif note:
+            problems.append(note)
+
+    days = intent.get("days")
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        days = 0
+    if days not in (7, 30, 90):
+        days = 30
+
+    return ({"action": action, "commodity": commodity, "category": category,
+             "regions": regions, "days": days,
+             "spec": (intent.get("spec") or "")}, notes, problems)
 
 
 def load_ask_config() -> dict:
@@ -260,6 +404,12 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
         return card
 
     province = market = ""
+    region_pairs = []
+    for name in regions:
+        if name in provinces:
+            region_pairs.append(("province", name))
+        else:
+            region_pairs.append(("market", name))
     if regions:
         first = regions[0]
         if first in provinces:
@@ -267,6 +417,16 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
         else:
             market = first
             province = province_of(first)
+
+    def in_regions(row) -> bool:
+        if not region_pairs:
+            return True
+        for kind, name in region_pairs:
+            if kind == "province" and row["province"] == name:
+                return True
+            if kind == "market" and row["market"] == name:
+                return True
+        return False
 
     def pick(rows):
         if not spec:
@@ -314,9 +474,7 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
             })
             return card
 
-    rows = [r for r in all_rows
-            if (not province or r["province"] == province)
-            and (not market or r["market"] == market)]
+    rows = [r for r in all_rows if in_regions(r)]
     if cat_names and not commodity:
         rows = [r for r in rows if r["commodity"] in cat_names]
         all_rows = [r for r in all_rows if r["commodity"] in cat_names]
@@ -414,9 +572,13 @@ PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象�
 1. 只判断意图，不要计算、不要输出任何价格数字。
 2. 问题是中文且可能没有空格，按语义理解。
 3. 指代词（"那广西呢""换成锌"）要结合【最近对话】补全。
-4. commodity 和 regions 都填不出来时 action=unknown。
+4. 用户提到具体城市（唐山/昆明/青岛/无锡），regions 里要填对应的**市场名**
+   （如"河北省/唐山市""昆明现货"），不要退化成省份。
+5. 用户说大区（华北/华东/华南），把它展开成该大区包含的省份。
+6. commodity 和 regions 都填不出来时 action=unknown。
 
-【品种】{commodities}
+【品种】（括号里是同义词，用户说括号里的词也要映射到冒号前的标准名）
+{commodities}
 
 【分类】（可以填 category，commodity 留空）
 {categories}
@@ -434,11 +596,16 @@ def llm_parse(conf: dict, question: str, history: list, commodities, provinces,
     hist_text = "\n".join(
         f"Q: {h.get('q','')} → {json.dumps(h.get('intent') or {}, ensure_ascii=False)}"
         for h in (history or [])[-3:]) or "（无）"
+    aliases = load_aliases()
+    com_lines = []
+    for name in commodities:
+        items = aliases.get(name) or []
+        com_lines.append(f"{name}（{'、'.join(items)}）" if items else name)
     cat_text = "\n".join(f"{k}：{'、'.join(v)}" for k, v in (categories or {}).items()) or "（无）"
     region_text = "、".join(provinces)
     if markets:
         region_text += "；市场：" + "、".join(markets[:120])
-    system = PROMPT.format(commodities="、".join(commodities), categories=cat_text,
+    system = PROMPT.format(commodities="；".join(com_lines), categories=cat_text,
                            regions=region_text, history=hist_text)
     resp = requests.post(
         conf["base_url"].rstrip("/") + "/chat/completions",
@@ -488,9 +655,15 @@ def ask(req: AskRequest):
                                "q": question, "ok": False, "error": str(exc)[:200],
                                "ms": int((time.time() - started) * 1000)})
             return {"ok": False, "error": str(exc)[:200]}
-        if (intent.get("action") or "") == "unknown":
-            return {"ok": False, "error": "没听懂", "intent": intent}
+        intent, notes, problems = normalize_intent(
+            intent, commodities, provinces, markets, categories, load_aliases())
+        if intent["action"] == "unknown" or not (
+                intent["commodity"] or intent["regions"] or intent["category"]):
+            return {"ok": False, "error": "没听懂", "intent": intent,
+                    "clarify": "；".join(problems)[:120]}
         card = execute(conn, intent, provinces, categories)
+        if notes:
+            card["note"] = "；".join(notes)[:120]
         log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),
                            "q": question, "ok": True, "intent": intent,
                            "card": card, "ms": int((time.time() - started) * 1000)})

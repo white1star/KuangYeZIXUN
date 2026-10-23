@@ -156,3 +156,60 @@ def test_healthz_reports_llm_flag(monkeypatch, tmp_path):
     client = TestClient(ask_api.app)
     data = client.get("/healthz").json()
     assert data["ok"] is True and data["llm"] is False
+
+# --------------------------------------------------------------------------
+# 意图归一：白名单 / 别名 / 错字 / 城市
+# --------------------------------------------------------------------------
+
+ALIASES = {
+    "铜": ["电解铜", "1#铜", "cu"],
+    "萤石": ["氟石", "氟化钙"],
+    "铜精矿": ["铜矿", "铜精粉"],
+    "锌精矿": ["锌矿"],
+}
+COMS = ["铜", "萤石", "铜精矿", "锌精矿", "铁矿石"]
+PROVS = ["河北", "山东", "广西"]
+MKTS = ["河北省/唐山市", "山东省/青岛市", "昆明现货", "长江现货", "广西有色"]
+
+
+def test_resolve_commodity_exact_and_alias():
+    assert ask_api.resolve_commodity("铜", COMS, ALIASES)[0] == "铜"
+    assert ask_api.resolve_commodity("电解铜", COMS, ALIASES)[0] == "铜"
+    assert ask_api.resolve_commodity("氟石", COMS, ALIASES)[0] == "萤石"
+    assert ask_api.resolve_commodity("铜矿", COMS, ALIASES)[0] == "铜精矿"
+
+
+def test_resolve_commodity_fuzzy_typo():
+    name, note = ask_api.resolve_commodity("锌精粉", COMS, ALIASES)
+    assert name == "锌精矿" and "理解为" in note
+
+
+def test_resolve_commodity_rejects_unknown():
+    name, note = ask_api.resolve_commodity("火星矿石", COMS, ALIASES)
+    assert name == "" and "没找到" in note
+
+
+def test_resolve_region_city_to_market():
+    hit, _ = ask_api.resolve_region("唐山", PROVS, MKTS)
+    assert hit == ("market", "河北省/唐山市")
+    hit2, _ = ask_api.resolve_region("广西", PROVS, MKTS)
+    assert hit2 == ("province", "广西")
+    assert ask_api.resolve_region("火星", PROVS, MKTS)[0] is None
+
+
+def test_normalize_intent_alias_and_drop_unknown_region():
+    intent, notes, problems = ask_api.normalize_intent(
+        {"action": "price", "commodity": "氟石", "regions": ["火星", "广西"]},
+        COMS, PROVS, MKTS, {}, ALIASES)
+    assert intent["commodity"] == "萤石"
+    assert intent["regions"] == ["广西"]
+    assert any("理解为" in n for n in notes)
+    assert any("火星" in p for p in problems)
+
+
+def test_normalize_intent_rejects_bad_action_and_days():
+    intent, _, _ = ask_api.normalize_intent(
+        {"action": "hack", "commodity": "铜", "days": 999},
+        COMS, PROVS, MKTS, {}, ALIASES)
+    assert intent["action"] == "unknown"
+    assert intent["days"] == 30

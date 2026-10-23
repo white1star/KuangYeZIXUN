@@ -1,0 +1,128 @@
+# 问答评测集：真实问句 + 期望意图
+# 用法：python -m tools.eval_ask            （本地直连模型）
+#      python -m tools.eval_ask --http ... （打线上接口）
+# 只校验语义（动作/品种/地区/天数），不校验价格数字。
+
+- q: 广西萤石多少钱
+  action: price
+  commodity: 萤石
+  regions: [广西]
+
+- q: 氟石现在什么价
+  action: price
+  commodity: 萤石
+  regions: []
+
+- q: 电解铜多少钱一吨
+  action: price
+  commodity: 铜
+  regions: []
+
+- q: 唐山和青岛的铁矿石哪个贵
+  action: compare
+  commodity: 铁矿石
+  regions: [河北省/唐山市, 山东省/青岛市]
+
+- q: 长江现货铝和广东铝差多少
+  action: compare
+  commodity: 铝
+  regions: [长江现货, 广东现货]
+
+- q: 铜这周跌了多少
+  action: trend
+  commodity: 铜
+  days: 7
+
+- q: 萤石最近在跌吗
+  action: trend
+  commodity: 萤石
+  days: 30
+
+- q: 帮我看看非金属矿最近是不是都在跌
+  action: trend
+  category: 非金属矿
+
+- q: 稀土这段时间走势怎么样
+  action: trend
+  category: 稀土
+
+- q: 导出华北的铁矿石报价
+  action: export
+  commodity: 铁矿石
+  regions: [北京, 天津, 河北, 山西, 内蒙古]
+
+- q: 把萤石报价整理成一段发我
+  action: export
+  commodity: 萤石
+
+- q: 萤石都有哪些地区有报价
+  action: regions
+  commodity: 萤石
+
+- q: 铅精矿哪些市场在报
+  action: regions
+  commodity: 铅精矿
+
+- q: 昆明现货铜多少钱
+  action: price
+  commodity: 铜
+  regions: [昆明现货]
+
+- q: 辽宁的铜什么价
+  action: price
+  commodity: 铜
+  regions: [辽宁]
+
+- q: 唐山铁精粉多少钱
+  action: price
+  commodity: 铁矿石
+  regions: [河北省/唐山市]
+
+- q: 高岭土什么价
+  action: price
+  commodity: 高岭土
+
+- q: pb粉现在多少钱
+  action: price
+  commodity: 铁矿石
+
+- q: 光亮铜什么价
+  action: price
+  commodity: 废铜
+
+- q: 锌精粉多少钱
+  action: price
+  commodity: 锌精矿
+
+- q: 铝锭今天什么价
+  action: price
+  commodity: 铝
+
+- q: 内蒙古的锌多少钱
+  action: price
+  commodity: 锌
+  regions: [内蒙古]
+
+- q: 对比一下上海和广东的铝
+  action: compare
+  commodity: 铝
+  regions: [上海, 广东]
+
+- q: 焦煤近三个月走势
+  action: trend
+  commodity: 焦煤
+  days: 90
+
+- q: 今天天气怎么样
+  action: unknown
+
+- q: 帮我订个会议室
+  action: unknown
+
+- q: 铜多少钱
+  action: price
+  commodity: 铜
+
+- q: 铅锌什么价
+  action: price
+  commodity: 铅锌
