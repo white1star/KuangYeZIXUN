@@ -808,7 +808,9 @@
           var mk = {}; rows.forEach(function (r) { mk[r.market || '全国'] = 1; }); return mk;
         })()).length + ' 个市场 · ' + top.price_date;
       card.rows = rows.slice(0, 3).map(function (r) {
-        return {label: r.market || '全国', value: fmtPrice(r)};
+        var label = (r.market || '全国') + ' ' + String(r.spec_label || r.price_type || '');
+        if (label.length > 26) label = label.slice(0, 26) + '…';
+        return {label: label.trim(), value: fmtPrice(r)};
       });
     } else {
       var specText = String(top.spec_label || top.price_type || '');
