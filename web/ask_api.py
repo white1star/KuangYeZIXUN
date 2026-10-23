@@ -820,8 +820,12 @@ def ask(req: AskRequest):
             return {"ok": False, "error": str(exc)[:200]}
         intent, notes, problems = normalize_intent(
             intent, commodities, provinces, markets, categories, load_aliases(), pol)
-        if intent["action"] == "unknown" or not (
-                intent["commodity"] or intent["regions"] or intent["category"]):
+        has_entity = bool(intent["commodity"] or intent["regions"] or intent["category"])
+        if intent["action"] == "policy":
+            has_entity = bool(intent.get("keywords") or intent.get("minerals")
+                              or intent.get("types") or intent.get("regions")
+                              or intent.get("source"))
+        if intent["action"] == "unknown" or not has_entity:
             return {"ok": False, "error": "没听懂", "intent": intent,
                     "clarify": "；".join(problems)[:120]}
         if intent["action"] == "policy":

@@ -117,36 +117,16 @@
     if (answerEl) answerEl.hidden = true;
   }
 
-  // 打字：本地即时过滤（不等模型）
-  var timer = null;
-  qEl.addEventListener('input', function () {
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      var q = qEl.value;
-      if (!q.trim()) {
-        hideAnswer();
-        renderChips(null);
-        showItems(all, '', '');
-        return;
-      }
-      showItems(localFilter(q), q, '关键词匹配，按回车用 AI 解读');
-    }, 120);
-  });
-
-  // 回车：交给 /api/ask 理解意图（地区/矿种/类型/时间）
-  qEl.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      qEl.value = '';
+  // 输入停顿 700ms 或按回车 → 交给 AI 理解（地区/矿种/类型/时间）
+  function askPolicy(q, immediate) {
+    if (!q) {
       hideAnswer();
       renderChips(null);
       showItems(all, '', '');
       return;
     }
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    var q = qEl.value.trim();
-    if (!q) return;
-    setCount(localFilter(q).length, '正在让 AI 理解…');
+    var token = (askPolicy._seq = (askPolicy._seq || 0) + 1);
+    if (immediate) setCount(0, '正在理解…');
     fetch('api/ask', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -155,21 +135,41 @@
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return resp.json();
     }).then(function (data) {
+      if (token !== askPolicy._seq) return;   // 有更新的输入，丢弃这次结果
       var intent = data.intent || {};
       if (!data.ok || intent.action !== 'policy') {
-        showItems(localFilter(q), q, '关键词匹配');
         renderChips(null);
-        renderAnswer({title: q, value: '', meta: '这句没听成政策查询，先按关键词给你结果；可以问「最近山西的煤矿探矿权政策」'});
+        renderAnswer({title: q, meta: '这句没听成政策查询。可以问「最近山西的煤矿探矿权政策」「内蒙古萤石矿权出让」'});
+        showItems(localFilter(q), q, '关键词匹配');
         return;
       }
-      asked = true;
       renderChips(intent);
       renderAnswer(data.card || {});
-      showItems(data.items || [], q, 'AI 解读');
+      showItems(data.items || [], q, data.card && data.card.meta ? '' : '');
     }).catch(function () {
-      showItems(localFilter(q), q, '关键词匹配');
+      if (token !== askPolicy._seq) return;
       renderChips(null);
+      hideAnswer();
+      showItems(localFilter(q), q, 'AI 暂不可用，关键词匹配');
     });
+  }
+
+  var timer = null;
+  qEl.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { askPolicy(qEl.value.trim()); }, 700);
+  });
+  qEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      qEl.value = '';
+      clearTimeout(timer);
+      askPolicy('');
+      return;
+    }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    clearTimeout(timer);
+    askPolicy(qEl.value.trim(), true);
   });
 
   App.loadJSON('policy.json').then(function (payload) {
@@ -178,7 +178,7 @@
     var q = params.get('q') || '';
     if (q) {
       qEl.value = q;
-      showItems(localFilter(q), q, '关键词匹配');
+      askPolicy(q, true);
     } else {
       showItems(all, '', '');
     }
