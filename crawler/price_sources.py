@@ -387,5 +387,11 @@ def parse_regex(html: str, cfg: dict) -> list:
     return rows
 
 
+def parse_ore_daily(text, cfg):
+    from crawler import ore_daily
+    return ore_daily.parse(text, cfg)
+
+
 PARSERS["table"] = parse_table
 PARSERS["regex"] = parse_regex
+PARSERS["ore_daily"] = parse_ore_daily

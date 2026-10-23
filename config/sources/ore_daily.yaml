@@ -1,0 +1,17 @@
+key: ore_daily
+name: 矿业咨讯·每日矿石价格
+board: price
+parser: ore_daily
+# 公众号没有公开列表，用搜狗微信发现当天那篇；一天一抓，不会触发验证码
+discover:
+  search: https://weixin.sogou.com/weixin?type=2&query=%E5%90%84%E7%A7%8D%E7%9F%BF%E7%9F%B3%E4%BB%B7%E6%A0%BC
+  account: 矿业咨讯
+  title_keyword: 各种矿石价格
+  max_age_days: 4
+price_type: 现货
+basis: ""
+stale_days: 7
+covered_commodities: [铁精粉, 锰矿石, 铬矿, 铜精矿, 铅精矿, 锌精矿, 锡精矿, 锑精矿,
+                      镍精矿, 红土镍矿, 铝土矿, 白云石, 钨精矿, 钼精矿, 钛精矿,
+                      萤石, 硅藻土, 磷矿石, 锂矿石, 锂辉石, 锂云母, 钴精矿, 石墨,
+                      动力煤, 焦煤, 焦炭]

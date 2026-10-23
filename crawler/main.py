@@ -81,10 +81,13 @@ def _process_prices(conn, src, text):
     return store.upsert_prices(conn, rows), rows
 
 
-def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
+def run_once(settings=None, fetcher=None, sources_dir=None, tags=None,
+             only=None) -> dict:
     settings = settings or load_settings()
     tags = tags or load_tags()
     sources = [s for s in load_sources(sources_dir) if s.get("enabled", True)]
+    if only:
+        sources = [s for s in sources if s["key"] in only]
     fetcher = fetcher or fetch
     rv = compute_rules_version(settings.config_dir)
     report.log(f"[规则版本] {rv}")
@@ -98,11 +101,24 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
             found = new = 0
             last_result = None
             try:
+                if not (src.get("urls") or src.get("url") or src.get("discover")):
+                    raise RuntimeError("源没有配置 url / urls / discover")
+                home = (src.get("url") or (src.get("urls") or [""])[0]
+                        or (src.get("discover") or {}).get("search", ""))
                 store.upsert_source(conn, src["key"], src.get("name", src["key"]),
-                                    src["board"], _iter_urls(src)[0], True)
+                                    src["board"], home, True)
                 run_id = store.start_crawl_run(conn, src["key"], rv)
                 price_rows = []
-                for spec in _url_specs(src):
+                specs = _url_specs(src) if (src.get("urls") or src.get("url")) else []
+                if src.get("discover"):
+                    from crawler import wechat
+                    url, title = wechat.discover(src["discover"],
+                                                 timeout=settings.request_timeout)
+                    report.log(f"[{src['key']}] 发现文章：{title}")
+                    specs = [{"url": url}]
+                if not specs:
+                    raise RuntimeError("源没有配置 url / urls / discover")
+                for spec in specs:
                     url = spec["url"]
                     result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
                                      timeout=settings.request_timeout, retries=settings.request_retries,
@@ -159,8 +175,10 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="矿news 抓取器")
     parser.add_argument("--once", action="store_true", help="执行一轮抓取后退出")
-    parser.parse_args()
-    run_once()
+    parser.add_argument("--only", help="只抓指定源（逗号分隔）")
+    args = parser.parse_args()
+    only = {s.strip() for s in (args.only or "").split(",") if s.strip()}
+    run_once(only=only or None)
 
 
 if __name__ == "__main__":

@@ -391,3 +391,23 @@ UNIQUE(commodity, price_type, market, spec, price_date, source_key)
 | `tools/probe_ccmn_colname.py` | mall 接口 colName 全量探测 |
 | `tools/probe_ccmn_markets.py` | colName 清单发现 + 分页测试 + 铜 21 市场价差导出 |
 | `tools/probe_price_paging.py` | 生意社分页 + 升贴水表 + cctd 全部煤价口径 |
+
+
+---
+
+## 2026-10 增补：每日矿石价格（矿业咨讯）
+
+销售问的「矿石」不只是金属锭：钨/钼/钛/磷/锂/石墨/煤炭这些原料，
+公开源里只有公众号「矿业咨讯」每天发一篇《各种矿石价格》覆盖得最全。
+
+- 源：config/sources/ore_daily.yaml，parser ore_daily
+- 发现：搜狗微信搜标题 → 取 矿业咨讯 最新一篇 → 解析 mp.weixin.qq.com 真实链接
+- 解析：crawler/ore_daily.py。日报每天排版会变（有时带单位有时不带、小标题也换说法），
+  所以不按固定模板切：**小标题定品种 → 逐句取「标签 + 价格 + 单位」**，
+  标签里的括号/品位/地区/产地再拆成 spec / market / origin；FOB 与到港并列时只留送到价
+- 覆盖：铁精粉、锰矿石、铬矿、铜/铅/锌/锡/锑/镍精矿、红土镍矿、铝土矿、钨/钼/钛精矿、
+  萤石、硅藻土、磷矿石、锂辉石、锂云母、锂矿石、钴精矿、石墨、动力煤、焦煤、焦炭、白云石
+- 分类调整：矿石类置顶（黑色金属矿石 / 有色金属矿石 / 稀有金属矿石 / 非金属矿石 /
+  新能源矿石 / 煤炭），金属锭与合金放后面
+- 抓取入口：python -m crawler.main --once --only ore_daily
+
