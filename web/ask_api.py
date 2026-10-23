@@ -817,15 +817,24 @@ def ask(req: AskRequest):
                     "clarify": "；".join(problems)[:120]}
         if intent["action"] == "policy":
             items, total = search_policies(conn, intent)
+            relaxed = False
+            if total == 0 and intent.get("days"):
+                # 时间窗内没有 → 放宽到全部，别让人以为"没有政策"
+                retry = dict(intent)
+                retry["days"] = 0
+                items, total = search_policies(conn, retry)
+                relaxed = total > 0
             applied = [f"{k} {('/'.join(v) if isinstance(v, list) else v)}"
                        for k, v in (("地区", intent.get("regions")),
                                     ("矿种", intent.get("minerals")),
                                     ("类型", intent.get("types")),
                                     ("机关", intent.get("source")),
                                     ("关键词", intent.get("keywords"))) if v]
+            meta_text = ("筛选：" + " · ".join(applied)) if applied else "全部政策"
+            if relaxed:
+                meta_text += f"；近 {intent.get('days')} 天没有，已放宽到全部"
             card = {"title": question, "value": f"共 {total} 条",
-                    "sub": "", "rows": [], "export": None,
-                    "meta": ("筛选：" + " · ".join(applied)) if applied else "全部政策"}
+                    "sub": "", "rows": [], "export": None, "meta": meta_text}
             if notes:
                 card["note"] = "；".join(notes)[:120]
             log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),

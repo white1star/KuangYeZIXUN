@@ -47,8 +47,13 @@
     if (countEl) countEl.textContent = '共 ' + n + ' 条' + (hint ? '（' + hint + '）' : '');
   }
 
+  var STOP = {'最近': 1, '近期': 1, '最新': 1, '的': 1, '了': 1, '吗': 1, '呢': 1,
+              '有': 1, '哪些': 1, '什么': 1, '方面': 1, '关于': 1, '怎么': 1,
+              '如何': 1, '政策': 1, '法规': 1, '通知': 1, '公告': 1};
+
   function localFilter(query) {
-    var tokens = String(query || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+    var tokens = String(query || '').trim().toLowerCase().split(/\s+/)
+      .filter(function (t) { return t.length > 1 && !STOP[t]; });
     if (!tokens.length) return all;
     return all.filter(function (a) {
       var hay = [a.title, a.summary, a.source_name,
