@@ -829,6 +829,10 @@ def ask(req: AskRequest):
             return {"ok": False, "error": "没听懂", "intent": intent,
                     "clarify": "；".join(problems)[:120]}
         if intent["action"] == "policy":
+            # 护栏：模型爱按地区猜机关，会把结果过度收窄——问题里没提就不认
+            src = intent.get("source") or ""
+            if src and src not in question:
+                intent["source"] = ""
             items, total = search_policies(conn, intent)
             relaxed = ""
             if total == 0 and intent.get("days"):
