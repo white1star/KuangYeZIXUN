@@ -578,6 +578,7 @@
 
   function fmtChange(r) {
     if (r.change === null || r.change === undefined) return '暂无涨跌';
+    if (Number(r.change) === 0) return '持平';
     var sign = r.change > 0 ? '+' : '';
     var pct = (r.pct === null || r.pct === undefined) ? '' : '（' + (r.pct > 0 ? '+' : '') + r.pct + '%）';
     return sign + fmtNum(r.change) + pct;
@@ -645,9 +646,11 @@
             var mk = {}; rows.forEach(function (r) { mk[r.market || '全国'] = 1; }); return mk;
           })()).length + ' 个市场 · ' + top.price_date + '</div>';
       } else {
+        var specText = String(top.spec_label || top.price_type || '');
+        if (specText.length > 18) specText = specText.slice(0, 18) + '…';
         body = '<div class="ans-value">' + fmtPrice(top) + '</div>' +
           '<div class="ans-meta">' + esc(top.market || '全国') + ' · ' +
-          esc(top.spec_label || top.price_type) + ' · ' + top.price_date +
+          esc(specText) + ' · ' + top.price_date +
           ' · ' + fmtChange(top) + ' · 来源 ' + esc(top.source) + '</div>';
       }
       if (rows.length > 1) {
