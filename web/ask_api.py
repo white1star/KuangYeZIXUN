@@ -205,7 +205,12 @@ def normalize_intent(intent: dict, commodities, provinces, markets, categories, 
         out["keywords"] = [str(k).strip() for k in (intent.get("keywords") or []) if str(k).strip()]
         out["regions"] = pick_list(intent.get("regions"), pol.get("regions") or [], "地区")
         out["minerals"] = pick_list(intent.get("minerals"), pol.get("minerals") or [], "矿种")
-        out["types"] = pick_list(intent.get("types"), pol.get("types") or [], "类型")
+        # "政策/通知/公告"是泛词：本页全是政策，拿它当类型过滤反而会把
+        # 标成"新矿/市场/安全"的文章排掉
+        GENERIC = {"政策", "法规", "通知", "公告", "文件"}
+        picked_types = [x for x in pick_list(intent.get("types"), pol.get("types") or [], "类型")
+                        if x not in GENERIC]
+        out["types"] = picked_types
         source = str(intent.get("source") or "").strip()
         if source:
             close = difflib.get_close_matches(source, pol.get("sources") or [], n=1, cutoff=0.6)
