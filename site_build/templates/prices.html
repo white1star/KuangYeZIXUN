@@ -364,13 +364,6 @@
       suggestEl.hidden = false;
       return;
     }
-    var examples = '';
-    if (!q.trim()) {
-      examples = '<div class="suggest-examples">' +
-        ['广西萤石多少钱', '唐山 青岛 铁矿石 对比', '铜 这周跌了多少', '导出 华北 铁矿石']
-          .map(function (x) { return '<button type="button" class="ex-chip" data-ask="' +
-            esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>';
-    }
     var idx = -1;
     var html = sections.map(function (sec) {
       var head = '<div class="suggest-sec-head"><span>' + sec.title + '</span>' +
@@ -386,7 +379,7 @@
       }).join('');
       return '<div class="suggest-sec">' + head + body + '</div>';
     }).join('');
-    suggestEl.innerHTML = examples + html;
+    suggestEl.innerHTML = html;
     suggestEl.hidden = false;
   }
 
@@ -1262,12 +1255,6 @@
   });
 
   suggestEl.addEventListener('mousedown', function (e) {
-    var ex = e.target.closest('[data-ask]');
-    if (ex) {
-      e.preventDefault();
-      ask(ex.getAttribute('data-ask'));
-      return;
-    }
     if (e.target.closest('[data-action="clear-recent"]')) {
       e.preventDefault();
       writeStore(STORE_KEY_RECENT, []);

@@ -523,23 +523,6 @@ a:hover { text-decoration: none; }
   word-break: break-all;
 }
 .ans-empty { font-size: 13px; color: var(--muted); }
-.suggest-examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 2px 10px 10px;
-}
-.ex-chip {
-  border: 1px solid #E3E9E6;
-  background: #F7FAF8;
-  color: #2C6B45;
-  font: inherit;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 14px;
-  cursor: pointer;
-}
-.ex-chip:hover { background: #E9F5ED; border-color: #CFE3D7; }
 .copy-btn.done { border-color: var(--brand); color: #fff; background: var(--brand); }
 
 /* 矿价页：左侧分面 + 右侧内容 */
