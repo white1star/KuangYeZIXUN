@@ -44,12 +44,12 @@ def load_articles(conn) -> list:
     return items
 
 
-def search_items(articles) -> list:
+def search_items(articles, summary_chars=SUMMARY_CHARS) -> list:
     items = []
     for a in articles:
         summary = a["summary"]
-        if len(summary) > SUMMARY_CHARS:
-            summary = summary[:SUMMARY_CHARS]
+        if len(summary) > summary_chars:
+            summary = summary[:summary_chars]
         item = {
             "title": a["title"],
             "url": a["url"],

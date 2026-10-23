@@ -146,6 +146,9 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
     search_payload = {"generated_at": build_time, "count": len(articles),
                       "items": data.search_items(articles)}
     sizes["search.json"] = _write(out / "search.json", _json_text(search_payload))
+    policy_payload = {"generated_at": build_time, "count": len(policy_articles),
+                      "items": data.search_items(policy_articles, summary_chars=200)}
+    sizes["policy.json"] = _write(out / "policy.json", _json_text(policy_payload))
     sizes["prices.json"] = _write(out / "prices.json", _json_text(prices))
     for name in ("style.css", "app.js"):
         target = out / name

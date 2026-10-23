@@ -9,19 +9,16 @@
 
   function highlight(text, query) {
     var safe = esc(text);
-    if (!query) return safe;
-    var target = esc(query).toLowerCase();
-    if (!target) return safe;
-    var lower = safe.toLowerCase();
-    var out = '';
-    var pos = 0;
-    var idx = lower.indexOf(target);
-    while (idx >= 0) {
-      out += safe.slice(pos, idx) + '<mark>' + safe.slice(idx, idx + target.length) + '</mark>';
-      pos = idx + target.length;
-      idx = lower.indexOf(target, pos);
+    var tokens = String(query || '').trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return safe;
+    var pattern = tokens.map(function (tok) {
+      return esc(tok).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }).join('|');
+    try {
+      return safe.replace(new RegExp('(' + pattern + ')', 'gi'), '<mark>$1</mark>');
+    } catch (e) {
+      return safe;
     }
-    return out + safe.slice(pos);
   }
 
   function entryHtml(a, query) {
@@ -36,6 +33,9 @@
       + esc(a.published_at) + '</span>';
     (a.minerals || []).forEach(function (m) {
       html += '<span class="chip chip-mineral">' + esc(m) + '</span>';
+    });
+    (a.regions || []).forEach(function (r) {
+      html += '<span class="chip chip-region">' + esc(r) + '</span>';
     });
     (a.types || []).forEach(function (t) {
       html += '<span class="chip chip-type-' + esc(t) + '">' + esc(t) + '</span>';

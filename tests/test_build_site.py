@@ -118,8 +118,15 @@ def test_policy_contains_filters_and_seed(tmp_path):
     out, _ = make_site(tmp_path)
     policy = (out / "policy.html").read_text(encoding="utf-8")
     assert "河北省自然资源厅发布绿色矿山名录" in policy
-    assert '<option value="自然资源部">自然资源部</option>' in policy
-    assert '<option value="河北">河北</option>' in policy
+    # 搜索框 + 四个分面（机关/地区/矿种/类型）
+    for marker in ('id="pq"', 'id="facet-source"', 'id="facet-region"',
+                   'id="facet-mineral"', 'id="facet-type"'):
+        assert marker in policy, marker
+    payload = json.loads((out / "policy.json").read_text(encoding="utf-8"))
+    assert payload["count"] == 1
+    item = payload["items"][0]
+    assert item["source_name"] == "自然资源部"
+    assert item["regions"] == ["河北"]
 
 
 def test_search_json_items(tmp_path):

@@ -292,6 +292,7 @@ a:hover { text-decoration: none; }
   background: #F1F3F5;
   color: var(--muted);
 }
+.chip-region { background: #EEF4FB; color: #33557A; }
 .chip-mineral { background: #E9F6ED; color: #1C7234; }
 .chip-type-政策, .chip-type-法规, .chip-type-通知, .chip-type-公告 { background: #E8F0FE; color: #1A56DB; }
 .chip-type-安全, .chip-type-税收 { background: #FDECEA; color: #C0392B; }

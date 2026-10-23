@@ -6,22 +6,48 @@
   <div class="container">
     <h1 class="page-title">政策法规</h1>
     <p class="page-sub">汇聚矿产行业最新政策、法规及通知公告</p>
-    <div class="card filter-card">
-      <div class="filterbar">
-        <select id="pol-source">
-          <option value="">全部机关</option>
-          {% for s in sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-        </select>
-        <select id="pol-region">
-          <option value="">全部地区</option>
-          {% for r in regions %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
-        </select>
+
+    <div class="card toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+        </svg>
+        <input id="pq" type="search" autocomplete="off" spellcheck="false"
+               aria-label="搜索政策标题、摘要、机关、矿种">
+      </div>
+      <span class="ptype" id="result-count"></span>
+      <div id="active-filters" class="chips"></div>
+      <button type="button" class="facet-toggle" id="facet-toggle">筛选</button>
+    </div>
+
+    <div class="price-layout">
+      <aside class="facet-panel" id="facet-panel">
+        <div class="facet-group">
+          <div class="facet-title">机关<span class="facet-hint" id="cnt-source"></span></div>
+          <div class="facet-body" id="facet-source"></div>
+        </div>
+        <div class="facet-group">
+          <div class="facet-title">地区<span class="facet-hint" id="cnt-region"></span></div>
+          <div class="facet-body" id="facet-region"></div>
+        </div>
+        <div class="facet-group">
+          <div class="facet-title">矿种<span class="facet-hint" id="cnt-mineral"></span></div>
+          <div class="facet-body" id="facet-mineral"></div>
+        </div>
+        <div class="facet-group">
+          <div class="facet-title">类型<span class="facet-hint" id="cnt-type"></span></div>
+          <div class="facet-body" id="facet-type"></div>
+        </div>
+      </aside>
+
+      <div class="price-main">
+        <div class="card feed-card" id="feed">
+          {% for a in articles %}{{ ui.entry(a) }}{% endfor %}
+        </div>
+        <p class="empty" id="feed-empty" hidden>没有匹配的政策，换个关键词或清掉筛选试试</p>
       </div>
     </div>
-    <div class="card feed-card" id="feed">
-      {% for a in articles %}{{ ui.entry(a) }}{% endfor %}
-    </div>
-    <p class="empty" id="feed-empty" hidden>没有符合条件的政策，试试其他机关或地区</p>
   </div>
 </section>
 {% endblock %}
@@ -29,33 +55,165 @@
 <script src="app.js"></script>
 <script>
 (function () {
+  var qEl = document.getElementById('pq');
+  var chipsEl = document.getElementById('active-filters');
   var feedEl = document.getElementById('feed');
   var emptyEl = document.getElementById('feed-empty');
-  var selSource = document.getElementById('pol-source');
-  var selRegion = document.getElementById('pol-region');
-  var feed = new App.Feed(feedEl, 80);
+  var facetPanel = document.getElementById('facet-panel');
+  var facetToggle = document.getElementById('facet-toggle');
+  var feed = new App.Feed(feedEl, 50);
   var all = [];
 
-  function render() {
-    var source = selSource.value;
-    var region = selRegion.value;
-    var items = all.filter(function (a) {
-      if (a.board !== 'policy') return false;
-      if (source && a.source_name !== source) return false;
-      if (region && (a.regions || []).indexOf(region) < 0) return false;
-      return true;
-    });
-    feedEl.hidden = items.length === 0;
-    emptyEl.hidden = items.length > 0;
-    feed.set(items);
+  var state = {q: '', source: '', region: '', mineral: '', type: ''};
+  var DIMS = ['source', 'region', 'mineral', 'type'];
+  var LABELS = {source: '机关', region: '地区', mineral: '矿种', type: '类型'};
+
+  function valueOf(a, dim) {
+    if (dim === 'source') return a.source_name || '';
+    if (dim === 'region') return a.regions || [];
+    if (dim === 'mineral') return a.minerals || [];
+    return a.types || [];
   }
 
-  selSource.addEventListener('change', render);
-  selRegion.addEventListener('change', render);
+  function matches(a, skip) {
+    var q = state.q.trim().toLowerCase();
+    if (q) {
+      var hay = [a.title, a.summary, a.source_name,
+                 (a.minerals || []).join(' '), (a.regions || []).join(' '),
+                 (a.types || []).join(' ')].join(' ').toLowerCase();
+      var tokens = q.split(/\s+/).filter(Boolean);
+      for (var i = 0; i < tokens.length; i++) {
+        if (hay.indexOf(tokens[i]) < 0) return false;
+      }
+    }
+    for (var j = 0; j < DIMS.length; j++) {
+      var dim = DIMS[j];
+      if (dim === skip) continue;
+      if (!state[dim]) continue;
+      var v = valueOf(a, dim);
+      if (Array.isArray(v) ? v.indexOf(state[dim]) < 0 : v !== state[dim]) return false;
+    }
+    return true;
+  }
 
-  App.loadJSON('search.json').then(function (payload) {
-    all = payload.items || [];
+  function countBy(dim) {
+    var counter = {};
+    all.forEach(function (a) {
+      if (!matches(a, dim)) return;
+      var v = valueOf(a, dim);
+      var list = Array.isArray(v) ? v : [v];
+      list.forEach(function (name) {
+        if (name) counter[name] = (counter[name] || 0) + 1;
+      });
+    });
+    return counter;
+  }
+
+  function facetHtml(dim, counter) {
+    var names = Object.keys(counter).sort(function (a, b) {
+      return counter[b] - counter[a] || a.localeCompare(b, 'zh');
+    });
+    return names.map(function (name) {
+      var active = state[dim] === name ? ' active' : '';
+      return '<button type="button" class="facet-item' + active + '" data-dim="' + dim +
+        '" data-value="' + App.esc(name) + '">' +
+        '<span class="facet-name">' + App.esc(name) + '</span>' +
+        '<span class="facet-tail"><i>' + counter[name] + '</i></span></button>';
+    }).join('');
+  }
+
+  function renderFacets() {
+    DIMS.forEach(function (dim) {
+      var counter = countBy(dim);
+      document.getElementById('facet-' + dim).innerHTML = facetHtml(dim, counter);
+      document.getElementById('cnt-' + dim).textContent = Object.keys(counter).length + ' 项';
+    });
+  }
+
+  function renderChips() {
+    var html = '';
+    DIMS.forEach(function (dim) {
+      if (!state[dim]) return;
+      html += '<span class="chip-filter">' + LABELS[dim] + ' ' + App.esc(state[dim]) +
+        '<button type="button" data-clear="' + dim + '" title="清除">×</button></span>';
+    });
+    chipsEl.innerHTML = html;
+  }
+
+  function render() {
+    var items = all.filter(function (a) { return matches(a, ''); });
+    feedEl.hidden = items.length === 0;
+    emptyEl.hidden = items.length > 0;
+    var countEl = document.getElementById('result-count');
+    if (countEl) countEl.textContent = '共 ' + items.length + ' 条';
+    feed.set(items, state.q.trim());
+    renderFacets();
+    renderChips();
+    syncUrl();
+  }
+
+  function syncUrl() {
+    var params = new URLSearchParams();
+    Object.keys(state).forEach(function (k) {
+      if (state[k]) params.set(k, state[k]);
+    });
+    history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : ''));
+  }
+
+  function readUrl() {
+    var params = new URLSearchParams(location.search);
+    Object.keys(state).forEach(function (k) {
+      if (params.get(k)) state[k] = params.get(k);
+    });
+    if (state.q && qEl) qEl.value = state.q;
+  }
+
+  var timer = null;
+  qEl.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { state.q = qEl.value; render(); }, 120);
+  });
+  qEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { qEl.value = ''; state.q = ''; render(); }
+  });
+
+  facetPanel.addEventListener('click', function (e) {
+    var item = e.target.closest('[data-dim]');
+    if (!item) return;
+    var dim = item.getAttribute('data-dim');
+    var value = item.getAttribute('data-value');
+    state[dim] = state[dim] === value ? '' : value;
     render();
+    if (window.innerWidth <= 900) facetPanel.classList.remove('open');
+  });
+
+  chipsEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-clear]');
+    if (!btn) return;
+    state[btn.getAttribute('data-clear')] = '';
+    render();
+  });
+
+  if (facetToggle) {
+    facetToggle.addEventListener('click', function () {
+      facetPanel.classList.toggle('open');
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement !== qEl) {
+      e.preventDefault();
+      qEl.focus();
+    }
+  });
+
+  App.loadJSON('policy.json').then(function (payload) {
+    all = payload.items || [];
+    readUrl();
+    render();
+  }).catch(function () {
+    // 没有 JSON 时保留服务端渲染的列表
+    emptyEl.hidden = false;
   });
 })();
 </script>
