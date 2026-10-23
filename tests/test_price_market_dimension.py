@@ -313,6 +313,29 @@ def test_spread_ignores_carried_quotes(tmp_path):
         assert r["market_fresh_date"] == today
 
 
+def test_spread_suppressed_when_source_mixes_scopes(tmp_path):
+    """同规格价差超过 50% 说明源站混了口径（如钼酸铵 2.3万~39万），不给价差。"""
+    db = tmp_path / "t.db"
+    conn = store.connect(db)
+    store.init_db(conn)
+    today = datetime.now().strftime("%Y-%m-%d")
+    base = {"commodity": "钼酸铵", "price_type": "现货", "unit": "元/吨", "change": None,
+            "change_pct": None, "source_key": "pp100", "raw_label": "钼酸铵",
+            "origin": "国产", "spec": "99%", "basis": "出厂价", "contract": "",
+            "fetched_at": store.now_iso()}
+    store.upsert_prices(conn, [
+        dict(base, price_date=today, market="湖北武汉", value=23000.0),
+        dict(base, price_date=today, market="山东", value=390000.0),
+    ])
+    conn.close()
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_email="")
+    payload = json.loads((out / "prices.json").read_text(encoding="utf-8"))
+    rows = [r for r in payload["latest"] if r["commodity"] == "钼酸铵"]
+    assert rows
+    assert all(r["market_spread"] is None for r in rows)
+
+
 def test_market_map_and_global_market_list(tmp_path):
     db = tmp_path / "t.db"
     _seed_markets(db)
