@@ -160,8 +160,8 @@ def spec_label(row) -> str:
 
 def series(conn, commodity, market=None, days=30) -> list:
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    sql = ("SELECT price_date, value, price_type, market FROM ("
-           "SELECT price_date, value, price_type, market, ROW_NUMBER() OVER ("
+    sql = ("SELECT price_date, value, price_type, market, spec FROM ("
+           "SELECT price_date, value, price_type, market, spec, ROW_NUMBER() OVER ("
            "PARTITION BY price_date, price_type, market, spec "
            "ORDER BY fetched_at DESC, id DESC) rn FROM prices "
            "WHERE commodity=? AND price_date>=?) WHERE rn=1 ORDER BY price_date")
@@ -172,11 +172,18 @@ def series(conn, commodity, market=None, days=30) -> list:
         return []
     kind = min({r["price_type"] for r in rows}, key=lambda t: TYPE_ORDER.get(t, 9))
     picked = [r for r in rows if r["price_type"] == kind]
-    # 一条曲线只能是一个市场，否则涨跌会把两个市场的价差算进去
+    # 一条曲线只能是一个市场 + 一个规格，否则涨跌会把价差和规格差算进去
     markets = {r["market"] for r in picked}
     if len(markets) > 1 and not market:
         best = min(markets, key=lambda m: MARKET_PREF.index(m) if m in MARKET_PREF else 99)
         picked = [r for r in picked if r["market"] == best]
+    specs = {r["spec"] for r in picked}
+    if len(specs) > 1:
+        counts = {}
+        for r in picked:
+            counts[r["spec"]] = counts.get(r["spec"], 0) + 1
+        best_spec = max(counts, key=counts.get)
+        picked = [r for r in picked if r["spec"] == best_spec]
     return [(r["price_date"], r["value"]) for r in picked]
 
 
