@@ -10,8 +10,12 @@
 
     <div class="card toolbar">
       <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+        </svg>
         <input id="q" type="search" autocomplete="off" spellcheck="false"
-               placeholder="搜矿种 / 地区 / 规格，支持拼音：萤石、广西、PB粉、ying shi">
+               placeholder="搜矿种、地区、规格 / 拼音：萤石、广西、PB粉、ying shi">
         <div id="suggest" class="suggest" hidden></div>
       </div>
       <label>口径
@@ -271,108 +275,107 @@
     return total;
   }
 
-  function buildSuggestions(q) {
+  // 分组构建：空态给 最近/常用/热门，输入态给 矿种/地区
+  function buildSections(q) {
     var tokens = tokensOf(q);
-    var items = [];
+    var sections = [];
     if (!tokens.length) {
-      // 空态：最近搜索 + 常用 + 热门品种
-      var recent = readStore(STORE_KEY_RECENT, []);
-      recent.slice(0, 5).forEach(function (name) {
-        if (SEARCH.commodities.some(function (c) { return c.name === name; })) {
-          items.push({type: 'recent', value: name, label: name, meta: '最近'});
-        }
-      });
-      var favs = readStore(STORE_KEY_FAV, []);
-      favs.slice(0, 4).forEach(function (name) {
-        if (SEARCH.commodities.some(function (c) { return c.name === name; })) {
-          items.push({type: 'favorite', value: name, label: name, meta: '常用'});
-        }
-      });
-      SEARCH.commodities.slice()
+      var recent = readStore(STORE_KEY_RECENT, []).filter(byKnown).slice(0, 5)
+        .map(function (n) { return itemOf('recent', n, n, countOf(n) + ' 条'); });
+      var favs = readStore(STORE_KEY_FAV, []).filter(byKnown).slice(0, 5)
+        .map(function (n) { return itemOf('favorite', n, n, countOf(n) + ' 条'); });
+      var hot = SEARCH.commodities.slice()
         .sort(function (a, b) { return b.count - a.count; })
         .slice(0, 8)
-        .forEach(function (item) {
-          items.push({type: 'hot', value: item.name, label: item.name,
-                      meta: item.count + ' 条'});
-        });
-      return {items: items, total: items.length};
+        .map(function (c) { return itemOf('hot', c.name, c.name, c.count + ' 条'); });
+      if (recent.length) sections.push({title: '最近搜索', action: '清空', items: recent});
+      if (favs.length) sections.push({title: '常用', items: favs});
+      if (hot.length) sections.push({title: '热门品种', items: hot});
+      return sections;
     }
+
+    var coms = [];
     if (tokens.length > 1) {
       SEARCH.commodities.forEach(function (item) {
-        var combo = comboOf(item, tokens);
-        if (!combo) return;
-        items.push({type: 'combo', value: item.name, label: item.name,
-                    score: 0.4, count: item.count,
-                    combo: combo, meta: '矿种 + 地区'});
+        if (!comboOf(item, tokens)) return;
+        coms.push(itemOf('combo', item.name, item.name, item.count + ' 条', 0.4, item.count));
       });
     }
     SEARCH.commodities.forEach(function (item) {
       var score = scoreCommodity(item, tokens);
       if (score < 0) return;
-      items.push({type: 'commodity', value: item.name, label: item.name, score: score,
-                  count: item.count, meta: item.count + ' 条'});
+      coms.push(itemOf('commodity', item.name, item.name, item.count + ' 条', score, item.count));
     });
+    coms.sort(byScore);
+
+    var places = [];
     SEARCH.provinces.forEach(function (item) {
-      var score = scoreMarket({name: item.name, province: item.name, pinyin: item.pinyin,
-                               province_pinyin: item.pinyin}, tokens);
+      var score = scoreMarket({name: item.name, province: item.name,
+                               pinyin: item.pinyin, province_pinyin: item.pinyin}, tokens);
       if (score < 0) return;
-      items.push({type: 'province', value: item.name, label: item.name + '（全省）',
-                  score: score, count: 0, meta: item.markets.length + ' 个市场'});
+      places.push(itemOf('province', item.name, item.name + '（全省）',
+                         item.markets.length + ' 个市场', score, 0));
     });
     SEARCH.markets.forEach(function (item) {
       var score = scoreMarket(item, tokens);
       if (score < 0) return;
-      items.push({type: 'market', value: item.name, label: item.name,
-                  score: score + 0.4, count: 0, meta: item.province || '市场'});
+      places.push(itemOf('market', item.name, item.name,
+                         item.province || '市场', score + 0.4, 0));
     });
-    items.sort(function (a, b) {
-      if (a.score !== b.score) return a.score - b.score;
-      return (b.count || 0) - (a.count || 0);
-    });
-    return {items: items.slice(0, 12), total: items.length};
+    places.sort(byScore);
+
+    if (coms.length) sections.push({title: '矿种', items: coms.slice(0, 8), more: coms.length});
+    if (places.length) sections.push({title: '地区', items: places.slice(0, 8), more: places.length});
+    return sections;
+  }
+
+  function itemOf(type, value, label, meta, score, count) {
+    return {type: type, value: value, label: label, meta: meta,
+            score: score || 0, count: count || 0};
+  }
+
+  function byKnown(name) {
+    return SEARCH.commodities.some(function (c) { return c.name === name; });
+  }
+
+  function countOf(name) {
+    var c = SEARCH.commodities.find(function (x) { return x.name === name; });
+    return c ? c.count : 0;
+  }
+
+  function byScore(a, b) {
+    if (a.score !== b.score) return a.score - b.score;
+    return (b.count || 0) - (a.count || 0);
   }
 
   function renderSuggest(q) {
-    var built = buildSuggestions(q);
-    suggestions = built.items;
+    var sections = buildSections(q);
+    suggestions = [];
+    sections.forEach(function (sec) {
+      sec.items.forEach(function (it) { suggestions.push(it); });
+    });
     state.focus = -1;
     if (!suggestions.length) {
-      suggestEl.innerHTML = '<div class="suggest-empty">没有匹配的矿种或地区<br>' +
-        '<span>试试：萤石、广西、PB粉、ying shi</span></div>';
+      suggestEl.innerHTML = '<div class="suggest-empty">没有匹配的矿种或地区' +
+        '<span>试试 萤石 / 广西 / PB粉 / ying shi</span></div>';
       suggestEl.hidden = false;
       return;
     }
-    var groupNames = {commodity: '矿种', province: '地区', market: '市场',
-                      recent: '最近搜索', favorite: '常用', hot: '热门品种'};
-    var html = '';
-    if (!q.trim()) {
-      html += '<div class="suggest-head">' +
-        '<span class="suggest-group-title">最近 / 常用 / 热门</span>' +
-        '<button type="button" class="suggest-clear" id="clear-recent">清空历史</button></div>';
-    }
-    var last = '';
-    suggestions.forEach(function (item, idx) {
-      var group = (item.type === 'commodity') ? 'commodity'
-        : (item.type === 'province' || item.type === 'market') ? 'region'
-        : (item.type === 'hot' ? 'hot' : 'recent');
-      if (group !== last) {
-        if (!q.trim() || group === 'region' || group === 'commodity') {
-          html += '<div class="suggest-group">' +
-            (group === 'commodity' ? '矿种' : group === 'region' ? '地区' : groupNames[item.type]) +
-            '</div>';
-        }
-        last = group;
-      }
-      var star = item.type === 'commodity' || item.type === 'hot' || item.type === 'favorite' || item.type === 'recent' || item.type === 'combo';
-      html += '<div class="suggest-item" data-idx="' + idx + '">' +
-        '<span class="suggest-label">' + (star ? '<button type="button" class="star' +
-          (isFav(item.value) ? ' on' : '') + '" data-fav="' + esc(item.value) + '">☆</button>' : '') +
-        highlight(item.label, q) + '</span>' +
-        '<span class="suggest-meta">' + esc(item.meta) + '</span></div>';
-    });
-    if (q.trim() && built.total > suggestions.length) {
-      html += '<div class="suggest-more">共 ' + built.total + ' 个匹配，继续输入可缩小范围</div>';
-    }
+    var idx = -1;
+    var html = sections.map(function (sec) {
+      var head = '<div class="suggest-sec-head"><span>' + sec.title + '</span>' +
+        (sec.action ? '<button type="button" class="suggest-clear" data-action="clear-recent">' +
+          sec.action + '</button>' : '') +
+        (sec.more && sec.more > sec.items.length ? '<i>共 ' + sec.more + '</i>' : '') +
+        '</div>';
+      var body = sec.items.map(function (item) {
+        idx++;
+        return '<div class="suggest-item" data-idx="' + idx + '">' +
+          '<span class="suggest-label">' + highlight(item.label, q) + '</span>' +
+          '<span class="suggest-meta">' + esc(item.meta) + '</span></div>';
+      }).join('');
+      return '<div class="suggest-sec">' + head + body + '</div>';
+    }).join('');
     suggestEl.innerHTML = html;
     suggestEl.hidden = false;
   }
@@ -493,10 +496,15 @@
         '<div class="facet-cat-body' + (state.openCats && state.openCats.indexOf(ci) >= 0 ? '' : ' collapsed') +
         '" data-catbody="' + ci + '">';
       items.forEach(function (x) {
+        var fav = isFav(x.name);
         html += '<button type="button" class="facet-item' +
           (x.name === state.commodity && !state.showAll ? ' active' : '') +
           '" data-commodity="' + esc(x.name) + '">' +
-          '<span>' + esc(x.name) + '</span><i>' + x.count + '</i></button>';
+          '<span class="facet-name">' + esc(x.name) + '</span>' +
+          '<span class="facet-tail"><i>' + x.count + '</i>' +
+          '<span class="star' + (fav ? ' on' : '') + '" data-fav="' + esc(x.name) + '" ' +
+          'title="' + (fav ? '取消收藏' : '收藏') + '">' + (fav ? '★' : '☆') + '</span>' +
+          '</span></button>';
       });
       html += '</div></div>';
     });
@@ -533,7 +541,9 @@
       var c = SEARCH.commodities.find(function (x) { return x.name === name; });
       return '<button type="button" class="facet-item fav' +
         (name === state.commodity ? ' active' : '') + '" data-commodity="' + esc(name) + '">' +
-        '<span>★ ' + esc(name) + '</span><i>' + (c ? c.count : 0) + '</i></button>';
+        '<span class="facet-name">' + esc(name) + '</span>' +
+        '<span class="facet-tail"><i>' + (c ? c.count : 0) + '</i>' +
+        '<span class="star on" data-fav="' + esc(name) + '" title="取消收藏">★</span></span></button>';
     }).join('');
   }
 
@@ -791,16 +801,10 @@
   });
 
   suggestEl.addEventListener('mousedown', function (e) {
-    if (e.target.closest('.suggest-clear')) {
+    if (e.target.closest('[data-action="clear-recent"]')) {
       e.preventDefault();
       writeStore(STORE_KEY_RECENT, []);
       renderSuggest('');
-      return;
-    }
-    var star = e.target.closest('.star');
-    if (star) {
-      e.preventDefault();
-      toggleFav(star.getAttribute('data-fav'));
       return;
     }
     var item = e.target.closest('.suggest-item');
