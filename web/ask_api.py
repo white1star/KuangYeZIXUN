@@ -328,7 +328,13 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
         rows = [r for r in rows if r["price_type"] == preferred] or rows
 
     if not rows:
-        alt = all_rows[:4]
+        alt = list(all_rows)
+        if alt:
+            kinds = {r["price_type"] for r in alt}
+            preferred = min(kinds, key=lambda t: TYPE_ORDER.get(t, 9))
+            alt = [r for r in alt if r["price_type"] == preferred] or alt
+            alt.sort(key=market_rank)
+        alt = alt[:4]
         card["meta"] = "没有匹配的报价" + (
             "；同品种其他地区：" + "、".join(f"{r['market']} {price_text(r)}" for r in alt)
             if alt else "")

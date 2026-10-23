@@ -691,7 +691,21 @@
     }
 
     if (!rows.length) {
-      var alt = commodity ? rowsFor(commodity, null).slice(0, 4) : [];
+      var alt = commodity ? rowsFor(commodity, null).slice() : [];
+      if (alt.length) {
+        var altKinds = {};
+        alt.forEach(function (r) { altKinds[r.price_type] = 1; });
+        var ak = Object.keys(altKinds).sort(function (a, b) {
+          var ia = TYPE_PREF.indexOf(a), ib = TYPE_PREF.indexOf(b);
+          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
+        alt = alt.filter(function (r) { return r.price_type === ak[0]; });
+        alt.sort(function (a, b) {
+          var d = marketRank(a) - marketRank(b);
+          return d !== 0 ? d : b.value - a.value;
+        });
+      }
+      alt = alt.slice(0, 4);
       card.meta = '没有「' + card.title + '」的报价' + (alt.length
         ? '；同品种其他地区：' + alt.map(function (r) {
             return (r.market || '全国') + ' ' + fmtPrice(r);
