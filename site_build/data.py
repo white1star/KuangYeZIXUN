@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta
 
 from crawler import store
+from site_build.search import province_of
 
 SUMMARY_CHARS = 60
 SERIES_DAYS = 90
@@ -227,12 +228,14 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
             if market not in market_map[commodity][price_type]:
                 market_map[commodity][price_type].append(market)
         label = price_type + (f"·{market}" if market else "")
+        # 图例要短：规格只在短牌号时带上，长描述截断
+        short_spec = spec if len(spec) <= 12 else (spec[:10] + "…")
         series.setdefault(commodity, []).append({
             "key": f"{price_type}|{market}|{spec}",
             "price_type": price_type,
             "market": market,
             "spec": spec,
-            "label": label + (f" {spec}" if spec else ""),
+            "label": label + (f" {short_spec}" if spec else ""),
             "points": _carry_forward([list(p) for p in points], today),
         })
 
@@ -312,6 +315,7 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
         else:
             item["spec_label"] = origin
         item["brief_spec"] = item["spec_label"]
+        item["province"] = province_of(item["market"])
 
     markets = sorted({m for by_type in market_map.values()
                       for lst in by_type.values() for m in lst if m})

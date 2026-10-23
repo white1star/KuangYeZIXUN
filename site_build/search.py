@@ -96,4 +96,14 @@ def search_payload(prices: dict) -> dict:
             "province_pinyin": pinyin_initials(province, table),
         })
 
-    return {"commodities": commodities, "markets": markets}
+    # 省级聚合入口：搜"广西"能看广西全省（含 广西/防城港市、广西有色…），
+    # 而不是只命中名字刚好叫"广西"的那一个市场
+    provinces = []
+    for prov in sorted({m["province"] for m in markets if m["province"]}):
+        provinces.append({
+            "name": prov,
+            "pinyin": pinyin_initials(prov, table),
+            "markets": [m["name"] for m in markets if m["province"] == prov],
+        })
+
+    return {"commodities": commodities, "markets": markets, "provinces": provinces}

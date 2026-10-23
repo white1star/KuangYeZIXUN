@@ -575,6 +575,8 @@ mark { padding: 0 1px; border-radius: 2px; background: #FEF3C7; color: inherit; 
   .entry-meta { gap: 4px 6px; }
   .toolbar { gap: 10px 14px; padding: 12px 14px; }
   .toolbar label { flex: 1 1 40%; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .toolbar label.check { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 6px; }
+  .toolbar label.check input { margin: 0; }
   .toolbar select { width: 100%; }
   .filterbar { flex-direction: column; align-items: stretch; }
   .filterbar input { min-width: 0; }

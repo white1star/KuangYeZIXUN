@@ -43,7 +43,7 @@
           </thead>
           <tbody>
             {% for p in prices %}
-            <tr data-market="{{ p.market }}" data-commodity="{{ p.commodity }}"
+            <tr data-market="{{ p.market }}" data-province="{{ p.province }}" data-commodity="{{ p.commodity }}"
                 data-copy="{{ p.commodity }} {{ p.brief_spec }} {{ p.market }} {{ p.value|num }}{{ p.unit }} {{ p.price_date }} 来源：{{ p.source }}">
               <td data-label="品种">{{ p.commodity }}</td>
               <td data-label="市场">{% if p.market %}<span class="market-tag">{{ p.market }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
@@ -90,6 +90,7 @@
   var state = {
     commodity: {{ commodity|tojson }},
     market: '',
+    province: '',
     ptype: '',
     days: 30,
     showAll: false,
@@ -158,11 +159,18 @@
                   count: rowCount(item),
                   meta: item.count + ' 条' + (item.aliases.length ? ' · ' + item.aliases.slice(0, 2).join('/') : '')});
     });
+    (SEARCH.provinces || []).forEach(function (item) {
+      var score = marketScore({name: item.name, province: item.name, pinyin: item.pinyin,
+                               province_pinyin: item.pinyin}, q);
+      if (score < 0) return;
+      items.push({type: 'province', value: item.name, label: item.name + '（全省）',
+                  score: score, count: 0, meta: item.markets.length + ' 个市场'});
+    });
     (SEARCH.markets || []).forEach(function (item) {
       var score = marketScore(item, q);
       if (score < 0) return;
       items.push({type: 'market', value: item.name, label: item.name,
-                  score: score + 0.2, count: 0,
+                  score: score + 0.3, count: 0,
                   meta: item.province || '市场'});
     });
     items.sort(function (a, b) {
@@ -206,8 +214,14 @@
       state.commodity = item.value;
       state.ptype = '';
       syncTypes();
+    } else if (item.type === 'province') {
+      state.province = item.value;
+      state.market = '';
+      if (chkAll) { chkAll.checked = true; }
+      state.showAll = !!(chkAll && chkAll.checked);
     } else {
       state.market = item.value;
+      state.province = '';
       if (chkAll) { chkAll.checked = true; }
       state.showAll = !!(chkAll && chkAll.checked);
     }
@@ -220,12 +234,17 @@
 
   function renderChips() {
     var html = '';
-    if (state.commodity) {
+    if (state.showAll) {
+      html += '<span class="chip-filter">全部品种<button type="button" data-clear="all" title="只看单品种">×</button></span>';
+    } else if (state.commodity) {
       html += '<span class="chip-filter">品种 ' + state.commodity +
         '<button type="button" data-clear="commodity" title="清除">×</button></span>';
     }
-    if (state.market) {
-      html += '<span class="chip-filter">地区 ' + state.market +
+    if (state.province) {
+      html += '<span class="chip-filter">地区 ' + state.province + '（全省）' +
+        '<button type="button" data-clear="province" title="清除">×</button></span>';
+    } else if (state.market) {
+      html += '<span class="chip-filter">市场 ' + state.market +
         '<button type="button" data-clear="market" title="清除">×</button></span>';
     }
     chipsEl.innerHTML = html;
@@ -271,14 +290,18 @@
     var shown = 0;
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
-      var hit = (!state.market || row.getAttribute('data-market') === state.market)
+      var regionHit = state.province
+        ? row.getAttribute('data-province') === state.province
+        : (!state.market || row.getAttribute('data-market') === state.market);
+      var hit = regionHit
         && (state.showAll || row.getAttribute('data-commodity') === state.commodity);
       row.style.display = hit ? '' : 'none';
       if (hit) shown++;
     }
     if (countEl) {
       var scope = state.showAll ? '全部品种' : state.commodity;
-      countEl.textContent = '（' + scope + (state.market ? ' · ' + state.market : '') + ' ' + shown + ' 条）';
+      var region = state.province ? state.province + '全省' : state.market;
+      countEl.textContent = '（' + scope + (region ? ' · ' + region : '') + ' ' + shown + ' 条）';
     }
   }
 
@@ -288,7 +311,8 @@
     var m = state.market;
     var d = state.days;
     var entries = entriesFor(c, t, m);
-    titleEl.textContent = c + ' 价格走势 · ' + (t || '全部口径') + (m ? ' · ' + m : '') + ' · 近' + d + '天';
+    titleEl.textContent = c + ' 价格走势 · ' + (t || '全部口径') +
+      (state.province ? ' · ' + state.province + '全省' : (m ? ' · ' + m : '')) + ' · 近' + d + '天';
     var prepared = [];
     for (var i = 0; i < entries.length; i++) {
       var points = trimTo(entries[i].points, d);
@@ -395,6 +419,7 @@
   function syncUrl() {
     var params = new URLSearchParams();
     if (state.commodity) params.set('commodity', state.commodity);
+    if (state.province) params.set('province', state.province);
     if (state.market) params.set('market', state.market);
     if (state.ptype) params.set('ptype', state.ptype);
     if (state.days !== 30) params.set('days', state.days);
@@ -406,6 +431,7 @@
     var params = new URLSearchParams(location.search);
     if (params.get('commodity')) state.commodity = params.get('commodity');
     if (params.get('market')) { state.market = params.get('market'); if (chkAll) chkAll.checked = true; }
+    if (params.get('province')) { state.province = params.get('province'); if (chkAll) chkAll.checked = true; }
     if (params.get('ptype')) state.ptype = params.get('ptype');
     if (params.get('days')) state.days = Number(params.get('days')) || 30;
     state.showAll = !!(chkAll && chkAll.checked);
@@ -468,11 +494,17 @@
   chipsEl.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-clear]');
     if (!btn) return;
-    if (btn.getAttribute('data-clear') === 'market') {
+    var what = btn.getAttribute('data-clear');
+    if (what === 'market') {
       state.market = '';
+    } else if (what === 'province') {
+      state.province = '';
+    } else if (what === 'all') {
+      if (chkAll) chkAll.checked = false;
+      state.showAll = false;
     } else {
-      state.commodity = SEARCH.commodities.length ? SEARCH.commodities[0].name : '';
-      syncTypes();
+      state.showAll = false;
+      if (chkAll) chkAll.checked = false;
     }
     renderChips();
     syncUrl();
@@ -491,6 +523,7 @@
   });
   if (chkAll) chkAll.addEventListener('change', function () {
     state.showAll = chkAll.checked;
+    renderChips();
     applyTableFilter();
   });
   window.addEventListener('resize', function () { chart.resize(); });
