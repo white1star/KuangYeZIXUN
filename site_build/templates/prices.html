@@ -627,7 +627,7 @@
       var ia = TYPE_PREF.indexOf(a.price_type), ib = TYPE_PREF.indexOf(b.price_type);
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
     });
-    return mains;
+    return mains.slice(0, 1);
   }
 
   // ---------- 卡片渲染 ----------
@@ -677,6 +677,18 @@
       value: '', sub: '', meta: '', rows: [], export: null
     };
     var rows = rowsFor(commodity, region);
+
+    // 同一品种可能有期货/现货/指数多个口径，摘要只看一个
+    var kinds = {};
+    rows.forEach(function (r) { kinds[r.price_type] = 1; });
+    var kindKeys = Object.keys(kinds);
+    if (kindKeys.length > 1) {
+      kindKeys.sort(function (a, b) {
+        var ia = TYPE_PREF.indexOf(a), ib = TYPE_PREF.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      rows = rows.filter(function (r) { return r.price_type === kindKeys[0]; });
+    }
 
     if (!rows.length) {
       var alt = commodity ? rowsFor(commodity, null).slice(0, 4) : [];
