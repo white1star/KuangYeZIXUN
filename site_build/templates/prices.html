@@ -626,6 +626,23 @@
     return mains.slice(0, 1);
   }
 
+  function marketSummary(rows, limit) {
+    var groups = {}, order = [];
+    rows.forEach(function (r) {
+      var k = r.market || '全国';
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(r);
+    });
+    return order.slice(0, limit).map(function (k) {
+      var items = groups[k];
+      var vals = items.map(function (r) { return Number(r.value); });
+      var unit = items[0].unit || '';
+      var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+      var text = (lo === hi ? fmtNum(lo) : fmtNum(lo) + '~' + fmtNum(hi)) + (unit ? ' ' + unit : '');
+      return {label: k, value: text.trim()};
+    });
+  }
+
   // ---------- 卡片渲染 ----------
   function paintCard(card) {
     var el = document.getElementById('answer');
@@ -704,9 +721,10 @@
         });
       }
       alt = alt.slice(0, 4);
-      card.meta = '没有「' + card.title + '」的报价' + (alt.length
-        ? '；同品种其他地区：' + alt.map(function (r) {
-            return (r.market || '全国') + ' ' + fmtPrice(r);
+      var altSummary = marketSummary(alt, 4);
+      card.meta = '没有「' + card.title + '」的报价' + (altSummary.length
+        ? '；同品种其他地区：' + altSummary.map(function (x) {
+            return x.label + ' ' + x.value;
           }).join('、')
         : '，换个矿种或地区试试');
       return card;
@@ -783,13 +801,11 @@
     }
 
     if (parsed.action === 'regions') {
-      var byMarket = {};
-      rows.forEach(function (r) { if (!byMarket[r.market || '全国']) byMarket[r.market || '全国'] = r; });
-      var keys = Object.keys(byMarket);
-      card.meta = commodity + ' 共 ' + keys.length + ' 个市场有报价';
-      card.rows = keys.slice(0, 12).map(function (k) {
-        return {label: k, value: fmtPrice(byMarket[k])};
-      });
+      card.meta = commodity + ' 共 ' +
+        Object.keys((function () {
+          var mk = {}; rows.forEach(function (r) { mk[r.market || '全国'] = 1; }); return mk;
+        })()).length + ' 个市场有报价';
+      card.rows = marketSummary(rows, 12);
       return card;
     }
 

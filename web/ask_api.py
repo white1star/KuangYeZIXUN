@@ -258,6 +258,31 @@ def latest_rows(conn, commodity=None) -> list:
     return out
 
 
+def market_summary(rows, limit=4) -> list:
+    """按市场聚合：同一市场多规格 → 给价格区间；只有一个价 → 给单值。"""
+    groups = {}
+    order = []
+    for row in rows:
+        key = row["market"] or "全国"
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(row)
+    out = []
+    for key in order:
+        items = groups[key]
+        values = [float(i["value"]) for i in items]
+        unit = (items[0].get("unit") or "")
+        if len(set(values)) > 1:
+            text = f"{fmt_num(min(values))}~{fmt_num(max(values))} {unit}".strip()
+        else:
+            text = f"{fmt_num(values[0])} {unit}".strip()
+        out.append({"label": key, "value": text})
+        if len(out) >= limit:
+            break
+    return out
+
+
 def market_rank(row) -> int:
     market = row.get("market") or ""
     try:
@@ -496,18 +521,16 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
             preferred = min(kinds, key=lambda t: TYPE_ORDER.get(t, 9))
             alt = [r for r in alt if r["price_type"] == preferred] or alt
             alt.sort(key=market_rank)
-        alt = alt[:4]
+        summary = market_summary(alt, 4)
         card["meta"] = "没有匹配的报价" + (
-            "；同品种其他地区：" + "、".join(f"{r['market']} {price_text(r)}" for r in alt)
-            if alt else "")
+            "；同品种其他地区：" + "、".join(f"{x['label']} {x['value']}" for x in summary)
+            if summary else "")
         return card
 
     if action == "regions":
-        seen = {}
-        for r in rows:
-            seen.setdefault(r["market"] or "全国", r)
-        card["meta"] = f"{commodity} 共 {len(seen)} 个市场有报价"
-        card["rows"] = [{"label": k, "value": price_text(v)} for k, v in list(seen.items())[:12]]
+        markets_count = len({r["market"] or "全国" for r in rows})
+        card["meta"] = f"{commodity} 共 {markets_count} 个市场有报价"
+        card["rows"] = market_summary(rows, 12)
         return card
 
     if action == "export":
