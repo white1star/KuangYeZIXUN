@@ -16,3 +16,4 @@ config/yuanbao_cookie.txt
 _crawl_today.log
 
 config/server.local.yaml
+config/ask.local.yaml

@@ -475,13 +475,19 @@
     return '';
   }
 
-  // ---------- 问一句就出答案（关键词解析，不上模型） ----------
+  // ---------- 问一句就出答案 ----------
+  // 规则能答就本地答（0 延迟）；答不了或像追问，交给 /api/ask 让模型解析意图，
+  // 但价格数字始终由本地数据算，模型不产出数字。
+  var ASK_API = 'api/ask';
+  var ASK_HISTORY = [];
+
   var ACTION_RE = {
     compare: /对比|比较|差多少|差价|\bvs\b/i,
     export: /导出|报价单|整理成|发给|复制/,
     trend: /涨了|跌了|涨幅|跌幅|走势|趋势|变化|行情/,
     regions: /哪些|有哪些|列表|都有|分布/
   };
+  var REFER_RE = /那|换成|改成|再看|还有|它|这个|上面|刚才/;
 
   function daysOf(q) {
     if (/今天|今日/.test(q)) return 1;
@@ -499,32 +505,28 @@
     return 'price';
   }
 
-  // 中文没有空格，按"名称出现在句子里"来抽实体，长名优先
+  // 中文没有空格，按"名称出现在句子里"抽实体，长名优先
   function extractEntities(q) {
     var text = (q || '').toLowerCase();
     var found = {commodities: [], regions: [], hit: text};
 
     var cands = [];
     (SEARCH.commodities || []).forEach(function (c) {
-      var names = [c.name].concat(c.aliases || []);
-      names.forEach(function (n) {
-        if (n) cands.push({label: String(n).toLowerCase(), item: c, kind: 'commodity'});
+      [c.name].concat(c.aliases || []).forEach(function (n) {
+        if (n) cands.push({label: String(n).toLowerCase(), item: c});
       });
     });
     cands.sort(function (a, b) { return b.label.length - a.label.length; });
     var seenC = {};
     cands.forEach(function (x) {
       if (!x.label || found.hit.indexOf(x.label) < 0) return;
-      if (!seenC[x.item.name]) {
-        found.commodities.push(x.item);
-        seenC[x.item.name] = 1;
-      }
+      if (!seenC[x.item.name]) { found.commodities.push(x.item); seenC[x.item.name] = 1; }
       found.hit = found.hit.split(x.label).join(' ');
     });
 
     var regs = [];
-    (SEARCH.provinces || []).forEach(function (p) {
-      regs.push({label: p.name.toLowerCase(), kind: 'province', name: p.name});
+    (SEARCH.provinces || []).forEach(function (pr) {
+      regs.push({label: pr.name.toLowerCase(), kind: 'province', name: pr.name});
     });
     (SEARCH.markets || []).forEach(function (m) {
       var parts = String(m.name).split('/');
@@ -541,14 +543,11 @@
       found.hit = found.hit.split(r.label).join(' ');
     });
 
-    // 纯字母（拼音/首字母）
     if (!found.commodities.length && /^[a-z0-9 ]+$/.test(text.trim())) {
       var merged = text.replace(/\s+/g, '');
       (SEARCH.commodities || []).forEach(function (c) {
         if ((c.pinyin || '') === merged || (c.full_pinyin || '') === merged ||
-            (c.pinyin || '').indexOf(merged) === 0) {
-          found.commodities.push(c);
-        }
+            (c.pinyin || '').indexOf(merged) === 0) found.commodities.push(c);
       });
     }
     return found;
@@ -556,20 +555,50 @@
 
   function parseQuery(q) {
     var e = extractEntities(q);
-    return {raw: q, days: daysOf(q), action: actionOf(q),
+    return {raw: q, days: daysOf(q) || 30, action: actionOf(q),
             commodities: e.commodities, regions: e.regions};
   }
 
-  function rowsFor(commodity, region) {
-    var rows = (LATEST || []).filter(function (r) {
-      if (commodity && r.commodity !== commodity) return false;
-      if (region) {
-        if (region.kind === 'province') return r.province === region.name;
-        return r.market === region.name;
-      }
-      return true;
+  // 规则没吃干净的部分（说明它可能理解偏了）→ 交给模型
+  function leftovers(q) {
+    var rest = String(q || '').toLowerCase();
+    (SEARCH.commodities || []).forEach(function (c) {
+      [c.name].concat(c.aliases || []).forEach(function (n) {
+        if (n) rest = rest.split(String(n).toLowerCase()).join(' ');
+      });
     });
-    return rows;
+    (SEARCH.provinces || []).forEach(function (pr) {
+      rest = rest.split(pr.name.toLowerCase()).join(' ');
+    });
+    (SEARCH.markets || []).forEach(function (m) {
+      var parts = String(m.name).split('/');
+      rest = rest.split(String(m.name).toLowerCase()).join(' ');
+      var city = (parts[parts.length - 1] || '').replace(/市$|区$|县$|盟$|地区$/, '');
+      if (city.length >= 2) rest = rest.split(city.toLowerCase()).join(' ');
+    });
+    rest = rest.replace(/对比|比较|差多少|差价|涨了|跌了|涨幅|跌幅|走势|趋势|变化|行情|导出|报价单|整理成|发给|复制|哪些|有哪些|列表|都有|分布/g, ' ');
+    rest = rest.replace(/今天|今日|本周|这周|近7天|一周|近30天|本月|这月|一个月|近90天|三个月|季度/g, ' ');
+    rest = rest.replace(/多少钱|什么价|怎么样|如何|多少|价格|报价|现在|目前|帮我|查一下|看看|一下|请问/g, ' ');
+    rest = rest.replace(/[\s\d.,，。!?！？、:：;；'"“”()（）\-—]/g, '');
+    rest = rest.replace(/[的了呢吗那换再和与跟在有是个我你他她它们这那些把给对从到就都也还又很更最]/g, '');
+    return rest;
+  }
+
+  function shouldUseLLM(q, parsed) {
+    if (!parsed.commodities.length && !parsed.regions.length) return true;
+    if (leftovers(q).length >= 2) return true;
+    if (REFER_RE.test(q) && ASK_HISTORY.length) return true;
+    return false;
+  }
+
+  // ---------- 取数与格式化（规则路径） ----------
+  function rowsFor(commodity, region) {
+    return (LATEST || []).filter(function (r) {
+      if (commodity && r.commodity !== commodity) return false;
+      if (!region) return true;
+      if (region.kind === 'province') return r.province === region.name;
+      return r.market === region.name;
+    });
   }
 
   function fmtPrice(r) {
@@ -585,6 +614,7 @@
   }
 
   var TYPE_PREF = ['现货', '港口现货', '指数', '月度长协', '年度长协', '期货'];
+  var MARKET_PREF = ['长江现货', '长江综合', '国内市场', '上海地区', '无锡现货'];
 
   function seriesOf(commodity, region) {
     var entries = SERIES[commodity] || [];
@@ -600,208 +630,259 @@
     return mains;
   }
 
-  function renderAnswer(parsed) {
-    var card = document.getElementById('answer');
+  // ---------- 卡片渲染 ----------
+  function paintCard(card) {
+    var el = document.getElementById('answer');
+    var rowsHtml = (card.rows || []).map(function (r) {
+      return '<span>' + esc(r.label) + ' <b>' + esc(r.value) + '</b></span>';
+    }).join('');
+    var body;
+    if (card.export) {
+      body = '<pre class="ans-export" id="ans-export-text">' + esc(card.export) + '</pre>';
+    } else if (card.value) {
+      body = '<div class="ans-value">' + esc(card.value) +
+        (card.sub ? '<span class="ans-sub">' + esc(card.sub) + '</span>' : '') + '</div>' +
+        (card.meta ? '<div class="ans-meta">' + esc(card.meta) + '</div>' : '') +
+        (rowsHtml ? '<div class="ans-rows">' + rowsHtml + '</div>' : '');
+    } else {
+      body = '<div class="ans-empty">' + esc(card.meta || '没有匹配的报价') + '</div>';
+    }
+    var actions = card.export
+      ? '<button type="button" class="ans-btn primary" data-act="copy-export">复制这段</button>'
+      : '';
+    el.innerHTML =
+      '<div class="ans-head"><span class="ans-title">' + esc(card.title || '') + '</span>' +
+      '<span class="ans-actions">' + actions +
+      '<button type="button" class="ans-btn" data-act="close">收起</button></span></div>' +
+      '<div class="ans-body">' + body + '</div>';
+    el.hidden = false;
+    el.querySelectorAll('[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var act = btn.getAttribute('data-act');
+        if (act === 'close') { el.hidden = true; return; }
+        if (act === 'copy-export') {
+          var pre = document.getElementById('ans-export-text');
+          if (pre) copyText(pre.textContent).then(function () { flash(btn, '已复制'); });
+        }
+      });
+    });
+  }
+
+  // ---------- 规则路径：本地算，产出 card ----------
+  function buildCard(parsed) {
     var commodity = parsed.commodities[0] ? parsed.commodities[0].name : '';
     var region = parsed.regions[0] || null;
-    var title = [region ? region.name : '', commodity].filter(Boolean).join(' · ') || parsed.raw;
-    var body = '';
-    var actions = '';
+    var card = {
+      title: [region ? region.name : '', commodity].filter(Boolean).join(' · ') || parsed.raw,
+      value: '', sub: '', meta: '', rows: [], export: null
+    };
+    var rows = rowsFor(commodity, region);
 
-    function priceBlock() {
-      var rows = rowsFor(commodity, region);
-      if (!rows.length) {
-        var alt = commodity ? rowsFor(commodity, null).slice(0, 4) : [];
-        body = '<div class="ans-empty">没有「' + esc(title) + '」的报价。' +
-          (alt.length ? '同品种其他地区：' + alt.map(function (r) {
-            return esc(r.market || '全国') + ' ' + fmtPrice(r);
-          }).join('、') : '换个矿种或地区试试。') + '</div>';
-        return;
-      }
-      var MARKET_PREF = ['长江现货', '长江综合', '国内市场', '上海地区', '无锡现货',
-                         '广东省', '山东', '河北省/唐山市'];
-      function marketRank(r) {
-        var i = MARKET_PREF.indexOf(r.market);
-        if (i >= 0) return i;
-        if (r.market && r.market.indexOf('/') >= 0) return MARKET_PREF.length;
-        return MARKET_PREF.length + 1;
-      }
-      rows = rows.slice().sort(function (a, b) {
-        var d = marketRank(a) - marketRank(b);
-        if (d !== 0) return d;
-        return b.value - a.value;
-      });
-      var top = rows[0];
-      var specSet = {};
-      rows.forEach(function (r) { specSet[r.spec_label || r.price_type] = 1; });
-      var specCount = Object.keys(specSet).length;
-      if (specCount > 1) {
-        // 多规格：给区间，别拿最贵那条冒充"什么价"
-        var vals = rows.map(function (r) { return r.value; });
-        var lo2 = Math.min.apply(null, vals), hi2 = Math.max.apply(null, vals);
-        body = '<div class="ans-value">' + fmtNum(lo2) + ' ~ ' + fmtNum(hi2) +
-          '<span class="ans-sub">' + esc(top.unit || '') + '</span></div>' +
-          '<div class="ans-meta">' + rows.length + ' 条报价 · ' + specCount + ' 个规格 · ' +
-          Object.keys((function () {
-            var mk = {}; rows.forEach(function (r) { mk[r.market || '全国'] = 1; }); return mk;
-          })()).length + ' 个市场 · ' + top.price_date + '</div>';
-      } else {
-        var specText = String(top.spec_label || top.price_type || '');
-        if (specText.length > 18) specText = specText.slice(0, 18) + '…';
-        body = '<div class="ans-value">' + fmtPrice(top) + '</div>' +
-          '<div class="ans-meta">' + esc(top.market || '全国') + ' · ' +
-          esc(specText) + ' · ' + top.price_date +
-          ' · ' + fmtChange(top) + ' · 来源 ' + esc(top.source) + '</div>';
-      }
-      if (rows.length > 1) {
-        var others = rows.slice(1, 5);
-        body += '<div class="ans-rows">' + others.map(function (r) {
-          return '<span>' + esc(r.market || '全国') + ' <b>' + fmtPrice(r) + '</b></span>';
-        }).join('') +
-          (rows.length > 5 ? '<span class="more">共 ' + rows.length + ' 条</span>' : '') + '</div>';
-      }
+    if (!rows.length) {
+      var alt = commodity ? rowsFor(commodity, null).slice(0, 4) : [];
+      card.meta = '没有「' + card.title + '」的报价' + (alt.length
+        ? '；同品种其他地区：' + alt.map(function (r) {
+            return (r.market || '全国') + ' ' + fmtPrice(r);
+          }).join('、')
+        : '，换个矿种或地区试试');
+      return card;
     }
 
     if (parsed.action === 'compare') {
       var regions = parsed.regions.slice(0, 4);
-      if (regions.length < 2) {
-        priceBlock();
-      } else {
-        // 同一规格才能比：挑一个在最多地区出现的规格
+      if (regions.length >= 2) {
         var specCount = {};
         regions.forEach(function (rg) {
           rowsFor(commodity, rg).forEach(function (r) {
             specCount[r.spec] = (specCount[r.spec] || 0) + 1;
           });
         });
-        var specKeys = Object.keys(specCount).sort(function (a, b) {
-          return specCount[b] - specCount[a];
-        });
+        var specKeys = Object.keys(specCount).sort(function (a, b) { return specCount[b] - specCount[a]; });
         var useSpec = specKeys.length ? specKeys[0] : '';
         var picked = regions.map(function (rg) {
-          var rows = rowsFor(commodity, rg).filter(function (r) {
-            return !useSpec || r.spec === useSpec;
+          var rs = rowsFor(commodity, rg).filter(function (r) { return !useSpec || r.spec === useSpec; });
+          if (!rs.length) rs = rowsFor(commodity, rg);
+          rs.sort(function (a, b) {
+            var d = marketRank(a) - marketRank(b);
+            return d !== 0 ? d : b.value - a.value;
           });
-          if (!rows.length) rows = rowsFor(commodity, rg);
-          rows.sort(function (a, b) { return b.value - a.value; });
-          return {region: rg, row: rows[0]};
+          return {region: rg, row: rs[0]};
         }).filter(function (x) { return x.row; });
         picked.sort(function (a, b) { return b.row.value - a.row.value; });
-        if (picked.length < 2) {
-          priceBlock();
-        } else {
+        if (picked.length >= 2) {
           var hi = picked[0], lo = picked[picked.length - 1];
           var diff = hi.row.value - lo.row.value;
           var pct = lo.row.value ? (diff / lo.row.value * 100) : 0;
-          title = picked.map(function (x) { return x.region.name; }).join(' vs ') +
+          card.title = picked.map(function (x) { return x.region.name; }).join(' vs ') +
             (commodity ? ' · ' + commodity : '');
-          body = '<div class="ans-value">' + esc(hi.region.name) + ' 高 ' + fmtNum(diff) +
-            ' ' + (hi.row.unit || '') +
-            '<span class="ans-sub">（+' + pct.toFixed(2) + '%）</span></div>' +
-            '<div class="ans-rows">' + picked.map(function (x) {
-              return '<span>' + esc(x.region.name) + ' <b>' + fmtPrice(x.row) + '</b></span>';
-            }).join('') + '</div>' +
-            '<div class="ans-meta">' + esc(hi.row.spec_label || '') + ' · ' +
-            hi.row.price_date + ' · 最低 ' + esc(lo.region.name) + '</div>';
+          card.value = hi.region.name + ' 高 ' + fmtNum(diff) + ' ' + (hi.row.unit || '');
+          card.sub = '（+' + pct.toFixed(2) + '%）';
+          card.meta = (hi.row.spec_label || '') + ' · ' + hi.row.price_date + ' · 最低 ' + lo.region.name;
+          card.rows = picked.map(function (x) {
+            return {label: x.region.name, value: fmtPrice(x.row)};
+          });
+          return card;
         }
       }
-    } else if (parsed.action === 'trend') {
+    }
+
+    if (parsed.action === 'trend') {
       var entries = seriesOf(commodity, region);
-      if (!entries.length) {
-        priceBlock();
-      } else {
+      if (entries.length) {
         var e = entries[0];
         var pts = e.points || [];
         var n = parsed.days || 30;
         var cutoff = pts.length ? shiftDate(pts[pts.length - 1][0], -(n - 1)) : '';
-        var window = pts.filter(function (x) { return x[0] >= cutoff; });
-        if (window.length < 2) {
-          priceBlock();
-        } else {
-          var first = window[0][1], last = window[window.length - 1][1];
+        var win = pts.filter(function (x) { return x[0] >= cutoff; });
+        if (win.length >= 2) {
+          var first = win[0][1], last = win[win.length - 1][1];
           var chg = last - first;
-          var pct2 = first ? (chg / first * 100) : 0;
-          var vals = window.map(function (x) { return x[1]; });
-          body = '<div class="ans-value">' + (chg > 0 ? '+' : '') + fmtNum(chg) +
-            '<span class="ans-sub">（' + (pct2 > 0 ? '+' : '') + pct2.toFixed(2) + '%）</span></div>' +
-            '<div class="ans-meta">' + esc(commodity) + ' · 近 ' + n + ' 天：' +
-            fmtNum(first) + ' → ' + fmtNum(last) + ' · 区间 ' +
-            fmtNum(Math.min.apply(null, vals)) + '~' + fmtNum(Math.max.apply(null, vals)) +
-            ' · ' + esc(e.label) + '</div>';
+          var p2 = first ? (chg / first * 100) : 0;
+          var vals = win.map(function (x) { return x[1]; });
+          card.value = (chg > 0 ? '+' : '') + fmtNum(chg);
+          card.sub = '（' + (p2 > 0 ? '+' : '') + p2.toFixed(2) + '%）';
+          card.meta = commodity + ' · 近 ' + n + ' 天：' + fmtNum(first) + ' → ' + fmtNum(last) +
+            ' · 区间 ' + fmtNum(Math.min.apply(null, vals)) + '~' + fmtNum(Math.max.apply(null, vals)) +
+            ' · ' + e.label;
+          return card;
         }
       }
-    } else if (parsed.action === 'export') {
-      var rowsE = rowsFor(commodity, region).slice(0, 12);
-      if (!rowsE.length) {
-        priceBlock();
-      } else {
-        var lines = rowsE.map(function (r) {
-          return r.commodity + ' ' + (r.spec_label || '') + ' ' + (r.market || '') + ' ' +
-            fmtPrice(r) + ' ' + r.price_date;
-        });
-        body = '<pre class="ans-export" id="ans-export-text">' + esc(lines.join('\n')) + '</pre>';
-        actions = '<button type="button" class="ans-btn primary" data-act="copy-export">复制这段</button>';
-      }
-    } else if (parsed.action === 'regions') {
-      var rowsR = rowsFor(commodity, null);
-      var byMarket = {};
-      rowsR.forEach(function (r) {
-        var k = r.market || '全国';
-        if (!byMarket[k]) byMarket[k] = r;
-      });
-      var mk = Object.keys(byMarket);
-      if (!mk.length) {
-        priceBlock();
-      } else {
-        body = '<div class="ans-meta">' + esc(commodity) + ' 共 ' + mk.length + ' 个市场有报价</div>' +
-          '<div class="ans-rows">' + mk.slice(0, 12).map(function (k) {
-            return '<span>' + esc(k) + ' <b>' + fmtPrice(byMarket[k]) + '</b></span>';
-          }).join('') + '</div>';
-      }
-    } else {
-      priceBlock();
     }
 
-    // 图表跟着答案走
+    if (parsed.action === 'export') {
+      card.export = rows.slice(0, 12).map(function (r) {
+        return r.commodity + ' ' + (r.spec_label || '') + ' ' + (r.market || '') + ' ' +
+          fmtPrice(r) + ' ' + r.price_date;
+      }).join('\n');
+      card.meta = '共 ' + rows.length + ' 条，导出前 12 条';
+      return card;
+    }
+
+    if (parsed.action === 'regions') {
+      var byMarket = {};
+      rows.forEach(function (r) { if (!byMarket[r.market || '全国']) byMarket[r.market || '全国'] = r; });
+      var keys = Object.keys(byMarket);
+      card.meta = commodity + ' 共 ' + keys.length + ' 个市场有报价';
+      card.rows = keys.slice(0, 12).map(function (k) {
+        return {label: k, value: fmtPrice(byMarket[k])};
+      });
+      return card;
+    }
+
+    rows = rows.slice().sort(function (a, b) {
+      var d = marketRank(a) - marketRank(b);
+      return d !== 0 ? d : b.value - a.value;
+    });
+    var top = rows[0];
+    var specSet = {};
+    rows.forEach(function (r) { specSet[r.spec_label || r.price_type] = 1; });
+    var specCount2 = Object.keys(specSet).length;
+    if (specCount2 > 1) {
+      var vv = rows.map(function (r) { return r.value; });
+      card.value = fmtNum(Math.min.apply(null, vv)) + ' ~ ' + fmtNum(Math.max.apply(null, vv));
+      card.sub = top.unit || '';
+      card.meta = rows.length + ' 条报价 · ' + specCount2 + ' 个规格 · ' +
+        Object.keys((function () {
+          var mk = {}; rows.forEach(function (r) { mk[r.market || '全国'] = 1; }); return mk;
+        })()).length + ' 个市场 · ' + top.price_date;
+      card.rows = rows.slice(0, 3).map(function (r) {
+        return {label: r.market || '全国', value: fmtPrice(r)};
+      });
+    } else {
+      var specText = String(top.spec_label || top.price_type || '');
+      if (specText.length > 18) specText = specText.slice(0, 18) + '…';
+      card.value = fmtPrice(top);
+      card.meta = (top.market || '全国') + ' · ' + specText + ' · ' + top.price_date +
+        ' · ' + fmtChange(top) + ' · 来源 ' + top.source;
+    }
+    return card;
+  }
+
+  function marketRank(r) {
+    var i = MARKET_PREF.indexOf(r.market);
+    if (i >= 0) return i;
+    return MARKET_PREF.length + ((r.market || '').indexOf('/') >= 0 ? 0 : 1);
+  }
+
+  // 把意图落到界面状态（图表 + 表格 + 筛选条）
+  function applyIntent(commodity, region) {
     if (commodity) {
       state.commodity = commodity;
       state.ptype = '';
       if (region) {
         if (region.kind === 'province') { state.province = region.name; state.market = ''; }
         else { state.market = region.name; state.province = ''; }
-        state.showAll = false;
-        if (chkAll) chkAll.checked = false;
       } else {
-        // 没提地区就是问全国，清掉上一轮的地区筛选
         state.province = '';
         state.market = '';
-        state.showAll = false;
-        if (chkAll) chkAll.checked = false;
       }
+      state.showAll = false;
+      if (chkAll) chkAll.checked = false;
       syncTypes();
       renderChips();
       renderFacets();
       load();
     }
+  }
 
-    card.innerHTML =
-      '<div class="ans-head"><span class="ans-title">' + esc(title) + '</span>' +
-      '<span class="ans-actions">' + actions +
-      '<button type="button" class="ans-btn" data-act="close">收起</button></span></div>' +
-      '<div class="ans-body">' + body + '</div>';
-    card.hidden = false;
+  function renderAnswer(parsed) {
+    var commodity = parsed.commodities[0] ? parsed.commodities[0].name : '';
+    var region = parsed.regions[0] || null;
+    applyIntent(commodity, region);
+    paintCard(buildCard(parsed));
+    ASK_HISTORY.push({q: parsed.raw, intent: {
+      action: parsed.action,
+      commodity: commodity || null,
+      regions: parsed.regions.map(function (r) { return r.name; })
+    }});
+    if (ASK_HISTORY.length > 6) ASK_HISTORY.shift();
+  }
 
-    card.querySelectorAll('[data-act]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var act = btn.getAttribute('data-act');
-        if (act === 'close') { card.hidden = true; return; }
-        if (act === 'copy-export') {
-          var pre = document.getElementById('ans-export-text');
-          if (pre) {
-            copyText(pre.textContent).then(function () { flash(btn, '已复制'); });
-          }
-        }
-      });
+  // ---------- 模型路径 ----------
+  function renderServerAnswer(data, question) {
+    var intent = data.intent || {};
+    var commodity = intent.commodity || '';
+    var regions = intent.regions || [];
+    var region = regions.length ? {
+      kind: (SEARCH.provinces || []).some(function (p) { return p.name === regions[0]; })
+        ? 'province' : 'market',
+      name: regions[0]
+    } : null;
+    applyIntent(commodity, region);
+    paintCard(data.card || {title: question, meta: '没有答案'});
+    ASK_HISTORY.push({q: question, intent: intent});
+    if (ASK_HISTORY.length > 6) ASK_HISTORY.shift();
+  }
+
+  function askLLM(q) {
+    qEl.value = '';
+    hideSuggest();
+    var el = document.getElementById('answer');
+    el.innerHTML = '<div class="ans-head"><span class="ans-title">' + esc(q) + '</span></div>' +
+      '<div class="ans-body"><div class="ans-meta">正在查…</div></div>';
+    el.hidden = false;
+    fetch(ASK_API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q, history: ASK_HISTORY})
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.json();
+    }).then(function (data) {
+      if (!data.ok) throw new Error(data.error || '没听懂');
+      renderServerAnswer(data, q);
+    }).catch(function (err) {
+      var parsed = parseQuery(q);
+      if (parsed.commodities.length || parsed.regions.length) {
+        renderAnswer(parsed);
+        return;
+      }
+      el.innerHTML = '<div class="ans-head"><span class="ans-title">' + esc(q) + '</span>' +
+        '<span class="ans-actions"><button type="button" class="ans-btn" data-act="close">收起</button></span></div>' +
+        '<div class="ans-body"><div class="ans-empty">没听懂。试试「广西萤石多少钱」' +
+        '「唐山 青岛 铁矿石 对比」「铜这周跌了多少」</div></div>';
+      el.querySelector('[data-act="close"]').addEventListener('click', function () { el.hidden = true; });
+      console.warn('ask api fallback:', err && err.message);
     });
   }
 
@@ -809,10 +890,7 @@
     q = (q || '').trim();
     if (!q) return;
     var parsed = parseQuery(q);
-    if (!parsed.commodities.length && !parsed.regions.length) {
-      if (suggestions.length) applySuggestion(suggestions[0]);
-      return;
-    }
+    if (shouldUseLLM(q, parsed)) { askLLM(q); return; }
     qEl.value = '';
     hideSuggest();
     renderAnswer(parsed);
