@@ -437,7 +437,11 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
                or key in (r.get("raw_label") or "").lower()]
         return hit or rows
 
-    card = {"title": " · ".join([p for p in (regions[0] if regions else "", commodity) if p]),
+    if len(regions) > 2:
+        region_text = f"{regions[0]} 等 {len(regions)} 个地区"
+    else:
+        region_text = "、".join(regions)
+    card = {"title": " · ".join([p for p in (region_text, commodity) if p]),
             "value": "", "sub": "", "meta": "", "rows": [], "export": None}
     all_rows = latest_rows(conn, commodity)
 
