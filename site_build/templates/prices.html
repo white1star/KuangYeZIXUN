@@ -653,9 +653,11 @@
     var body;
     if (card.export) {
       body = '<pre class="ans-export" id="ans-export-text">' + esc(card.export) + '</pre>';
-    } else if (card.value) {
-      body = '<div class="ans-value">' + esc(card.value) +
-        (card.sub ? '<span class="ans-sub">' + esc(card.sub) + '</span>' : '') + '</div>' +
+    } else if (card.value || rowsHtml) {
+      body = (card.value
+        ? '<div class="ans-value">' + esc(card.value) +
+          (card.sub ? '<span class="ans-sub">' + esc(card.sub) + '</span>' : '') + '</div>'
+        : '') +
         (card.meta ? '<div class="ans-meta">' + esc(card.meta) + '</div>' : '') +
         (rowsHtml ? '<div class="ans-rows">' + rowsHtml + '</div>' : '');
     } else {
