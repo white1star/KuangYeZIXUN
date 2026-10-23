@@ -7,6 +7,26 @@ from bs4 import BeautifulSoup
 from crawler.parse import parse_date
 
 
+def covered_commodities(cfg: dict) -> set:
+    """这个源按配置应该覆盖哪些品种（库里的标准品种名）。
+
+    来源：显式声明 covered_commodities + 页面级 commodity / commodity_map 的键。
+    注意 commodity_map 的「值」可能是源站产品名（1#铜），不能当品种名用，
+    所以只认显式声明和页面级映射的键。
+    """
+    out = set()
+    declared = cfg.get("covered_commodities")
+    if isinstance(declared, (list, tuple, set)):
+        out |= {str(v).strip() for v in declared if str(v).strip()}
+    for spec in cfg.get("urls") or []:
+        if not isinstance(spec, dict):
+            continue
+        if spec.get("commodity"):
+            out.add(str(spec["commodity"]).strip())
+        out |= {str(k).strip() for k in (spec.get("commodity_map") or {})}
+    return {name for name in out if name}
+
+
 def _to_float(s):
     if s is None:
         return None
@@ -289,8 +309,9 @@ def parse_table(html: str, cfg: dict) -> list:
             if len(cells) <= max(cols[k] for k in ("name", "price")):
                 continue
             label = cells[cols["name"]]
-            commodity = _match_commodity(label, cfg.get("commodity_map", {}),
-                                         exact=bool(cfg.get("exact_match")))
+            # 页面级 commodity 优先：一个品类页就是一个品种，不靠关键字猜
+            commodity = cfg.get("commodity") or _match_commodity(
+                label, cfg.get("commodity_map", {}), exact=bool(cfg.get("exact_match")))
             if not commodity:
                 continue
             value = _num_text(_cell_text(cells, cols["price"]))
@@ -324,8 +345,8 @@ def parse_regex(html: str, cfg: dict) -> list:
                 return ""
 
         label = group("name")
-        commodity = _match_commodity(label, cfg.get("commodity_map", {}),
-                                     exact=bool(cfg.get("exact_match")))
+        commodity = cfg.get("commodity") or _match_commodity(
+            label, cfg.get("commodity_map", {}), exact=bool(cfg.get("exact_match")))
         if not commodity:
             continue
         value = _num_text(group("price"))

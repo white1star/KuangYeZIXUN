@@ -13,15 +13,17 @@ EXPECTED = {
     "pp100_list_2.html": ("萤石", 1700.0, "元/吨"),
     "pp100_list_3.html": ("石英砂", 800.0, "元/吨"),
     "pp100_list_4.html": ("锑", 105500.0, "元/吨"),
-    "pp100_list_5.html": ("锰", 18100.0, "元/吨"),
-    "pp100_list_6.html": ("钨", 600.0, "元/千克"),
-    "pp100_list_7.html": ("钼", 285000.0, "元/吨"),
-    "pp100_list_8.html": ("焦煤", 2540.0, "元/吨"),
+    "pp100_list_5.html": ("电解锰", 18100.0, "元/吨"),
+    "pp100_list_6.html": ("碳化钨粉", 600.0, "元/千克"),
+    "pp100_list_7.html": ("钼酸铵", 285000.0, "元/吨"),
+    "pp100_list_8.html": ("炼焦煤", 2540.0, "元/吨"),
     "ccmn_list.html": ("铜", 107960.0, "元/吨"),
     "sxcoal_list.html": ("动力煤", 673.03, "元/吨"),
     "cctd_list.html": ("动力煤", 754.0, "元/吨"),
     "mysteel_list.html": ("铁矿石", 774.12, "元/吨"),
 }
+# 快照对应的品类页已停采（口径混杂无法给可信价），保留样本但不要求解析
+DROPPED_PAGES = {"pp100_list_7.html": "钼酸铵页口径混杂（同规格 2.3万~39万），已停采"}
 
 
 def _snapshots():
@@ -30,6 +32,20 @@ def _snapshots():
         for key in PRICE_HTML_SOURCES
         for path in sorted(FIXTURES.glob(f"{key}_list*.html"))
     ]
+
+
+def _cfg_for(src, commodity):
+    """按品种挑出页面级配置（生意社每个品类页在 urls 里声明品种）。"""
+    specs = [s for s in (src.get("urls") or []) if isinstance(s, dict)]
+    if not specs:
+        return src
+    for spec in specs:
+        cfg = {k: v for k, v in {**src, **spec}.items() if k != "url"}
+        names = [cfg["commodity"]] if cfg.get("commodity") else list(
+            (cfg.get("commodity_map") or {}).keys())
+        if commodity in names:
+            return cfg
+    return None
 
 
 @pytest.mark.parametrize("key", PRICE_HTML_SOURCES)
@@ -42,12 +58,20 @@ def test_price_source_parses_from_snapshot(key, path):
     src = [s for s in load_sources() if s["key"] == key][0]
     if not src.get("enabled", True):
         pytest.skip(f"{key} 已停用")
+    expected = EXPECTED.get(path.name)
+    assert expected, f"{path.name} 缺少人工核对期望值"
+    cfg = _cfg_for(src, expected[0])
+    if cfg is None:
+        pytest.skip(DROPPED_PAGES.get(path.name, f"{path.name} 配置里已无该品种"))
     html = path.read_text(encoding="utf-8")
-    rows = price_sources.parse(src["parser"], html, src)
+    rows = price_sources.parse(cfg["parser"], html, cfg)
     min_rows = MIN_ROWS.get(key, 1)
     assert len(rows) >= min_rows, f"{path.name} 解析条数不足: {len(rows)} < {min_rows}"
     assert all(r["value"] > 0 for r in rows), f"{path.name} 出现非法价格"
-    unknown = {r["commodity"] for r in rows} - set(src.get("commodity_map", {}).keys())
+    known = set(cfg.get("commodity_map", {}).keys())
+    if cfg.get("commodity"):
+        known.add(cfg["commodity"])
+    unknown = {r["commodity"] for r in rows} - known
     assert not unknown, f"{path.name} 出现未知品种: {unknown}"
     unit_map = src.get("unit_map") or {}
     for r in rows:
@@ -55,8 +79,6 @@ def test_price_source_parses_from_snapshot(key, path):
         assert r["unit"] == expected_unit, (
             f"{path.name} {r['commodity']} 单位异常: {r['unit']} != {expected_unit}"
         )
-    expected = EXPECTED.get(path.name)
-    assert expected, f"{path.name} 缺少人工核对期望值"
     hit = [r for r in rows if (r["commodity"], r["value"]) == expected[:2]]
     assert hit, f"{path.name} 未解析出期望行: {expected[:2]}"
     assert hit[0]["unit"] == expected[2], (

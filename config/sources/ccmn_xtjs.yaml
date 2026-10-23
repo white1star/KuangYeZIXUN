@@ -1,0 +1,34 @@
+key: ccmn_xtjs
+name: 长江有色·稀土
+board: price
+parser: ccmn_quota
+url: https://mall.ccmn.cn/shop/quotaData/getQuotaData
+referer: https://www.ccmn.cn/priceinfo/xtjs
+method: POST
+post_data:
+  colName: xtjs
+  pageNo: 1
+  pageSize: 50
+headers:
+  X-Requested-With: XMLHttpRequest
+price_type: 现货
+exact_match: true
+basis: 含税
+unit: 元/吨
+items: quotaVoList
+quote:
+  name: productSortName
+  price: avgPrice
+  date: publishDateTime
+  market: marketName
+  origin: placeOrTrademark
+  spec: trademark
+  unit: unit
+covered_commodities: [氧化钕, 金属钕, 氧化镨, 金属镨, 氧化镝, 金属镝]
+commodity_map:
+  氧化钕: ["氧化钕"]
+  金属钕: ["金属钕"]
+  氧化镨: ["氧化镨"]
+  金属镨: ["金属镨"]
+  氧化镝: ["氧化镝"]
+  金属镝: ["金属镝"]

@@ -16,6 +16,8 @@ exact_match: true
 # 精矿类单位源站给的是"元/干吨""金属/干吨"，直接沿用；
 # 红土镍矿/铝土矿/镍铁源站没标计价单位，这里不猜口径（unit 留空）
 basis: ""
+# 矿产品/镍铁这类小众品种源站按周更新，用 2 天阈值会天天误报
+stale_days: 7
 unit: ""
 items: quotaVoList
 quote:

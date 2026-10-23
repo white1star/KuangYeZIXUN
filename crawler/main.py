@@ -9,7 +9,25 @@ from crawler.rules_version import compute_rules_version
 
 
 def _iter_urls(src: dict) -> list:
-    return src.get("urls") or [src["url"]]
+    return [spec["url"] for spec in _url_specs(src)]
+
+
+def _url_specs(src: dict) -> list:
+    """urls 既可以是字符串，也可以是 {url, commodity_map, ...} 这样的字典。
+
+    字典里的键会在解析时覆盖源级配置：生意社一个品类页对应一个品种，
+    用页面级 commodity_map 就不会把钼精矿/钼铁/钼酸铵混成一个"钼"。
+    """
+    items = src.get("urls") or [src["url"]]
+    specs = []
+    for item in items:
+        if isinstance(item, dict):
+            spec = dict(item)
+            spec.setdefault("url", src.get("url", ""))
+        else:
+            spec = {"url": item}
+        specs.append(spec)
+    return specs
 
 
 def _drop_stale(items, src):
@@ -84,7 +102,8 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                                     src["board"], _iter_urls(src)[0], True)
                 run_id = store.start_crawl_run(conn, src["key"], rv)
                 price_rows = []
-                for url in _iter_urls(src):
+                for spec in _url_specs(src):
+                    url = spec["url"]
                     result = fetcher(url, referer=src.get("referer", ""), encoding=src.get("encoding"),
                                      timeout=settings.request_timeout, retries=settings.request_retries,
                                      method=src.get("method", "GET"), data=src.get("post_data"),
@@ -93,7 +112,8 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                     if not result.ok:
                         raise RuntimeError(result.error or f"HTTP {result.status}")
                     if src["board"] == "price":
-                        price_count, rows = _process_prices(conn, src, result.text)
+                        parse_cfg = {k: v for k, v in {**src, **spec}.items() if k != "url"}
+                        price_count, rows = _process_prices(conn, parse_cfg, result.text)
                         price_rows.extend(rows)
                         found += price_count
                         new += price_count
@@ -109,6 +129,11 @@ def run_once(settings=None, fetcher=None, sources_dir=None, tags=None) -> dict:
                 if src["board"] == "price" and price_rows:
                     # 整源抓完再对账：源今天没再出的报价要清掉
                     store.sync_price_source_day(conn, src["key"], price_rows)
+                    covered = price_sources.covered_commodities(src)
+                    if src.get("covered_commodities"):
+                        purged = store.purge_uncovered_prices(conn, src["key"], covered)
+                        if purged:
+                            report.log(f"[{src['key']}] 清理已下架品种的历史报价 {purged} 条")
                 store.finish_crawl_run(conn, run_id, "ok", found, new)
                 summary["sources_ok"] += 1
                 report.log(f"[{src['key']}] 完成：抓到 {found} 条，新增 {new} 条")

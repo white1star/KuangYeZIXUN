@@ -32,6 +32,7 @@
           <option value="90" {{ 'selected' if days == 90 else '' }}>近90天</option>
         </select>
       </label>
+      <label class="check"><input type="checkbox" id="all-commodities"> 表格看全部品种</label>
     </div>
     <div class="card chart-card">
       <div class="card-head"><span id="chart-title">{{ commodity }} 价格走势</span></div>
@@ -46,7 +47,7 @@
         </thead>
         <tbody>
           {% for p in prices %}
-          <tr data-market="{{ p.market }}">
+          <tr data-market="{{ p.market }}" data-commodity="{{ p.commodity }}">
             <td>{{ p.commodity }}</td>
             <td>{% if p.market %}<span class="market-tag">{{ p.market }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
             <td>{{ p.price_type }}</td>
@@ -75,6 +76,7 @@ const selCommodity = document.getElementById('commodity');
 const selPtype = document.getElementById('ptype');
 const selMarket = document.getElementById('market');
 const selDays = document.getElementById('days');
+const chkAll = document.getElementById('all-commodities');
 const INIT_PTYPE = {{ ptype|tojson }};
 const INIT_MARKET = {{ market|tojson }};
 const chart = echarts.init(chartEl);
@@ -101,14 +103,20 @@ function syncTypes() {
 
 function applyTableFilter() {
   const market = selMarket.value;
+  const commodity = selCommodity.value;
+  const showAll = !chkAll || chkAll.checked;
   const rows = document.querySelectorAll('table.prices tbody tr[data-market]');
   let shown = 0;
   for (const row of rows) {
-    const hit = !market || row.getAttribute('data-market') === market;
+    const hit = (!market || row.getAttribute('data-market') === market)
+      && (showAll || row.getAttribute('data-commodity') === commodity);
     row.style.display = hit ? '' : 'none';
     if (hit) shown++;
   }
-  if (countEl) countEl.textContent = (market ? market + ' ' : '') + shown + ' 条';
+  if (countEl) {
+    const scope = showAll ? '全部品种' : commodity;
+    countEl.textContent = '（' + scope + (market ? ' · ' + market : '') + ' ' + shown + ' 条）';
+  }
 }
 
 async function load() {
@@ -200,6 +208,7 @@ selCommodity.addEventListener('change', function () { syncTypes(); load(); });
 selPtype.addEventListener('change', load);
 selMarket.addEventListener('change', load);
 selDays.addEventListener('change', load);
+if (chkAll) chkAll.addEventListener('change', applyTableFilter);
 window.addEventListener('resize', function () { chart.resize(); });
 syncTypes();
 load();

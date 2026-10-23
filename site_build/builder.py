@@ -34,6 +34,15 @@ NEWS_TABS = {"全部": [], "新矿山": ["新矿"], "市场": ["价格", "市场
 NEWS_INITIAL = 60
 POLICY_INITIAL = 100
 HOT_WORDS = ["探矿权", "磷矿", "绿色矿山", "焦煤", "萤石", "尾矿库"]
+# 打开矿价页默认看哪个品种：优先销售最常问的
+DEFAULT_COMMODITIES = ("铜", "铁矿石", "动力煤", "萤石")
+
+
+def default_commodity(names) -> str:
+    for name in DEFAULT_COMMODITIES:
+        if name in names:
+            return name
+    return names[0] if names else ""
 
 
 def _fmt_num(value) -> str:
@@ -125,7 +134,7 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
         "prices.html": env.get_template("prices.html").render(
             **base, page="prices", prices=prices["latest"],
             commodities=prices["commodities"],
-            commodity=prices["commodities"][0] if prices["commodities"] else "",
+            commodity=default_commodity(prices["commodities"]),
             type_map=prices["type_map"],
             markets=prices["markets"]),
         "search.html": env.get_template("search.html").render(**base, page="search"),

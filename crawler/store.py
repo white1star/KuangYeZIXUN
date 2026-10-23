@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import statistics
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -280,8 +281,39 @@ def _fill_change(conn, row) -> None:
     row["change_pct"] = round(change / prev * 100, 2)
 
 
+def _aggregate_same_key(rows) -> list:
+    """同一个 (品种, 口径, 市场, 规格, 日期, 来源) 的多条报价合成一条。
+
+    生意社一页里同一地区同一规格会有多家报价企业，逐条入库只会让后写入的盖掉前面的，
+    等于随机取一家。这里取中位数：既不受个别极端值影响，也比"最后一条"稳定。
+    """
+    groups: dict = {}
+    order: list = []
+    for r in rows:
+        key = (r["commodity"], r.get("price_type", ""), r.get("market", ""),
+               r.get("spec", ""), r.get("price_date", ""), r.get("source_key", ""))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+    out = []
+    for key in order:
+        items = groups[key]
+        if len(items) == 1:
+            out.append(items[0])
+            continue
+        base = dict(items[0])
+        base["value"] = round(statistics.median([float(x["value"]) for x in items]), 4)
+        changes = [float(x["change"]) for x in items if x.get("change") is not None]
+        if changes:
+            base["change"] = round(statistics.median(changes), 4)
+        out.append(base)
+    return out
+
+
 def upsert_prices(conn, rows) -> int:
     count = 0
+    rows = _aggregate_same_key(rows)
     for r in rows:
         r.setdefault("market", "")
         r.setdefault("origin", "")
@@ -336,3 +368,18 @@ def sync_price_source_day(conn, source_key, rows) -> None:
             for row in existing:
                 if (commodity, price_type, row["market"], row["spec"]) not in keys:
                     conn.execute("DELETE FROM prices WHERE id=?", (row["id"],))
+
+def purge_uncovered_prices(conn, source_key, covered) -> int:
+    """配置即覆盖范围：源配置里已不再采集的品种，历史行一并清掉。
+
+    否则下架一个品类后，旧行还会以"沿用昨收"的样子留在页面上。
+    只在 covered 非空时执行（判不出范围就不清，避免误删）。
+    """
+    covered = {str(c).strip() for c in covered if str(c).strip()}
+    if not covered:
+        return 0
+    marks = ",".join("?" for _ in covered)
+    cur = conn.execute(
+        f"DELETE FROM prices WHERE source_key=? AND commodity NOT IN ({marks})",
+        (source_key, *sorted(covered)))
+    return cur.rowcount

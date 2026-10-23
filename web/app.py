@@ -69,6 +69,16 @@ def _decorate_price(row: dict) -> dict:
     return row
 
 
+DEFAULT_COMMODITIES = ("铜", "铁矿石", "动力煤", "萤石")
+
+
+def _default_commodity(names) -> str:
+    for name in DEFAULT_COMMODITIES:
+        if name in names:
+            return name
+    return names[0] if names else ""
+
+
 def create_app(db_path=None) -> FastAPI:
     settings = load_settings()
     db_file = Path(db_path) if db_path else settings.db_path
@@ -129,7 +139,7 @@ def create_app(db_path=None) -> FastAPI:
         try:
             commodity_list = queries.distinct_commodities(conn)
             if commodity not in commodity_list:
-                commodity = commodity_list[0] if commodity_list else ""
+                commodity = _default_commodity(commodity_list)
             if days not in (7, 30, 90):
                 days = 30
             ctx = {"commodities": commodity_list,
