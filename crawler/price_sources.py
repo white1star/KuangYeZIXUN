@@ -237,6 +237,19 @@ def parse(parser: str, text: str, cfg: dict) -> list:
     return fn(text, cfg)
 
 
+UNIT_RE = re.compile(r"(元|美元)\s*/\s*(吨|千克|公斤|克|吨度|盎司|磅)")
+UNIT_ALIAS = {"公斤": "千克"}
+
+
+def _unit_from_text(text) -> str:
+    """从 '1700元/吨' '14元/公斤' 这种价格文本里取单位（公斤→千克）。"""
+    m = UNIT_RE.search(str(text or ""))
+    if not m:
+        return ""
+    cur, unit = m.group(1), m.group(2)
+    return f"{cur}/{UNIT_ALIAS.get(unit, unit)}"
+
+
 def _cell_text(cells, idx):
     if idx is None or idx >= len(cells):
         return ""
@@ -317,6 +330,7 @@ def parse_table(html: str, cfg: dict) -> list:
             value = _num_text(_cell_text(cells, cols["price"]))
             if value is None or value <= 0:
                 continue
+            price_cell = _cell_text(cells, cols["price"])
             rows.append(_make_row(
                 commodity, cfg.get("price_type", "现货"), value, cfg, label,
                 change=_cell_float(cells, cols.get("change")),
@@ -326,7 +340,8 @@ def parse_table(html: str, cfg: dict) -> list:
                 origin=_cell_text(cells, cols.get("origin")),
                 spec=_cell_text(cells, cols.get("spec")),
                 basis=_cell_text(cells, cols.get("basis")),
-                unit=_cell_text(cells, cols.get("unit")) or None,
+                # 价格单元格自带的单位优先（源站会说清楚是元/吨还是元/公斤）
+                unit=_unit_from_text(price_cell) or _cell_text(cells, cols.get("unit")) or None,
             ))
     return rows
 

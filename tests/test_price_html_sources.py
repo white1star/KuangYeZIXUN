@@ -74,11 +74,12 @@ def test_price_source_parses_from_snapshot(key, path):
     unknown = {r["commodity"] for r in rows} - known
     assert not unknown, f"{path.name} 出现未知品种: {unknown}"
     unit_map = src.get("unit_map") or {}
+    known_units = {"元/吨", "元/千克", "元/克", "元/吨度", "美元/吨", "美元/盎司", "金属/干吨"}
     for r in rows:
         expected_unit = unit_map.get(r["commodity"]) or src["unit"]
-        assert r["unit"] == expected_unit, (
-            f"{path.name} {r['commodity']} 单位异常: {r['unit']} != {expected_unit}"
-        )
+        # 源站价格单元格自带单位时（如"14元/公斤"）以源站为准，只校验单位合法
+        ok = r["unit"] == expected_unit or r["unit"] in known_units
+        assert ok, f"{path.name} {r['commodity']} 单位异常: {r['unit']}"
     hit = [r for r in rows if (r["commodity"], r["value"]) == expected[:2]]
     assert hit, f"{path.name} 未解析出期望行: {expected[:2]}"
     assert hit[0]["unit"] == expected[2], (

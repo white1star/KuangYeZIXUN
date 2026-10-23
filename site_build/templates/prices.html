@@ -6,23 +6,17 @@
 <section class="page-body">
   <div class="container">
     <h1 class="page-title">矿价行情</h1>
-    <p class="page-sub">按品种、市场、口径追踪矿产品现货与期货价格动态</p>
+    <p class="page-sub">按矿种、地区、规格查现货与期货价格</p>
     <div class="card toolbar">
-      <label>品种
-        <select id="commodity">
-          {% for c in commodities %}<option value="{{ c }}" {{ 'selected' if c == commodity else '' }}>{{ c }}</option>{% endfor %}
-        </select>
-      </label>
+      <div class="search-wrap">
+        <input id="q" type="search" autocomplete="off" spellcheck="false"
+               placeholder="搜矿种 / 地区 / 规格：萤石、广西、PB粉、ys">
+        <div id="suggest" class="suggest" hidden></div>
+      </div>
       <label>口径
         <select id="ptype">
           <option value="">全部口径</option>
           {% for t in type_map.get(commodity, []) %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-        </select>
-      </label>
-      <label>市场
-        <select id="market">
-          <option value="">全部市场</option>
-          {% for m in markets %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
         </select>
       </label>
       <label>周期
@@ -33,6 +27,7 @@
         </select>
       </label>
       <label class="check"><input type="checkbox" id="all-commodities"> 表格看全部品种</label>
+      <div id="active-filters" class="chips"></div>
     </div>
     <div class="card chart-card">
       <div class="card-head"><span id="chart-title">{{ commodity }} 价格走势</span></div>
@@ -44,24 +39,26 @@
       <div class="table-scroll">
         <table class="prices wide">
           <thead>
-            <tr><th>品种</th><th>市场</th><th>口径</th><th>规格</th><th class="num">最新价</th><th class="num">涨跌</th><th class="num">涨跌幅</th><th class="num">同规格价差</th><th>日期</th><th>来源</th></tr>
+            <tr><th>品种</th><th>市场</th><th>口径</th><th>规格</th><th class="num">最新价</th><th class="num">涨跌</th><th class="num">涨跌幅</th><th class="num">同规格价差</th><th>日期</th><th>来源</th><th></th></tr>
           </thead>
           <tbody>
             {% for p in prices %}
-            <tr data-market="{{ p.market }}" data-commodity="{{ p.commodity }}">
-              <td>{{ p.commodity }}</td>
-              <td>{% if p.market %}<span class="market-tag">{{ p.market }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-              <td>{{ p.price_type }}</td>
-              <td class="spec">{{ p.spec_label or '—' }}</td>
-              <td class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
-              <td class="num">{{ ui.change_cell(p) }}</td>
-              <td class="num">{{ ui.price_cell(p) }}</td>
-              <td class="num">{% if p.market_spread is not none and p.market_spread > 0 %}<span class="muted">{{ p.market_spread|num }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-              <td>{{ p.price_date }}{% if p.carried %} <span class="carry" title="沿用 {{ p.quote_date }} 报价，暂无新报价，有新价后自动刷新">昨收</span>{% endif %}</td>
-              <td class="src">{{ p.source }}{% if p.basis %}<br><span class="ptype">{{ p.basis }}</span>{% endif %}</td>
+            <tr data-market="{{ p.market }}" data-commodity="{{ p.commodity }}"
+                data-copy="{{ p.commodity }} {{ p.brief_spec }} {{ p.market }} {{ p.value|num }}{{ p.unit }} {{ p.price_date }} 来源：{{ p.source }}">
+              <td data-label="品种">{{ p.commodity }}</td>
+              <td data-label="市场">{% if p.market %}<span class="market-tag">{{ p.market }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td data-label="口径">{{ p.price_type }}</td>
+              <td data-label="规格" class="spec">{{ p.spec_label or '—' }}</td>
+              <td data-label="最新价" class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
+              <td data-label="涨跌" class="num">{{ ui.change_cell(p) }}</td>
+              <td data-label="涨跌幅" class="num">{{ ui.price_cell(p) }}</td>
+              <td data-label="同规格价差" class="num">{% if p.market_spread is not none and p.market_spread > 0 %}<span class="muted">{{ p.market_spread|num }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td data-label="日期">{{ p.price_date }}{% if p.carried %} <span class="carry" title="沿用 {{ p.quote_date }} 报价，暂无新报价，有新价后自动刷新">昨收</span>{% endif %}</td>
+              <td data-label="来源" class="src">{{ p.source }}{% if p.basis %}<br><span class="ptype">{{ p.basis }}</span>{% endif %}</td>
+              <td class="copy-cell"><button type="button" class="copy-btn" title="复制这条报价">复制</button></td>
             </tr>
             {% else %}
-            <tr><td colspan="10"><p class="empty">暂无数据</p></td></tr>
+            <tr><td colspan="11"><p class="empty">暂无数据</p></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -78,14 +75,27 @@
   var emptyEl = document.getElementById('chart-empty');
   var titleEl = document.getElementById('chart-title');
   var countEl = document.getElementById('table-count');
-  var selCommodity = document.getElementById('commodity');
+  var chipsEl = document.getElementById('active-filters');
+  var qEl = document.getElementById('q');
+  var suggestEl = document.getElementById('suggest');
   var selPtype = document.getElementById('ptype');
-  var selMarket = document.getElementById('market');
   var selDays = document.getElementById('days');
   var chkAll = document.getElementById('all-commodities');
   var chart = echarts.init(chartEl);
-  var SERIES = {};
+
   var TYPE_MAP = {};
+  var SERIES = {};
+  var SEARCH = {commodities: [], markets: []};
+
+  var state = {
+    commodity: {{ commodity|tojson }},
+    market: '',
+    ptype: '',
+    days: 30,
+    showAll: false,
+    focus: -1
+  };
+  var suggestions = [];
 
   function fmtNum(v) {
     var n = Number(v);
@@ -103,7 +113,125 @@
     return dt.getFullYear() + '-' + m + '-' + d;
   }
 
-  // 每条曲线 = 一个 (口径, 市场, 规格)，不同口径绝不拼成一条线
+  // ---------- 搜索 ----------
+  function rowCount(item) { return item.count || 0; }
+
+  function commodityScore(item, q) {
+    if (!q) return 0;
+    var name = (item.name || '').toLowerCase();
+    var alias = (item.aliases || []).map(function (a) { return a.toLowerCase(); });
+    var py = (item.pinyin || '').toLowerCase();
+    if (name === q) return 0;
+    if (name.indexOf(q) === 0) return 1;
+    if (alias.indexOf(q) >= 0) return 2;
+    if (py.indexOf(q) === 0) return 3;                     // 拼音只做前缀，避免 sys 命中 ys
+    if (alias.some(function (a) { return a.indexOf(q) >= 0; })) return 4;
+    if (name.indexOf(q) > 0) return 5;
+    if ((item.specs || []).join(' ').toLowerCase().indexOf(q) >= 0) return 6;
+    return -1;
+  }
+
+  function marketScore(item, q) {
+    if (!q) return 0;
+    var name = (item.name || '').toLowerCase();
+    var prov = (item.province || '').toLowerCase();
+    var py = (item.pinyin || '').toLowerCase();
+    var ppy = (item.province_pinyin || '').toLowerCase();
+    if (name === q) return 0;
+    if (prov && prov === q) return 1;
+    if (name.indexOf(q) === 0) return 1.5;
+    if (py.indexOf(q) === 0) return 2;
+    if (prov && prov.indexOf(q) === 0) return 2.5;
+    if (ppy.indexOf(q) === 0) return 3;
+    if (name.indexOf(q) > 0) return 4;
+    if (prov && prov.indexOf(q) > 0) return 5;
+    return -1;
+  }
+
+  function buildSuggestions(q) {
+    q = (q || '').trim().toLowerCase();
+    var items = [];
+    (SEARCH.commodities || []).forEach(function (item) {
+      var score = commodityScore(item, q);
+      if (score < 0) return;
+      items.push({type: 'commodity', value: item.name, label: item.name, score: score,
+                  count: rowCount(item),
+                  meta: item.count + ' 条' + (item.aliases.length ? ' · ' + item.aliases.slice(0, 2).join('/') : '')});
+    });
+    (SEARCH.markets || []).forEach(function (item) {
+      var score = marketScore(item, q);
+      if (score < 0) return;
+      items.push({type: 'market', value: item.name, label: item.name,
+                  score: score + 0.2, count: 0,
+                  meta: item.province || '市场'});
+    });
+    items.sort(function (a, b) {
+      if (a.score !== b.score) return a.score - b.score;
+      return b.count - a.count;
+    });
+    return items.slice(0, q ? 10 : 12);
+  }
+
+  function renderSuggest(q) {
+    suggestions = buildSuggestions(q);
+    state.focus = -1;
+    if (!suggestions.length) {
+      suggestEl.innerHTML = '<div class="suggest-empty">没有匹配的矿种或地区，换个关键词试试</div>';
+      suggestEl.hidden = false;
+      return;
+    }
+    var html = '';
+    var lastType = '';
+    suggestions.forEach(function (item, idx) {
+      if (item.type !== lastType) {
+        html += '<div class="suggest-group">' + (item.type === 'commodity' ? '矿种' : '地区') + '</div>';
+        lastType = item.type;
+      }
+      html += '<div class="suggest-item" data-idx="' + idx + '">' +
+        '<span class="suggest-label">' + item.label + '</span>' +
+        '<span class="suggest-meta">' + item.meta + '</span></div>';
+    });
+    suggestEl.innerHTML = html;
+    suggestEl.hidden = false;
+  }
+
+  function hideSuggest() {
+    suggestEl.hidden = true;
+    state.focus = -1;
+  }
+
+  function applySuggestion(item) {
+    if (!item) return;
+    if (item.type === 'commodity') {
+      state.commodity = item.value;
+      state.ptype = '';
+      syncTypes();
+    } else {
+      state.market = item.value;
+      if (chkAll) { chkAll.checked = true; }
+      state.showAll = !!(chkAll && chkAll.checked);
+    }
+    qEl.value = '';
+    hideSuggest();
+    renderChips();
+    syncUrl();
+    load();
+  }
+
+  function renderChips() {
+    var html = '';
+    if (state.commodity) {
+      html += '<span class="chip-filter">品种 ' + state.commodity +
+        '<button type="button" data-clear="commodity" title="清除">×</button></span>';
+    }
+    if (state.market) {
+      html += '<span class="chip-filter">地区 ' + state.market +
+        '<button type="button" data-clear="market" title="清除">×</button></span>';
+    }
+    chipsEl.innerHTML = html;
+  }
+
+  // ---------- 图表 ----------
   function entriesFor(commodity, priceType, market) {
     var entries = SERIES[commodity] || [];
     var picked = entries.filter(function (e) {
@@ -124,8 +252,8 @@
   }
 
   function syncTypes() {
-    var types = TYPE_MAP[selCommodity.value] || [];
-    var current = selPtype.value;
+    var types = TYPE_MAP[state.commodity] || [];
+    var current = state.ptype;
     selPtype.innerHTML = '<option value="">全部口径</option>';
     for (var i = 0; i < types.length; i++) {
       var opt = document.createElement('option');
@@ -135,32 +263,30 @@
     }
     if (types.indexOf(current) >= 0) selPtype.value = current;
     if (selPtype.selectedIndex < 0) selPtype.value = '';
+    state.ptype = selPtype.value;
   }
 
   function applyTableFilter() {
-    var market = selMarket.value;
-    var commodity = selCommodity.value;
-    var showAll = !chkAll || chkAll.checked;
     var rows = document.querySelectorAll('table.prices tbody tr[data-market]');
     var shown = 0;
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
-      var hit = (!market || row.getAttribute('data-market') === market)
-        && (showAll || row.getAttribute('data-commodity') === commodity);
+      var hit = (!state.market || row.getAttribute('data-market') === state.market)
+        && (state.showAll || row.getAttribute('data-commodity') === state.commodity);
       row.style.display = hit ? '' : 'none';
       if (hit) shown++;
     }
     if (countEl) {
-      var scope = showAll ? '全部品种' : commodity;
-      countEl.textContent = '（' + scope + (market ? ' · ' + market : '') + ' ' + shown + ' 条）';
+      var scope = state.showAll ? '全部品种' : state.commodity;
+      countEl.textContent = '（' + scope + (state.market ? ' · ' + state.market : '') + ' ' + shown + ' 条）';
     }
   }
 
   function load() {
-    var c = selCommodity.value;
-    var t = selPtype.value;
-    var m = selMarket.value;
-    var d = Number(selDays.value);
+    var c = state.commodity;
+    var t = state.ptype;
+    var m = state.market;
+    var d = state.days;
     var entries = entriesFor(c, t, m);
     titleEl.textContent = c + ' 价格走势 · ' + (t || '全部口径') + (m ? ' · ' + m : '') + ' · 近' + d + '天';
     var prepared = [];
@@ -193,8 +319,8 @@
       return dir > 0 ? Math.ceil(v / mag) * mag : Math.floor(v / mag) * mag;
     }
     var indexOf = {};
-    axis.forEach(function (d, i) { indexOf[d] = i; });
-    var series = prepared.map(function (p, idx) {
+    axis.forEach(function (day, idx) { indexOf[day] = idx; });
+    var series = prepared.map(function (p) {
       var values = axis.map(function () { return null; });
       var unit = '';
       p.points.forEach(function (pt) {
@@ -233,8 +359,7 @@
           for (var i = 0; i < items.length; i++) {
             var it = items[i];
             if (it.value === null || it.value === undefined) continue;
-            out += '<br/>' + it.marker + it.seriesName + ' ' + fmtNum(it.value) +
-              (it.value !== null && it.seriesIndex === 0 ? '' : '');
+            out += '<br/>' + it.marker + it.seriesName + ' ' + fmtNum(it.value);
           }
           return out;
         }
@@ -266,18 +391,131 @@
     applyTableFilter();
   }
 
-  selCommodity.addEventListener('change', function () { syncTypes(); load(); });
-  selPtype.addEventListener('change', load);
-  selMarket.addEventListener('change', load);
-  selDays.addEventListener('change', load);
-  if (chkAll) chkAll.addEventListener('change', applyTableFilter);
+  // ---------- URL / 事件 ----------
+  function syncUrl() {
+    var params = new URLSearchParams();
+    if (state.commodity) params.set('commodity', state.commodity);
+    if (state.market) params.set('market', state.market);
+    if (state.ptype) params.set('ptype', state.ptype);
+    if (state.days !== 30) params.set('days', state.days);
+    var url = location.pathname + (params.toString() ? '?' + params.toString() : '');
+    history.replaceState(null, '', url);
+  }
+
+  function readUrl() {
+    var params = new URLSearchParams(location.search);
+    if (params.get('commodity')) state.commodity = params.get('commodity');
+    if (params.get('market')) { state.market = params.get('market'); if (chkAll) chkAll.checked = true; }
+    if (params.get('ptype')) state.ptype = params.get('ptype');
+    if (params.get('days')) state.days = Number(params.get('days')) || 30;
+    state.showAll = !!(chkAll && chkAll.checked);
+    if (selDays) selDays.value = String(state.days);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+
+  function flash(btn, text) {
+    var old = btn.textContent;
+    btn.textContent = text;
+    btn.classList.add('done');
+    setTimeout(function () { btn.textContent = old; btn.classList.remove('done'); }, 1200);
+  }
+
+  qEl.addEventListener('input', function () { renderSuggest(qEl.value); });
+  qEl.addEventListener('focus', function () { renderSuggest(qEl.value); });
+  qEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { qEl.value = ''; hideSuggest(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (suggestEl.hidden) renderSuggest(qEl.value);
+      if (!suggestions.length) return;
+      e.preventDefault();
+      state.focus = (state.focus + (e.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length;
+      Array.prototype.forEach.call(suggestEl.querySelectorAll('.suggest-item'), function (el, i) {
+        el.classList.toggle('active', i === state.focus);
+      });
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applySuggestion(suggestions[state.focus >= 0 ? state.focus : 0]);
+    }
+  });
+
+  suggestEl.addEventListener('mousedown', function (e) {
+    var item = e.target.closest('.suggest-item');
+    if (!item) return;
+    e.preventDefault();
+    applySuggestion(suggestions[Number(item.getAttribute('data-idx'))]);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.search-wrap')) hideSuggest();
+  });
+
+  chipsEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-clear]');
+    if (!btn) return;
+    if (btn.getAttribute('data-clear') === 'market') {
+      state.market = '';
+    } else {
+      state.commodity = SEARCH.commodities.length ? SEARCH.commodities[0].name : '';
+      syncTypes();
+    }
+    renderChips();
+    syncUrl();
+    load();
+  });
+
+  selPtype.addEventListener('change', function () {
+    state.ptype = selPtype.value;
+    syncUrl();
+    load();
+  });
+  selDays.addEventListener('change', function () {
+    state.days = Number(selDays.value) || 30;
+    syncUrl();
+    load();
+  });
+  if (chkAll) chkAll.addEventListener('change', function () {
+    state.showAll = chkAll.checked;
+    applyTableFilter();
+  });
   window.addEventListener('resize', function () { chart.resize(); });
+
+  document.querySelector('table.prices').addEventListener('click', function (e) {
+    var btn = e.target.closest('.copy-btn');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var text = tr ? tr.getAttribute('data-copy') : '';
+    if (!text) return;
+    copyText(text).then(function () { flash(btn, '已复制'); });
+  });
 
   App.loadJSON('prices.json').then(function (payload) {
     TYPE_MAP = payload.type_map || {};
     SERIES = payload.series || {};
+    SEARCH = payload.search || {commodities: [], markets: []};
+    readUrl();
+    if (!TYPE_MAP[state.commodity] && SEARCH.commodities.length) {
+      state.commodity = SEARCH.commodities[0].name;
+    }
     syncTypes();
+    renderChips();
     load();
+    syncUrl();
   }).catch(function () {
     emptyEl.hidden = false;
     chartEl.style.display = 'none';

@@ -9,7 +9,7 @@ import jinja2
 import yaml
 
 from crawler import store
-from site_build import data
+from site_build import data, search
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -100,6 +100,7 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
         sources_ok, sources_total = data.source_health(conn)
         last_fetch = data.last_fetch_time(conn)
         prices = data.prices_payload(conn)
+        prices["search"] = search.search_payload(prices)
         policy_meta = data.policy_meta(articles)
         copies = data.load_marketing_copies(conn)
         copy_stats = data.marketing_stats(conn)

@@ -19,8 +19,8 @@ urls:
   - {url: "https://www.100ppi.com/mprice/plist-1-478-1.html", commodity: "硅铁"}
   - {url: "https://www.100ppi.com/mprice/plist-1-546-1.html", commodity: "生石灰"}
   - {url: "https://www.100ppi.com/mprice/plist-1-763-1.html", commodity: "高岭土"}
-  - {url: "https://www.100ppi.com/mprice/plist-1-870-1.html", commodity: "炼焦煤"}
-  - {url: "https://www.100ppi.com/mprice/plist-1-870-2.html", commodity: "炼焦煤"}
+  - {url: "https://www.100ppi.com/mprice/plist-1-870-1.html", commodity: "焦煤"}
+  - {url: "https://www.100ppi.com/mprice/plist-1-870-2.html", commodity: "焦煤"}
   - {url: "https://www.100ppi.com/mprice/plist-1-923-1.html", commodity: "无烟煤"}
   - {url: "https://www.100ppi.com/mprice/plist-1-968-1.html", commodity: "锗"}
   - {url: "https://www.100ppi.com/mprice/plist-1-976-1.html", commodity: "金属镨"}
@@ -44,7 +44,6 @@ urls:
   - {url: "https://www.100ppi.com/mprice/plist-1-9308-1.html", commodity: "滑石"}
   - {url: "https://www.100ppi.com/mprice/plist-1-9694-1.html", commodity: "铝土矿"}
   - {url: "https://www.100ppi.com/mprice/plist-1-9707-1.html", commodity: "铝土矿"}
-  - {url: "https://www.100ppi.com/mprice/plist-1-11554-1.html", commodity: "三氧化钨"}
   - {url: "https://www.100ppi.com/mprice/plist-1-12401-1.html", commodity: "萤石粉"}
   - {url: "https://www.100ppi.com/mprice/plist-1-17885-1.html", commodity: "萤石精矿"}
 price_type: 现货
@@ -58,4 +57,4 @@ table:
   cell: "td"
   # 品名/规格/产地属性/价格/价格类型/地区/报价企业/报价日期
   columns: {name: 0, spec: 1, origin: 2, price: 3, basis: 4, market: 5, date: 7}
-covered_commodities: [铁矿石, 钴, 金属硅, 焦炭, 萤石, 石英砂, 硅藻土, 硅铁, 生石灰, 高岭土, 炼焦煤, 无烟煤, 锗, 金属镨, 金属钕, 金属镝, 镨钕合金, 镝铁合金, 碳化钨粉, 黄磷, 电解锰, 硅粉, 氢氧化锂, 碳酸钾, 二氧化锰, 锰硅, 硅灰石, 金刚砂, 铋, 铟, 滑石, 铝土矿, 三氧化钨, 萤石粉, 萤石精矿]
+covered_commodities: [铁矿石, 钴, 金属硅, 焦炭, 萤石, 石英砂, 硅藻土, 硅铁, 生石灰, 高岭土, 焦煤, 无烟煤, 锗, 金属镨, 金属钕, 金属镝, 镨钕合金, 镝铁合金, 碳化钨粉, 黄磷, 电解锰, 硅粉, 氢氧化锂, 碳酸钾, 二氧化锰, 锰硅, 硅灰石, 金刚砂, 铋, 铟, 滑石, 铝土矿, 萤石粉, 萤石精矿]
