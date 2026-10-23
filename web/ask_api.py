@@ -75,7 +75,18 @@ def catalog(conn) -> tuple:
     markets = [r["market"] for r in conn.execute(
         "SELECT DISTINCT market FROM prices WHERE market<>'' ORDER BY market").fetchall()]
     provinces = sorted({province_of(m) for m in markets if province_of(m)})
-    return commodities, provinces, markets
+    try:
+        raw = yaml.safe_load((ROOT / "config" / "price_categories.yaml").read_text(
+            encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        raw = {}
+    known = set(commodities)
+    categories = {}
+    for name, names in raw.items():
+        items = [n for n in (names or []) if n in known]
+        if items:
+            categories[str(name)] = items
+    return commodities, provinces, markets, categories
 
 
 # --------------------------------------------------------------------------
@@ -173,12 +184,73 @@ def series(conn, commodity, market=None, days=30) -> list:
 # 执行意图
 # --------------------------------------------------------------------------
 
-def execute(conn, intent: dict, provinces: list) -> dict:
+def category_trend(conn, names: list, days: int) -> dict:
+    """一批品种的涨跌概览：几个跌、几个涨，跌得最多的是谁。"""
+    changes = []
+    for name in names:
+        pts = series(conn, name, days=days)
+        if len(pts) >= 2 and pts[0][1]:
+            pct = (pts[-1][1] - pts[0][1]) / pts[0][1] * 100
+            changes.append((name, pct))
+    if not changes:
+        return {}
+    changes.sort(key=lambda x: x[1])
+    down = [c for c in changes if c[1] < -0.005]
+    up = [c for c in changes if c[1] > 0.005]
+    flat = len(changes) - len(down) - len(up)
+    if down:
+        headline = f"{len(down)} 个下跌 / {len(up)} 个上涨"
+        detail = "跌幅前 3：" + "、".join(f"{n} {p:+.2f}%" for n, p in down[:3])
+    elif up:
+        headline = f"没有下跌（{len(up)} 涨 / {flat} 平）"
+        detail = "涨幅前 3：" + "、".join(f"{n} {p:+.2f}%" for n, p in sorted(up, key=lambda x: -x[1])[:3])
+    else:
+        headline = f"全部持平（{len(changes)} 个品种）"
+        detail = ""
+    return {
+        "value": headline,
+        "sub": f"（近 {days} 天）",
+        "meta": detail,
+        "rows": [{"label": n, "value": f"{p:+.2f}%"} for n, p in changes[:8]],
+    }
+
+
+def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dict:
     action = intent.get("action") or "price"
     commodity = intent.get("commodity") or ""
+    category = intent.get("category") or ""
     regions = [r for r in (intent.get("regions") or []) if r]
     days = int(intent.get("days") or 30)
     spec = (intent.get("spec") or "").strip()
+    categories = categories or {}
+    cat_names = categories.get(category, []) if category else []
+
+    if not commodity and not regions and not cat_names:
+        return {"title": "", "value": "", "sub": "", "rows": [],
+                "meta": "请说明查什么，比如「广西萤石多少钱」「萤石最近在跌吗」"}
+
+    if cat_names and not commodity:
+        card = {"title": category, "value": "", "sub": "", "meta": "", "rows": [], "export": None}
+        if action == "trend":
+            card.update(category_trend(conn, cat_names, days))
+            if not card["value"]:
+                card["meta"] = f"{category} 暂无可算走势的品种"
+            return card
+        # 分类查价：每个品种给一条代表价（主市场 + 首选口径）
+        picked = []
+        for name in cat_names:
+            rs = latest_rows(conn, name)
+            if not rs:
+                continue
+            kinds = {r["price_type"] for r in rs}
+            if len(kinds) > 1:
+                preferred = min(kinds, key=lambda t: TYPE_ORDER.get(t, 9))
+                rs = [r for r in rs if r["price_type"] == preferred] or rs
+            rs.sort(key=market_rank)
+            picked.append((name, rs[0]))
+        card["meta"] = f"{category} 共 {len(picked)} 个品种有报价 · 主市场代表价"
+        card["rows"] = [{"label": n, "value": price_text(r)} for n, r in picked]
+        return card
 
     province = market = ""
     if regions:
@@ -238,7 +310,15 @@ def execute(conn, intent: dict, provinces: list) -> dict:
     rows = [r for r in all_rows
             if (not province or r["province"] == province)
             and (not market or r["market"] == market)]
+    if cat_names and not commodity:
+        rows = [r for r in rows if r["commodity"] in cat_names]
+        all_rows = [r for r in all_rows if r["commodity"] in cat_names]
     rows = pick(rows)
+    # 同一品种可能有期货/现货/指数多个口径，摘要只看一个
+    kinds = {r["price_type"] for r in rows}
+    if len(kinds) > 1:
+        preferred = min(kinds, key=lambda t: TYPE_ORDER.get(t, 9))
+        rows = [r for r in rows if r["price_type"] == preferred] or rows
 
     if not rows:
         alt = all_rows[:4]
@@ -287,7 +367,8 @@ def execute(conn, intent: dict, provinces: list) -> dict:
             "sub": top["unit"] or "",
             "meta": f"{len(rows)} 条报价 · {len(specs)} 个规格 · "
                     f"{len({r['market'] or '全国' for r in rows})} 个市场 · {top['price_date']}",
-            "rows": [{"label": r["market"] or "全国", "value": price_text(r)} for r in rows[:3]],
+            "rows": [{"label": (r["market"] or "全国") + " " + spec_label(r),
+                      "value": price_text(r)} for r in rows[:3]],
         })
     else:
         card.update({
@@ -307,7 +388,8 @@ PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象�
 字段：
 - action: price(查价) | compare(比价) | trend(涨跌/走势) | export(导出报价文本) | regions(有哪些地区) | unknown
 - commodity: 必须从【品种】里选一个，选不到填 null
-- regions: 数组，从【地区】里选，可以多个；问"全国/整体"填空数组
+- category: 问的是一类矿（如"非金属矿""稀土"）时填分类名，否则 null
+- regions: 数组，从【地区】里选（省或具体市场都行），可以多个；问"全国/整体"填空数组
 - days: 7 / 30 / 90 之一，没提就填 null
 - spec: 规格关键词（如 "PB粉" "97" "准一级"），没有填 null
 
@@ -319,20 +401,28 @@ PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象�
 
 【品种】{commodities}
 
+【分类】（可以填 category，commodity 留空）
+{categories}
+
 【地区】{regions}
 
 【最近对话】{history}"""
 
 
-def llm_parse(conf: dict, question: str, history: list, commodities, provinces) -> dict:
+def llm_parse(conf: dict, question: str, history: list, commodities, provinces,
+              categories=None, markets=None) -> dict:
     api_key = conf.get("api_key") or ""
     if not api_key:
         raise RuntimeError("未配置 DEEPSEEK_API_KEY")
     hist_text = "\n".join(
         f"Q: {h.get('q','')} → {json.dumps(h.get('intent') or {}, ensure_ascii=False)}"
         for h in (history or [])[-3:]) or "（无）"
-    system = PROMPT.format(commodities="、".join(commodities),
-                           regions="、".join(provinces), history=hist_text)
+    cat_text = "\n".join(f"{k}：{'、'.join(v)}" for k, v in (categories or {}).items()) or "（无）"
+    region_text = "、".join(provinces)
+    if markets:
+        region_text += "；市场：" + "、".join(markets[:120])
+    system = PROMPT.format(commodities="、".join(commodities), categories=cat_text,
+                           regions=region_text, history=hist_text)
     resp = requests.post(
         conf["base_url"].rstrip("/") + "/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -371,10 +461,11 @@ def ask(req: AskRequest):
     started = time.time()
     conn, settings = connect()
     try:
-        commodities, provinces, _ = catalog(conn)
+        commodities, provinces, markets, categories = catalog(conn)
         conf = load_ask_config()
         try:
-            intent = llm_parse(conf, question, req.history, commodities, provinces)
+            intent = llm_parse(conf, question, req.history, commodities, provinces,
+                               categories, markets)
         except Exception as exc:
             log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),
                                "q": question, "ok": False, "error": str(exc)[:200],
@@ -382,7 +473,7 @@ def ask(req: AskRequest):
             return {"ok": False, "error": str(exc)[:200]}
         if (intent.get("action") or "") == "unknown":
             return {"ok": False, "error": "没听懂", "intent": intent}
-        card = execute(conn, intent, provinces)
+        card = execute(conn, intent, provinces, categories)
         log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),
                            "q": question, "ok": True, "intent": intent,
                            "card": card, "ms": int((time.time() - started) * 1000)})
