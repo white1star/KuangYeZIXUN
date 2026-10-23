@@ -15,7 +15,7 @@
           <circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line>
         </svg>
         <input id="q" type="search" autocomplete="off" spellcheck="false"
-               placeholder="搜矿种、地区、规格 / 拼音：萤石、广西、PB粉、ying shi">
+               aria-label="搜索矿种、地区、规格">
         <div id="suggest" class="suggest" hidden></div>
       </div>
       <label>口径
@@ -357,7 +357,7 @@
     state.focus = -1;
     if (!suggestions.length) {
       suggestEl.innerHTML = '<div class="suggest-empty">没有匹配的矿种或地区' +
-        '<span>试试 萤石 / 广西 / PB粉 / ying shi</span></div>';
+        '<span>试试 萤石、广西、PB粉</span></div>';
       suggestEl.hidden = false;
       return;
     }
