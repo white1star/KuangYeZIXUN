@@ -311,6 +311,10 @@
     var m = state.market;
     var d = state.days;
     var entries = entriesFor(c, t, m);
+    if (!entries.length && (m || state.province)) {
+      // 选了地区但该品种在当地没报价：图表退回该品种的整体走势，不留空图
+      entries = entriesFor(c, t, '');
+    }
     titleEl.textContent = c + ' 价格走势 · ' + (t || '全部口径') +
       (state.province ? ' · ' + state.province + '全省' : (m ? ' · ' + m : '')) + ' · 近' + d + '天';
     var prepared = [];
