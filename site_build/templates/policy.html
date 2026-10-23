@@ -72,10 +72,11 @@
     });
   }
 
-  function showItems(items, query, hint) {
+  function showItems(items, query, hint, total) {
+    var n = (typeof total === 'number' && total >= 0) ? total : items.length;
     feedEl.hidden = items.length === 0;
     emptyEl.hidden = items.length > 0;
-    setCount(items.length, hint);
+    setCount(n, hint);
     feed.set(items, query);
   }
 
@@ -145,7 +146,7 @@
       }
       renderChips(intent);
       renderAnswer(data.card || {});
-      showItems(data.items || [], q, data.card && data.card.meta ? '' : '');
+      showItems(data.items || [], q, '', data.total);
     }).catch(function () {
       if (token !== askPolicy._seq) return;
       renderChips(null);

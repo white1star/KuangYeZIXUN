@@ -656,7 +656,7 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
     return card
 
 
-def search_policies(conn, intent: dict, limit: int = 40, keyword_mode: str = "all") -> tuple:
+def search_policies(conn, intent: dict, limit: int = 100, keyword_mode: str = "all") -> tuple:
     """按关键词/地区/矿种/类型/机关/天数检索政策。返回 (条目, 总数)。"""
     keywords = [k.lower() for k in (intent.get("keywords") or []) if k]
     regions = intent.get("regions") or []
@@ -886,7 +886,7 @@ def ask(req: AskRequest):
                                "q": question, "ok": True, "intent": intent,
                                "card": card, "ms": int((time.time() - started) * 1000)})
             return {"ok": True, "source": "llm", "intent": intent,
-                    "card": card, "items": items}
+                    "card": card, "items": items, "total": total}
         card = execute(conn, intent, provinces, categories)
         if notes:
             card["note"] = "；".join(notes)[:120]
