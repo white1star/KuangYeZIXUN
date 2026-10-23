@@ -179,7 +179,7 @@ def normalize_intent(intent: dict, commodities, provinces, markets, categories, 
     except (TypeError, ValueError):
         days = 0
     if days not in (7, 30, 90):
-        days = 30
+        days = 0 if action == "policy" else 30
 
     out = {"action": action, "commodity": commodity, "category": category,
            "regions": regions, "days": days, "spec": (intent.get("spec") or "")}
@@ -833,11 +833,12 @@ def ask(req: AskRequest):
                                "q": question, "ok": False, "error": str(exc)[:200],
                                "ms": int((time.time() - started) * 1000)})
             return {"ok": False, "error": str(exc)[:200]}
+        if req.scope == "policy":
+            # 政策页来的请求，按政策意图解析（模型不该在这里猜价格意图）
+            intent["action"] = "policy"
         intent, notes, problems = normalize_intent(
             intent, commodities, provinces, markets, categories, load_aliases(), pol,
             question=question)
-        if req.scope == "policy":
-            intent["action"] = "policy"
         has_entity = bool(intent["commodity"] or intent["regions"] or intent["category"])
         if intent["action"] == "policy":
             has_entity = bool(intent.get("keywords") or intent.get("minerals")
