@@ -258,19 +258,29 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
             "source": row["source_name"] or row["source_key"] or "",
         })
 
-    # 同品种同口径同规格下各市场的价差：直观看"哪个地区贵"
+    # 同品种同口径同规格下各市场的价差：只比"同一天真实报过价"的市场，
+    # 沿用昨收的点不参与，否则一个没更新的市场会把价差拉大。
     spread: dict = {}
+    fresh_date: dict = {}
     for item in latest:
         key = (item["commodity"], item["price_type"], item["spec"])
+        if not item["carried"]:
+            fresh_date[key] = max(fresh_date.get(key, ""), item["quote_date"])
+    for item in latest:
+        key = (item["commodity"], item["price_type"], item["spec"])
+        if item["carried"]:
+            continue
         lo, hi = spread.get(key, (None, None))
         value = item["value"]
         spread[key] = (value if lo is None else min(lo, value),
                         value if hi is None else max(hi, value))
     for item in latest:
-        lo, hi = spread.get((item["commodity"], item["price_type"], item["spec"]), (None, None))
+        key = (item["commodity"], item["price_type"], item["spec"])
+        lo, hi = spread.get(key, (None, None))
         item["market_low"] = lo
         item["market_high"] = hi
         item["market_spread"] = round(hi - lo, 2) if lo is not None and hi is not None else None
+        item["market_fresh_date"] = fresh_date.get(key, "")
         spec = (item["spec"] or "").strip()
         origin = (item["origin"] or "").strip()
         if spec and spec != "-":

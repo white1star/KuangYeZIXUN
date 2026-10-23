@@ -226,7 +226,9 @@ def _seed_markets(db):
     conn = store.connect(db)
     store.init_db(conn)
     rows = []
-    for day in ("2026-10-19", "2026-10-20", "2026-10-21"):
+    today = datetime.now().date()
+    for offset in (2, 1, 0):
+        day = (today - timedelta(days=offset)).strftime("%Y-%m-%d")
         rows.append({"commodity": "铜", "price_type": "期货", "value": 109000.0, "unit": "元/吨",
                      "change": None, "change_pct": None, "price_date": day,
                      "source_key": "sina_futures", "raw_label": "CU0", "market": "",
@@ -276,6 +278,39 @@ def test_latest_rows_expose_market_and_spread(tmp_path):
     assert "长江现货" in html
     assert "辽宁有色" in html
     assert "市场" in html
+
+
+def test_spread_ignores_carried_quotes(tmp_path):
+    """沿用昨收的市场不参与价差：一个没更新的市场不该把价差拉大。"""
+    db = tmp_path / "t.db"
+    conn = store.connect(db)
+    store.init_db(conn)
+    today = datetime.now().strftime("%Y-%m-%d")
+    old = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+    base = {"commodity": "铜", "price_type": "现货", "unit": "元/吨", "change": None,
+            "change_pct": None, "source_key": "ccmn_cu", "raw_label": "1#铜",
+            "origin": "国产", "spec": "1#", "basis": "含税", "contract": "",
+            "fetched_at": store.now_iso()}
+    store.upsert_prices(conn, [
+        dict(base, price_date=today, market="长江现货", value=108790.0),
+        dict(base, price_date=today, market="辽宁有色", value=108410.0),
+        # 山东有色当天没更新，停在两天前的价
+        dict(base, price_date=old, market="山东有色", value=110560.0),
+        dict(base, price_date=old, market="长江现货", value=110740.0),
+        dict(base, price_date=old, market="辽宁有色", value=110340.0),
+    ])
+    conn.close()
+    out = tmp_path / "dist"
+    build(db_path=db, out_dir=out, feedback_email="")
+    payload = json.loads((out / "prices.json").read_text(encoding="utf-8"))
+    rows = [r for r in payload["latest"] if r["price_type"] == "现货"]
+    fresh = [r for r in rows if not r["carried"]]
+    stale = [r for r in rows if r["carried"]]
+    assert {r["market"] for r in fresh} == {"长江现货", "辽宁有色"}
+    assert [r["market"] for r in stale] == ["山东有色"]
+    for r in fresh:
+        assert r["market_spread"] == 380.0, "价差只按当天真实报价算"
+        assert r["market_fresh_date"] == today
 
 
 def test_market_map_and_global_market_list(tmp_path):
