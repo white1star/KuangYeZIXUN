@@ -93,7 +93,7 @@ def test_prices_page_shows_carry_tag_for_carried_row(tmp_path):
     out = tmp_path / "dist"
     build(db_path=db, out_dir=out, feedback_email="")
     html = (out / "prices.html").read_text(encoding="utf-8")
-    assert "昨收" in html
+    assert 'class="carry"' in html  # 昨收 标记（脚本里也有"昨收"字样，这里查标记本身）
     assert old in html  # tooltip shows the real quote date
 
 
@@ -104,4 +104,4 @@ def test_prices_page_has_no_carry_tag_for_fresh_row(tmp_path):
     out = tmp_path / "dist"
     build(db_path=db, out_dir=out, feedback_email="")
     html = (out / "prices.html").read_text(encoding="utf-8")
-    assert "昨收" not in html
+    assert 'class="carry"' not in html

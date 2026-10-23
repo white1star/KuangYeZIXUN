@@ -816,7 +816,8 @@
       var specText = String(top.spec_label || top.price_type || '');
       if (specText.length > 18) specText = specText.slice(0, 18) + '…';
       card.value = fmtPrice(top);
-      card.meta = (top.market || '全国') + ' · ' + specText + ' · ' + top.price_date +
+      var dayText = top.carried ? (top.quote_date + ' 报价，昨收') : top.price_date;
+      card.meta = (top.market || '全国') + ' · ' + specText + ' · ' + dayText +
         ' · ' + fmtChange(top) + ' · 来源 ' + top.source;
     }
     return card;

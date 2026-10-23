@@ -108,8 +108,8 @@ def latest_rows(conn, commodity=None) -> list:
     for row in conn.execute(sql, params).fetchall():
         item = dict(row)
         item["province"] = province_of(item["market"])
-        if item["price_date"] and item["price_date"] < today:
-            continue
+        # 当天没出价（休市/源站没更新）也要保留：前端标"昨收"，问答不能当成没数据
+        item["carried"] = bool(item["price_date"] and item["price_date"] < today)
         out.append(item)
     return out
 
@@ -380,15 +380,18 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
             "value": f"{fmt_num(min(values))} ~ {fmt_num(max(values))}",
             "sub": top["unit"] or "",
             "meta": f"{len(rows)} 条报价 · {len(specs)} 个规格 · "
-                    f"{len({r['market'] or '全国' for r in rows})} 个市场 · {top['price_date']}",
+                    f"{len({r['market'] or '全国' for r in rows})} 个市场 · {top['price_date']}"
+                    f"{'（含昨收）' if any(r.get('carried') for r in rows) else ''}",
             "rows": [{"label": (r["market"] or "全国") + " " + spec_label(r),
                       "value": price_text(r)} for r in rows[:3]],
         })
     else:
+        carried_note = "（昨收，源站当天未出价）" if top.get("carried") else ""
         card.update({
             "value": price_text(top),
-            "meta": f"{top['market'] or '全国'} · {spec_label(top)} · {top['price_date']} · "
-                    f"{change_text(top)} · 来源 {top['source_name'] or top['source_key']}",
+            "meta": f"{top['market'] or '全国'} · {spec_label(top)} · {top['price_date']}"
+                    f"{carried_note} · {change_text(top)} · "
+                    f"来源 {top['source_name'] or top['source_key']}",
         })
     return card
 
