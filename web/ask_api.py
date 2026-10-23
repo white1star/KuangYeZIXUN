@@ -40,6 +40,7 @@ app = FastAPI(title="矿价问答")
 class AskRequest(BaseModel):
     question: str = ""
     history: list = []
+    scope: str = ""      # "policy" 表示来自政策频道，按政策解析
 
 
 ALIAS_FILE = ROOT / "config" / "price_aliases.yaml"
@@ -759,7 +760,7 @@ PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象�
 
 
 def llm_parse(conf: dict, question: str, history: list, commodities, provinces,
-              categories=None, markets=None, policy=None) -> dict:
+              categories=None, markets=None, policy=None, scope="") -> dict:
     api_key = conf.get("api_key") or ""
     if not api_key:
         raise RuntimeError("未配置 DEEPSEEK_API_KEY")
@@ -826,7 +827,7 @@ def ask(req: AskRequest):
         conf = load_ask_config()
         try:
             intent = llm_parse(conf, question, req.history, commodities, provinces,
-                               categories, markets, pol)
+                               categories, markets, pol, scope=req.scope)
         except Exception as exc:
             log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),
                                "q": question, "ok": False, "error": str(exc)[:200],
@@ -835,6 +836,8 @@ def ask(req: AskRequest):
         intent, notes, problems = normalize_intent(
             intent, commodities, provinces, markets, categories, load_aliases(), pol,
             question=question)
+        if req.scope == "policy":
+            intent["action"] = "policy"
         has_entity = bool(intent["commodity"] or intent["regions"] or intent["category"])
         if intent["action"] == "policy":
             has_entity = bool(intent.get("keywords") or intent.get("minerals")
