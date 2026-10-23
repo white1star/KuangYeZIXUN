@@ -4,10 +4,12 @@
 一天一次抓取，量很小，不会触发验证码。
 """
 import html as html_lib
+import json
+import os
 import re
 import shutil
 import subprocess
-from datetime import date
+from datetime import date, datetime
 
 import requests
 
@@ -101,8 +103,30 @@ def curl_get(url, timeout=25):
         return ""
 
 
+def _from_url_file(path, max_age_days):
+    """本机发现后推过来的文章 URL；服务器上搜狗被拦时靠它。"""
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        data = json.loads(open(path, encoding="utf-8").read())
+        url = (data.get("url") or "").strip()
+        found = data.get("found_at") or ""
+        if not url.startswith("http"):
+            return None
+        if found:
+            age = (date.today() - datetime.strptime(found[:10], "%Y-%m-%d").date()).days
+            if age > max_age_days:
+                return None
+        return url, data.get("title") or "每日矿石价格"
+    except (OSError, ValueError):
+        return None
+
+
 def discover(conf, timeout=25):
     """按配置找到今天（或最近）那篇文章的 URL。"""
+    hit = _from_url_file(conf.get("url_file"), int(conf.get("max_age_days", 7)))
+    if hit:
+        return hit
     sess = requests.Session()
     page = fetch(conf["search"], session=sess, timeout=timeout, retries=1)
     items = search_items(page.text) if page.ok else []

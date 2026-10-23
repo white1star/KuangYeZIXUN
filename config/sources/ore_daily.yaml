@@ -2,12 +2,16 @@ key: ore_daily
 name: 矿业咨讯·每日矿石价格
 board: price
 parser: ore_daily
-# 公众号没有公开列表，用搜狗微信发现当天那篇；一天一抓，不会触发验证码
+# 公众号没有公开列表，用搜狗微信发现当天那篇
+# 但搜狗按机房 IP 拦截（腾讯云返回「已关闭」），所以：
+#   本机 tools/push_ore_url.py 发现 → 写 data/ore_daily_url.json → 推到服务器
+#   服务器优先读这个文件，读不到再自己试搜狗
 discover:
   search: https://weixin.sogou.com/weixin?type=2&query=%E5%90%84%E7%A7%8D%E7%9F%BF%E7%9F%B3%E4%BB%B7%E6%A0%BC
   account: 矿业咨讯
   title_keyword: 各种矿石价格
   max_age_days: 4
+  url_file: data/ore_daily_url.json
 price_type: 现货
 basis: ""
 stale_days: 7
