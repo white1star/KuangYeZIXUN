@@ -220,6 +220,9 @@ def normalize_intent(intent: dict, commodities, provinces, markets, categories, 
         GENERIC = {"政策", "法规", "通知", "公告", "文件"}
         picked_types = [x for x in pick_list(intent.get("types"), pol.get("types") or [], "类型")
                         if x not in GENERIC]
+        # 类型是分类标签，用户很少说"新矿/市场"；模型自己推的类型会把另一类文章排掉
+        if question:
+            picked_types = [x for x in picked_types if x in question]
         out["types"] = picked_types
         source = str(intent.get("source") or "").strip()
         if source:
