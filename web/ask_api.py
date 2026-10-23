@@ -43,7 +43,7 @@ class AskRequest(BaseModel):
 
 
 ALIAS_FILE = ROOT / "config" / "price_aliases.yaml"
-ACTIONS = {"price", "compare", "trend", "export", "regions"}
+ACTIONS = {"price", "compare", "trend", "export", "regions", "policy"}
 
 
 def load_aliases() -> dict:
@@ -135,7 +135,7 @@ def resolve_region(raw, provinces, markets):
     return None, f"没找到地区「{raw}」"
 
 
-def normalize_intent(intent: dict, commodities, provinces, markets, categories, aliases):
+def normalize_intent(intent: dict, commodities, provinces, markets, categories, aliases, policy=None):
     """白名单强校验：认不出的品种/地区不硬猜，记进 problems 交给前端提示。"""
     notes, problems = [], []
     action = str(intent.get("action") or "price")
@@ -179,9 +179,46 @@ def normalize_intent(intent: dict, commodities, provinces, markets, categories, 
     if days not in (7, 30, 90):
         days = 30
 
-    return ({"action": action, "commodity": commodity, "category": category,
-             "regions": regions, "days": days,
-             "spec": (intent.get("spec") or "")}, notes, problems)
+    out = {"action": action, "commodity": commodity, "category": category,
+           "regions": regions, "days": days, "spec": (intent.get("spec") or "")}
+
+    if action == "policy":
+        pol = policy or {}
+
+        def pick_list(raw_list, pool, label):
+            picked = []
+            for item in raw_list or []:
+                name = str(item).strip()
+                if not name:
+                    continue
+                if name in pool:
+                    picked.append(name)
+                    continue
+                close = difflib.get_close_matches(name, pool, n=1, cutoff=0.6)
+                if close:
+                    picked.append(close[0])
+                    notes.append(f"把「{name}」理解为{label} {close[0]}")
+                else:
+                    problems.append(f"没找到{label}「{name}」")
+            return picked
+
+        out["keywords"] = [str(k).strip() for k in (intent.get("keywords") or []) if str(k).strip()]
+        out["regions"] = pick_list(intent.get("regions"), pol.get("regions") or [], "地区")
+        out["minerals"] = pick_list(intent.get("minerals"), pol.get("minerals") or [], "矿种")
+        out["types"] = pick_list(intent.get("types"), pol.get("types") or [], "类型")
+        source = str(intent.get("source") or "").strip()
+        if source:
+            close = difflib.get_close_matches(source, pol.get("sources") or [], n=1, cutoff=0.6)
+            if source in (pol.get("sources") or []):
+                out["source"] = source
+            elif close:
+                out["source"] = close[0]
+                notes.append(f"把「{source}」理解为机关 {close[0]}")
+            else:
+                out["source"] = ""
+                problems.append(f"没找到机关「{source}」")
+
+    return out, notes, problems
 
 
 def load_ask_config() -> dict:
@@ -210,6 +247,26 @@ def connect():
 # --------------------------------------------------------------------------
 # 目录
 # --------------------------------------------------------------------------
+
+def policy_catalog(conn) -> dict:
+    """政策库里实际存在的地区/矿种/类型/机关，用于白名单校验。"""
+    rows = conn.execute(
+        "SELECT a.regions, a.minerals, a.types, "
+        "(SELECT s.name FROM sources s WHERE s.key=a.source_key) src "
+        "FROM articles a WHERE a.board='policy' AND a.is_primary=1").fetchall()
+    regions, minerals, types, sources = set(), set(), set(), set()
+    for r in rows:
+        for m in json.loads(r["regions"] or "[]"):
+            regions.add(m)
+        for m in json.loads(r["minerals"] or "[]"):
+            minerals.add(m)
+        for m in json.loads(r["types"] or "[]"):
+            types.add(m)
+        if r["src"]:
+            sources.add(r["src"])
+    return {"regions": sorted(regions), "minerals": sorted(minerals),
+            "types": sorted(types), "sources": sorted(sources)}
+
 
 def catalog(conn) -> tuple:
     since = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -581,6 +638,55 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
     return card
 
 
+def search_policies(conn, intent: dict, limit: int = 40) -> tuple:
+    """按关键词/地区/矿种/类型/机关/天数检索政策。返回 (条目, 总数)。"""
+    keywords = [k.lower() for k in (intent.get("keywords") or []) if k]
+    regions = intent.get("regions") or []
+    minerals = intent.get("minerals") or []
+    types = intent.get("types") or []
+    source = intent.get("source") or ""
+    days = int(intent.get("days") or 0)
+    cutoff = ""
+    if days:
+        cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+    rows = conn.execute(
+        "SELECT a.title, a.url, a.published_at, a.fetched_at, a.summary, "
+        "a.minerals, a.regions, a.types, "
+        "(SELECT s.name FROM sources s WHERE s.key=a.source_key) AS source_name "
+        "FROM articles a WHERE a.board='policy' AND a.is_primary=1 "
+        "ORDER BY CASE WHEN a.published_at='' THEN substr(a.fetched_at,1,10) "
+        "ELSE a.published_at END DESC, a.id DESC LIMIT 3000").fetchall()
+
+    out = []
+    for row in rows:
+        day = (row["published_at"] or "")[:10] or (row["fetched_at"] or "")[:10]
+        if cutoff and day and day < cutoff:
+            continue
+        if source and (row["source_name"] or "") != source:
+            continue
+        regs = json.loads(row["regions"] or "[]")
+        mins = json.loads(row["minerals"] or "[]")
+        typs = json.loads(row["types"] or "[]")
+        if regions and not all(r in regs for r in regions):
+            continue
+        if minerals and not all(m in mins for m in minerals):
+            continue
+        if types and not all(t in typs for t in types):
+            continue
+        hay = f"{row['title']} {row['summary']} {' '.join(mins + regs + typs)}".lower()
+        if keywords and not all(k in hay for k in keywords):
+            continue
+        out.append({
+            "title": row["title"], "url": row["url"],
+            "published_at": row["published_at"] or day,
+            "summary": row["summary"] or "",
+            "source_name": row["source_name"] or "",
+            "board": "policy", "minerals": mins, "regions": regs, "types": typs,
+        })
+    return out[:limit], len(out)
+
+
 # --------------------------------------------------------------------------
 # 模型：只解析意图
 # --------------------------------------------------------------------------
@@ -588,12 +694,18 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
 PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象，不要任何解释。
 
 字段：
-- action: price(查价) | compare(比价) | trend(涨跌/走势) | export(导出报价文本) | regions(有哪些地区) | unknown
+- action: price(查价) | compare(比价) | trend(涨跌/走势) | export(导出报价文本) | regions(有哪些地区) | policy(查政策/法规/通知/矿权公告) | unknown
 - commodity: 必须从【品种】里选一个，选不到填 null
 - category: 问的是一类矿（如"非金属矿""稀土"）时填分类名，否则 null
 - regions: 数组，从【地区】里选（省或具体市场都行），可以多个；问"全国/整体"填空数组
 - days: 7 / 30 / 90 之一，没提就填 null
 - spec: 规格关键词（如 "PB粉" "97" "准一级"），没有填 null
+
+当 action=policy 时，另填这四项（其余字段留空）：
+- keywords: 关键词数组，如 ["探矿权","出让"]
+- regions / minerals / types: 数组，分别从【政策地区】【政策矿种】【政策类型】里选
+- source: 从【政策机关】里选一个，没有填 null
+- days: 近多少天，没提填 null
 
 规则：
 1. 只判断意图，不要计算、不要输出任何价格数字。
@@ -612,11 +724,19 @@ PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象�
 
 【地区】{regions}
 
+【政策地区】{policy_regions}
+
+【政策矿种】{policy_minerals}
+
+【政策类型】{policy_types}
+
+【政策机关】{policy_sources}
+
 【最近对话】{history}"""
 
 
 def llm_parse(conf: dict, question: str, history: list, commodities, provinces,
-              categories=None, markets=None) -> dict:
+              categories=None, markets=None, policy=None) -> dict:
     api_key = conf.get("api_key") or ""
     if not api_key:
         raise RuntimeError("未配置 DEEPSEEK_API_KEY")
@@ -632,8 +752,14 @@ def llm_parse(conf: dict, question: str, history: list, commodities, provinces,
     region_text = "、".join(provinces)
     if markets:
         region_text += "；市场：" + "、".join(markets[:120])
-    system = PROMPT.format(commodities="；".join(com_lines), categories=cat_text,
-                           regions=region_text, history=hist_text)
+    pol = policy or {}
+    system = PROMPT.format(
+        commodities="；".join(com_lines), categories=cat_text,
+        regions=region_text, history=hist_text,
+        policy_regions="、".join(pol.get("regions") or []) or "（无）",
+        policy_minerals="、".join(pol.get("minerals") or []) or "（无）",
+        policy_types="、".join(pol.get("types") or []) or "（无）",
+        policy_sources="、".join(pol.get("sources") or []) or "（无）")
     resp = requests.post(
         conf["base_url"].rstrip("/") + "/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -673,21 +799,40 @@ def ask(req: AskRequest):
     conn, settings = connect()
     try:
         commodities, provinces, markets, categories = catalog(conn)
+        pol = policy_catalog(conn)
         conf = load_ask_config()
         try:
             intent = llm_parse(conf, question, req.history, commodities, provinces,
-                               categories, markets)
+                               categories, markets, pol)
         except Exception as exc:
             log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),
                                "q": question, "ok": False, "error": str(exc)[:200],
                                "ms": int((time.time() - started) * 1000)})
             return {"ok": False, "error": str(exc)[:200]}
         intent, notes, problems = normalize_intent(
-            intent, commodities, provinces, markets, categories, load_aliases())
+            intent, commodities, provinces, markets, categories, load_aliases(), pol)
         if intent["action"] == "unknown" or not (
                 intent["commodity"] or intent["regions"] or intent["category"]):
             return {"ok": False, "error": "没听懂", "intent": intent,
                     "clarify": "；".join(problems)[:120]}
+        if intent["action"] == "policy":
+            items, total = search_policies(conn, intent)
+            applied = [f"{k} {('/'.join(v) if isinstance(v, list) else v)}"
+                       for k, v in (("地区", intent.get("regions")),
+                                    ("矿种", intent.get("minerals")),
+                                    ("类型", intent.get("types")),
+                                    ("机关", intent.get("source")),
+                                    ("关键词", intent.get("keywords"))) if v]
+            card = {"title": question, "value": f"共 {total} 条",
+                    "sub": "", "rows": [], "export": None,
+                    "meta": ("筛选：" + " · ".join(applied)) if applied else "全部政策"}
+            if notes:
+                card["note"] = "；".join(notes)[:120]
+            log_ask(settings, {"ts": datetime.now().isoformat(timespec="seconds"),
+                               "q": question, "ok": True, "intent": intent,
+                               "card": card, "ms": int((time.time() - started) * 1000)})
+            return {"ok": True, "source": "llm", "intent": intent,
+                    "card": card, "items": items}
         card = execute(conn, intent, provinces, categories)
         if notes:
             card["note"] = "；".join(notes)[:120]

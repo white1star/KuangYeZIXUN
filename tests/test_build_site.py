@@ -118,10 +118,10 @@ def test_policy_contains_filters_and_seed(tmp_path):
     out, _ = make_site(tmp_path)
     policy = (out / "policy.html").read_text(encoding="utf-8")
     assert "河北省自然资源厅发布绿色矿山名录" in policy
-    # 搜索框 + 四个分面（机关/地区/矿种/类型）
-    for marker in ('id="pq"', 'id="facet-source"', 'id="facet-region"',
-                   'id="facet-mineral"', 'id="facet-type"'):
-        assert marker in policy, marker
+    # 只有一个 AI 搜索框，不再有左侧分面
+    assert 'id="pq"' in policy
+    assert 'id="facet-panel"' not in policy
+    assert 'api/ask' in policy
     payload = json.loads((out / "policy.json").read_text(encoding="utf-8"))
     assert payload["count"] == 1
     item = payload["items"][0]
