@@ -170,12 +170,17 @@ def _market_rank(market: str) -> int:
 SPREAD_MAX_RATIO = 1.5
 
 
-def _safe_spread(lo, hi):
+def _safe_spread(lo, hi, spec):
     """市场价差只在"同一品种同一规格"可信时给出。
 
-    价差超过最低价的 50%，说明源站把不同口径（品位/单位/计价基准）混在了一个品名下
-    （实测钼酸铵 99% 同规格从 2.3 万到 39 万），这种数字不能当地区价差展示。
+    1) 规格没写或不详（`-`）：不同市场可能报的根本不是同一个东西（废铜普料 vs 光亮铜线），
+       不给价差；
+    2) 价差超过最低价的 50%：说明源站把不同口径（品位/单位/计价基准）混在一个品名下
+       （实测钼酸铵 99% 同规格从 2.3 万到 39 万），也不能当地区价差。
     """
+    spec = (spec or "").strip()
+    if not spec or spec == "-":
+        return None
     if lo is None or hi is None or lo <= 0 or hi < lo:
         return None
     if hi / lo > SPREAD_MAX_RATIO:
@@ -295,7 +300,7 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
         lo, hi = spread.get(key, (None, None))
         item["market_low"] = lo
         item["market_high"] = hi
-        item["market_spread"] = _safe_spread(lo, hi)
+        item["market_spread"] = _safe_spread(lo, hi, item["spec"])
         item["market_fresh_date"] = fresh_date.get(key, "")
         spec = (item["spec"] or "").strip()
         origin = (item["origin"] or "").strip()
