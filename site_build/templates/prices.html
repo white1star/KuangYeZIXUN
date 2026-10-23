@@ -432,8 +432,11 @@
         item.type === 'favorite' || item.type === 'recent') {
       state.commodity = item.value;
       state.ptype = '';
+      state.showAll = false;
+      if (chkAll) chkAll.checked = false;
       pushRecent(item.value);
       syncTypes();
+      renderFacets();
     } else if (item.type === 'province') {
       state.province = item.value;
       state.market = '';
@@ -1232,6 +1235,10 @@
   // ---------- 事件 ----------
   qEl.addEventListener('input', function () { renderSuggest(qEl.value); });
   qEl.addEventListener('focus', function () { renderSuggest(qEl.value); });
+  // 选完建议后输入框仍保持焦点，再点它不会触发 focus —— 这里补一个 click
+  qEl.addEventListener('click', function () {
+    if (suggestEl.hidden) renderSuggest(qEl.value);
+  });
   qEl.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { qEl.value = ''; hideSuggest(); return; }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -1251,6 +1258,12 @@
       } else {
         ask(qEl.value);
       }
+    }
+  });
+
+  suggestEl.addEventListener('click', function (e) {
+    if (!e.target.closest('.suggest-item') && !e.target.closest('.suggest-clear')) {
+      hideSuggest();
     }
   });
 
