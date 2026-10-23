@@ -307,14 +307,10 @@ def prices_payload(conn, days=SERIES_DAYS) -> dict:
         item["market_fresh_date"] = fresh_date.get(key, "")
         spec = (item["spec"] or "").strip()
         origin = (item["origin"] or "").strip()
-        # 产地/牌号只在"短、像地名或品牌"时才拼进规格：1# 葫芦岛、A00 抚铝
-        short_origin = bool(origin) and len(origin) <= 4 and not any(ch.isdigit() for ch in origin)
-        if spec and spec != "-":
-            show_origin = short_origin and len(spec) <= 12 and origin != spec
-            item["spec_label"] = f"{spec} {origin}" if show_origin else spec
-        else:
-            item["spec_label"] = origin
+        # 规格 = 牌号/品位/等级（1#、A00、PB粉 62%）；产地/品牌单独展示，不混进规格
+        item["spec_label"] = spec if (spec and spec != "-") else origin
         item["brief_spec"] = item["spec_label"]
+        item["has_origin"] = bool(origin) and bool(spec) and spec != "-"
         item["province"] = province_of(item["market"])
 
     markets = sorted({m for by_type in market_map.values()

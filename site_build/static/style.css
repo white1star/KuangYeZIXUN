@@ -693,6 +693,7 @@ table.prices .market-tag {
   background: #F2F8F4;
   white-space: nowrap;
 }
+table.prices .origin { display: block; margin-top: 2px; font-size: 11px; color: #98A1AC; }
 table.prices td.spec { font-size: 12px; color: var(--muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .ptype { margin-left: 6px; font-size: 11px; color: #98A1AC; }
 
