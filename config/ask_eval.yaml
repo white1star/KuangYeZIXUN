@@ -126,3 +126,17 @@
 - q: 铅锌什么价
   action: price
   commodity: 铅锌
+
+- q: 最近山西的煤矿探矿权政策
+  action: policy
+  regions: [山西]
+  minerals: [煤炭]
+
+- q: 内蒙古的萤石矿权出让
+  action: policy
+  regions: [内蒙古]
+  minerals: [萤石]
+
+- q: 安全生产方面的通知
+  action: policy
+  keywords: [安全生产]

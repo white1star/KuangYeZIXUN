@@ -34,15 +34,18 @@ def run_local(cases: list) -> list:
     conn, _ = ask_api.connect()
     try:
         commodities, provinces, markets, categories = ask_api.catalog(conn)
+        pol = ask_api.policy_catalog(conn)
         aliases = ask_api.load_aliases()
         conf = ask_api.load_ask_config()
         results = []
         for case in cases:
             q = str(case.get("q") or "")
             try:
-                raw = ask_api.llm_parse(conf, q, [], commodities, provinces, categories, markets)
+                raw = ask_api.llm_parse(conf, q, [], commodities, provinces,
+                                        categories, markets, pol)
                 intent, notes, problems = ask_api.normalize_intent(
-                    raw, commodities, provinces, markets, categories, aliases)
+                    raw, commodities, provinces, markets, categories, aliases, pol,
+                    question=q)
             except Exception as exc:
                 results.append({"q": q, "want": case, "got": None, "error": str(exc)[:120]})
                 continue
@@ -92,6 +95,12 @@ def check(want: dict, got: dict) -> tuple:
             return out
         if keys(want.get("regions")) != keys(got.get("regions")):
             return False, f"regions {got.get('regions')} != {want.get('regions')}"
+    if want.get("keywords") is not None:
+        if set(want.get("keywords") or []) != set(got.get("keywords") or []):
+            return False, f"keywords {got.get('keywords')} != {want.get('keywords')}"
+    if want.get("types") is not None:
+        if set(want.get("types") or []) != set(got.get("types") or []):
+            return False, f"types {got.get('types')} != {want.get('types')}"
     if want.get("days") is not None:
         if int(want["days"]) != int(got.get("days") or 0):
             return False, f"days {got.get('days')} != {want.get('days')}"

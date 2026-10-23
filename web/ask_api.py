@@ -135,7 +135,8 @@ def resolve_region(raw, provinces, markets):
     return None, f"没找到地区「{raw}」"
 
 
-def normalize_intent(intent: dict, commodities, provinces, markets, categories, aliases, policy=None):
+def normalize_intent(intent: dict, commodities, provinces, markets, categories, aliases,
+                     policy=None, question=""):
     """白名单强校验：认不出的品种/地区不硬猜，记进 problems 交给前端提示。"""
     notes, problems = [], []
     action = str(intent.get("action") or "price")
@@ -205,6 +206,14 @@ def normalize_intent(intent: dict, commodities, provinces, markets, categories, 
         out["keywords"] = [str(k).strip() for k in (intent.get("keywords") or []) if str(k).strip()]
         out["regions"] = pick_list(intent.get("regions"), pol.get("regions") or [], "地区")
         out["minerals"] = pick_list(intent.get("minerals"), pol.get("minerals") or [], "矿种")
+        # 模型偶尔漏召回：问题里明确出现的地名/矿种，直接补进来
+        if question:
+            for name in pol.get("regions") or []:
+                if name and name in question and name not in out["regions"]:
+                    out["regions"].append(name)
+            for name in pol.get("minerals") or []:
+                if name and name in question and name not in out["minerals"]:
+                    out["minerals"].append(name)
         # "政策/通知/公告"是泛词：本页全是政策，拿它当类型过滤反而会把
         # 标成"新矿/市场/安全"的文章排掉
         GENERIC = {"政策", "法规", "通知", "公告", "文件"}
@@ -824,7 +833,8 @@ def ask(req: AskRequest):
                                "ms": int((time.time() - started) * 1000)})
             return {"ok": False, "error": str(exc)[:200]}
         intent, notes, problems = normalize_intent(
-            intent, commodities, provinces, markets, categories, load_aliases(), pol)
+            intent, commodities, provinces, markets, categories, load_aliases(), pol,
+            question=question)
         has_entity = bool(intent["commodity"] or intent["regions"] or intent["category"])
         if intent["action"] == "policy":
             has_entity = bool(intent.get("keywords") or intent.get("minerals")
