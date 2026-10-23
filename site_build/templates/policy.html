@@ -55,11 +55,20 @@
     var tokens = String(query || '').trim().toLowerCase().split(/\s+/)
       .filter(function (t) { return t.length > 1 && !STOP[t]; });
     if (!tokens.length) return all;
+    function hay(a) {
+      return [a.title, a.summary, a.source_name,
+              (a.minerals || []).join(' '), (a.regions || []).join(' '),
+              (a.types || []).join(' ')].join(' ').toLowerCase();
+    }
+    var strict = all.filter(function (a) {
+      var text = hay(a);
+      return tokens.every(function (t) { return text.indexOf(t) >= 0; });
+    });
+    if (strict.length || tokens.length < 2) return strict;
+    // 全词命中太少 → 放宽成任一关键词
     return all.filter(function (a) {
-      var hay = [a.title, a.summary, a.source_name,
-                 (a.minerals || []).join(' '), (a.regions || []).join(' '),
-                 (a.types || []).join(' ')].join(' ').toLowerCase();
-      return tokens.every(function (t) { return hay.indexOf(t) >= 0; });
+      var text = hay(a);
+      return tokens.some(function (t) { return text.indexOf(t) >= 0; });
     });
   }
 

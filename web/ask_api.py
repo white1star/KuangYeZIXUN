@@ -638,7 +638,7 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
     return card
 
 
-def search_policies(conn, intent: dict, limit: int = 40) -> tuple:
+def search_policies(conn, intent: dict, limit: int = 40, keyword_mode: str = "all") -> tuple:
     """按关键词/地区/矿种/类型/机关/天数检索政策。返回 (条目, 总数)。"""
     keywords = [k.lower() for k in (intent.get("keywords") or []) if k]
     regions = intent.get("regions") or []
@@ -675,15 +675,23 @@ def search_policies(conn, intent: dict, limit: int = 40) -> tuple:
         if types and not all(t in typs for t in types):
             continue
         hay = f"{row['title']} {row['summary']} {' '.join(mins + regs + typs)}".lower()
-        if keywords and not all(k in hay for k in keywords):
-            continue
+        if keywords:
+            hits = sum(1 for k in keywords if k in hay)
+            if keyword_mode == "any":
+                if hits == 0:
+                    continue
+            elif hits < len(keywords):
+                continue
         out.append({
+            "hits": hits if keywords else 0,
             "title": row["title"], "url": row["url"],
             "published_at": row["published_at"] or day,
             "summary": row["summary"] or "",
             "source_name": row["source_name"] or "",
             "board": "policy", "minerals": mins, "regions": regs, "types": typs,
         })
+    if keyword_mode == "any":
+        out.sort(key=lambda x: (-x["hits"], x["published_at"]))
     return out[:limit], len(out)
 
 
@@ -702,7 +710,8 @@ PROMPT = """你是矿价查询的意图解析器。只输出一个 JSON 对象�
 - spec: 规格关键词（如 "PB粉" "97" "准一级"），没有填 null
 
 当 action=policy 时，另填这四项（其余字段留空）：
-- keywords: 关键词数组，如 ["探矿权","出让"]
+- keywords: 关键词数组，放动作/主题词（探矿权、采矿权、出让、挂牌、绿色矿山、安全生产），
+  **不要把矿种名放进来**（矿种填 minerals 字段），也不要放"最近/政策/通知"这类泛词
 - regions / minerals / types: 数组，分别从【政策地区】【政策矿种】【政策类型】里选
 - source: 从【政策机关】里选一个，没有填 null
 - days: 近多少天，没提填 null
@@ -817,13 +826,19 @@ def ask(req: AskRequest):
                     "clarify": "；".join(problems)[:120]}
         if intent["action"] == "policy":
             items, total = search_policies(conn, intent)
-            relaxed = False
+            relaxed = ""
             if total == 0 and intent.get("days"):
                 # 时间窗内没有 → 放宽到全部，别让人以为"没有政策"
                 retry = dict(intent)
                 retry["days"] = 0
                 items, total = search_policies(conn, retry)
-                relaxed = total > 0
+                if total:
+                    relaxed = f"近 {intent.get('days')} 天没有，已放宽到全部"
+            if total == 0 and len(intent.get("keywords") or []) > 1:
+                # 全关键词都命中太少 → 放宽成"任一关键词"
+                items, total = search_policies(conn, dict(intent, days=0), keyword_mode="any")
+                if total:
+                    relaxed = "已放宽为任一关键词命中"
             applied = [f"{k} {('/'.join(v) if isinstance(v, list) else v)}"
                        for k, v in (("地区", intent.get("regions")),
                                     ("矿种", intent.get("minerals")),
@@ -832,7 +847,7 @@ def ask(req: AskRequest):
                                     ("关键词", intent.get("keywords"))) if v]
             meta_text = ("筛选：" + " · ".join(applied)) if applied else "全部政策"
             if relaxed:
-                meta_text += f"；近 {intent.get('days')} 天没有，已放宽到全部"
+                meta_text += "；" + relaxed
             card = {"title": question, "value": f"共 {total} 条",
                     "sub": "", "rows": [], "export": None, "meta": meta_text}
             if notes:
