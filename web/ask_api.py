@@ -349,9 +349,10 @@ def execute(conn, intent: dict, provinces: list, categories: dict = None) -> dic
             change = last - first
             pct = (change / first * 100) if first else 0
             values = [p[1] for p in pts]
+            flat = abs(change) < 0.005
             card.update({
-                "value": f"{'+' if change > 0 else ''}{fmt_num(change)}",
-                "sub": f"（{'+' if pct > 0 else ''}{pct:.2f}%）",
+                "value": "持平" if flat else f"{'+' if change > 0 else ''}{fmt_num(change)}",
+                "sub": "（0%）" if flat else f"（{'+' if pct > 0 else ''}{pct:.2f}%）",
                 "meta": f"{commodity} · 近 {days} 天：{fmt_num(first)} → {fmt_num(last)} · "
                         f"区间 {fmt_num(min(values))}~{fmt_num(max(values))}",
             })
