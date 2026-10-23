@@ -5,11 +5,13 @@
 """
 import html as html_lib
 import re
+import shutil
+import subprocess
 from datetime import date
 
 import requests
 
-from crawler.fetch import fetch
+from crawler.fetch import DEFAULT_UA, fetch
 
 BASE = "https://weixin.sogou.com"
 ITEM_RE = re.compile(r'<li id="sogou_vr_11002601_box_\d+".*?</li>', re.S)
@@ -85,13 +87,27 @@ def article_lines(page):
     return [ln.strip() for ln in text.splitlines() if ln.strip()]
 
 
+def curl_get(url, timeout=25):
+    """搜狗会按 requests 的 TLS 指纹拦（返回「已关闭」），curl 能过。"""
+    exe = shutil.which("curl")
+    if not exe:
+        return ""
+    try:
+        out = subprocess.run(
+            [exe, "-sL", "--max-time", str(timeout), "-A", DEFAULT_UA, url],
+            capture_output=True, timeout=timeout + 10)
+        return out.stdout.decode("utf-8", "replace")
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
 def discover(conf, timeout=25):
     """按配置找到今天（或最近）那篇文章的 URL。"""
     sess = requests.Session()
     page = fetch(conf["search"], session=sess, timeout=timeout, retries=1)
-    if not page.ok:
-        raise RuntimeError(f"搜狗搜索失败：{page.error or page.status}")
-    items = search_items(page.text)
+    items = search_items(page.text) if page.ok else []
+    if not items:
+        items = search_items(curl_get(conf["search"], timeout))
     if not items:
         raise RuntimeError("搜狗没返回文章（可能是验证码）")
     hit = pick(items, account=conf.get("account", ""),
@@ -99,5 +115,13 @@ def discover(conf, timeout=25):
                max_age_days=int(conf.get("max_age_days", 7)))
     if not hit:
         raise RuntimeError("搜狗结果里没有符合账号/标题的文章")
-    url = resolve(sess, hit["href"])
+    try:
+        url = resolve(sess, hit["href"])
+    except RuntimeError:
+        url = ""
+    if not url:
+        raw = curl_get(BASE + hit["href"], timeout)
+        url = "".join(re.findall(r"url \+= '(.*?)'", raw)).replace("@", "")
+    if not url.startswith("http"):
+        raise RuntimeError("没拿到微信文章真实链接")
     return url, hit["title"]
