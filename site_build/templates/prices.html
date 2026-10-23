@@ -75,7 +75,7 @@
                   <td data-label="品种">{{ p.commodity }}</td>
                   <td data-label="市场">{% if p.market %}<span class="market-tag">{{ p.market }}</span>{% else %}<span class="muted">—</span>{% endif %}{% if p.has_origin %}<span class="origin" title="产地/品牌">{{ p.origin }}</span>{% endif %}</td>
                   <td data-label="口径">{{ p.price_type }}</td>
-                  <td data-label="规格" class="spec">{{ p.spec_label or '—' }}</td>
+                  <td data-label="规格" class="spec"><span class="spec-text"{% if p.spec_label %} title="{{ p.spec_label }}"{% endif %}>{{ p.spec_label or '—' }}</span></td>
                   <td data-label="最新价" class="num">{{ p.value|num }}<span class="unit">{{ p.unit }}</span></td>
                   <td data-label="涨跌" class="num">{{ ui.change_cell(p) }}</td>
                   <td data-label="涨跌幅" class="num">{{ ui.price_cell(p) }}</td>
@@ -1388,6 +1388,11 @@
   });
 
   document.querySelector('table.prices').addEventListener('click', function (e) {
+    var spec = e.target.closest('.spec-text');
+    if (spec) {
+      spec.classList.toggle('expanded');
+      return;
+    }
     var btn = e.target.closest('.copy-btn');
     if (!btn) return;
     var tr = btn.closest('tr');
