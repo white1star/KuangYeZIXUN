@@ -69,6 +69,22 @@ def main():
                    encoding='utf-8')
     print(f'写入 {out}：{len(table)} 个汉字')
 
+    # 整词全拼（供 'ying shi' / 'yingshi' 命中）；运行时不依赖 pypinyin
+    words = set()
+    for t in texts:
+        t = str(t).strip()
+        if t:
+            words.add(t)
+    full = {}
+    for w in sorted(words):
+        py = ''.join(lazy_pinyin(w)).lower()
+        if py and py != w.lower():
+            full[w] = py
+    full_out = ROOT / 'config' / 'price_pinyin_full.json'
+    full_out.write_text(json.dumps(full, ensure_ascii=False, sort_keys=True, indent=0),
+                        encoding='utf-8')
+    print(f'写入 {full_out}：{len(full)} 个词')
+
 
 if __name__ == '__main__':
     main()

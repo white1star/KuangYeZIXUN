@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ALIAS_FILE = ROOT / "config" / "price_aliases.yaml"
 PINYIN_FILE = ROOT / "config" / "price_pinyin.json"
 CATEGORY_FILE = ROOT / "config" / "price_categories.yaml"
+PINYIN_FULL_FILE = ROOT / "config" / "price_pinyin_full.json"
 
 # 省级行政区（短名），用于把 "河北省/唐山市" "河南有色" 归到省
 PROVINCES = ("北京", "天津", "上海", "重庆", "河北", "山西", "辽宁", "吉林", "黑龙江",
@@ -65,6 +66,7 @@ def search_payload(prices: dict) -> dict:
     aliases = _load_yaml(ALIAS_FILE)
     categories = _load_yaml(CATEGORY_FILE)
     table = _load_pinyin()
+    full_table = _load_json(PINYIN_FULL_FILE)
 
     commodities = []
     for name in prices.get("commodities") or []:
@@ -76,9 +78,9 @@ def search_payload(prices: dict) -> dict:
         commodities.append({
             "name": name,
             "pinyin": pinyin_initials(name, table),
-            "full_pinyin": full_pinyin(name),
+            "full_pinyin": full_pinyin(name, full_table),
             "alias_pinyin": [pinyin_initials(a, table) for a in alias_list],
-            "alias_full_pinyin": [full_pinyin(a) for a in alias_list],
+            "alias_full_pinyin": [full_pinyin(a, full_table) for a in alias_list],
             "aliases": alias_list,
             "markets": markets,
             "provinces": sorted({province_of(m) for m in markets if province_of(m)}),
@@ -127,10 +129,17 @@ def search_payload(prices: dict) -> dict:
             "provinces": provinces, "categories": cat_list}
 
 
-def full_pinyin(text: str) -> str:
-    """整串拼音（不带声调），供 'ying shi' / 'yingshi' 这类输入命中。"""
+def full_pinyin(text: str, table: dict = None) -> str:
+    """整词全拼。用生成好的静态表，运行时不依赖 pypinyin。"""
+    if table is None:
+        table = _load_json(PINYIN_FULL_FILE)
+    return str(table.get(str(text or "").strip(), "")).lower()
+
+
+def _load_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
     try:
-        from pypinyin import lazy_pinyin
-    except ImportError:
-        return ""
-    return "".join(lazy_pinyin(str(text or ""))).lower()
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
