@@ -1,0 +1,61 @@
+name: 构建并部署静态站
+
+on:
+  push:
+    branches: [data]
+  workflow_dispatch:
+
+concurrency:
+  group: crawl-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  TZ: Asia/Shanghai
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          ref: master
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+      - name: 从 data 分支恢复数据库
+        run: |
+          mkdir -p data
+          if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
+            git fetch --depth=1 origin data
+            git show origin/data:data/news.db > data/news.db
+            echo "已从 data 分支恢复数据库（$(du -h data/news.db | cut -f1)）"
+          else
+            echo "data 分支尚不存在，本次使用空库"
+          fi
+      - name: 静态化构建
+        run: python -m scripts.build_site
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: 上传静态产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: 部署到 GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
