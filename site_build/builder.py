@@ -10,6 +10,7 @@ import yaml
 
 from crawler import store
 from site_build import data, search
+from site_build.hot import builder as hot_builder
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -92,6 +93,7 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
         raise FileNotFoundError(f"数据库不存在：{db_file}，请先运行 python -m crawler.main --once")
     if not vendor.exists():
         raise FileNotFoundError(f"ECharts 本地文件不存在：{vendor}")
+    build_time = datetime.now().strftime("%Y-%m-%d %H:%M")
     conn = store.connect(db_file)
     try:
         store.init_db(conn)
@@ -104,9 +106,9 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
         policy_meta = data.policy_meta(articles)
         copies = data.load_marketing_copies(conn)
         copy_stats = data.marketing_stats(conn)
+        hot_result = hot_builder.build(conn, out / "hot", articles, prices, build_time)
     finally:
         conn.close()
-    build_time = datetime.now().strftime("%Y-%m-%d %H:%M")
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
                              autoescape=True, trim_blocks=True, lstrip_blocks=True)
     env.filters["num"] = _fmt_num
@@ -159,6 +161,7 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
     vendor_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(vendor, vendor_target)
     sizes["vendor/echarts.min.js"] = vendor_target.stat().st_size
+    sizes.update(hot_result["sizes"])
     return {
         "out_dir": str(out),
         "built_at": build_time,
@@ -168,7 +171,8 @@ def build(db_path=None, out_dir=None, vendor_path=None, feedback_email=None) -> 
                    "policy": len(policy_articles),
                    "prices": len(prices["latest"]),
                    "commodities": len(prices["commodities"]),
-                   "copies": len(copies)},
+                   "copies": len(copies),
+                   "hot": hot_result["counts"]},
     }
 
 
@@ -182,6 +186,10 @@ def main(argv=None):
     print("文章 {} 篇（新闻 {}，政策 {}），品种 {} 个，报价行 {} 条，文案 {} 条".format(
         result["counts"]["articles"], result["counts"]["news"], result["counts"]["policy"],
         result["counts"]["commodities"], result["counts"]["prices"], result["counts"]["copies"]))
+    hot = result["counts"]["hot"]
+    print("热榜：热议 {} 条，微信 {}，百度资讯 {}，社交 {}，B站 {}，行业 {}，矿价 {} 条".format(
+        hot["top10"], hot["wechat"], hot["baidu_news"], hot["social"],
+        hot["bilibili"], hot["industry"], hot["prices"]))
     for name, size in sorted(result["files"].items()):
         print(f"  {name:<24} {_fmt_size(size):>10}")
     print(f"  {'合计':<24} {_fmt_size(result['total_bytes']):>10}")

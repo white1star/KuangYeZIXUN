@@ -78,6 +78,42 @@ CREATE TABLE IF NOT EXISTS crawl_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_crawl_runs_started ON crawl_runs(started_at);
 
+CREATE TABLE IF NOT EXISTS hot_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  title TEXT NOT NULL,
+  title_hash TEXT NOT NULL,
+  url TEXT NOT NULL DEFAULT '',
+  url_hash TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  author TEXT NOT NULL DEFAULT '',
+  published_at TEXT NOT NULL DEFAULT '',
+  rank INTEGER NOT NULL DEFAULT 0,
+  raw_heat REAL,
+  heat_score INTEGER NOT NULL DEFAULT 0,
+  category TEXT NOT NULL DEFAULT '',
+  keywords TEXT NOT NULL DEFAULT '[]',
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  UNIQUE(platform, title_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_hot_items_seen ON hot_items(last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS idx_hot_items_heat ON hot_items(heat_score DESC);
+CREATE INDEX IF NOT EXISTS idx_hot_items_platform ON hot_items(platform, heat_score DESC);
+
+CREATE TABLE IF NOT EXISTS hot_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  finished_at TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'running',
+  items_found INTEGER NOT NULL DEFAULT 0,
+  items_new INTEGER NOT NULL DEFAULT 0,
+  error TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_hot_runs_started ON hot_runs(started_at);
+
 CREATE TABLE IF NOT EXISTS marketing_copy (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   short_uri TEXT NOT NULL UNIQUE,

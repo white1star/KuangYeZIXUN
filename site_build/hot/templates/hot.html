@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>选矿热榜 · 矿业圈今天在聊什么</title>
+<meta name="description" content="选矿热榜聚合微信公众号、B站UP主、微博、抖音、今日头条、百度热搜、知乎等自媒体与社交平台，看矿业圈今天在讨论什么热点，政策通知不进榜。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23289048'/%3E%3Ctext x='8' y='12' font-size='10' text-anchor='middle' fill='%23fff'%3E矿%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="hot.css?v={{ cache_bust }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/Xuankuang/">
+      <span class="brand-mark" aria-hidden="true">矿</span>
+      <span class="brand-text"><b>选矿热榜</b><small>矿业圈在聊什么</small></span>
+    </a>
+    <nav class="nav" aria-label="站点导航">
+      <a class="active" href="/Xuankuang/">热榜</a>
+      <a class="nav-back" href="/">→ 信息中心</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-main">
+      <p class="eyebrow">{{ date_label }} · 每日 07:30 / 12:30 / 18:30 更新</p>
+      <h1>今天矿业圈<br>在聊什么</h1>
+      <p class="hero-sub">聚合微信公众号、B站UP主、微博、抖音、头条、百度、知乎，只看矿业圈<b>自媒体和网友在讨论什么</b>：金价跌了、铜价涨了、哪家矿企出事、哪台设备翻车。官媒通知和招标公告不进榜。</p>
+      <div class="hero-stats">
+        <div class="stat"><b>{{ stats.total }}</b><span>今日新收录</span></div>
+        <div class="stat"><b>{{ stats.sources }}</b><span>覆盖平台</span></div>
+        <div class="stat"><b>{{ stats.discussion }}</b><span>自媒体讨论</span></div>
+        <div class="stat"><b>{{ stats.top_heat }}</b><span>最高热度</span></div>
+      </div>
+    </div>
+    <aside class="hero-side">
+      <div class="pulse">
+        <span class="pulse-dot"></span>
+        <div>
+          <b>编辑热度，不是阅读量</b>
+          <p>热度分由本站按公开信号计算，55–99 分，仅用于站内排序。</p>
+        </div>
+      </div>
+      <dl class="hero-facts">
+        <div><dt>更新时间</dt><dd>{{ updated_at }}</dd></div>
+        <div><dt>收录口径</dt><dd>近 7 天 · 自媒体 / 社交</dd></div>
+        <div><dt>官媒通知</dt><dd>不进榜</dd></div>
+      </dl>
+      <a class="hero-link" href="#about">热度怎么算 →</a>
+    </aside>
+  </section>
+
+  <section class="filters" aria-label="筛选">
+    <div class="chips" id="cat-chips">
+      <button class="chip active" type="button" data-cat="全部">全部</button>
+      {% for c in categories %}
+      <button class="chip" type="button" data-cat="{{ c.name }}">
+        <i style="background:{{ c.color }}"></i>{{ c.name }}<b>{{ c.count }}</b>
+      </button>
+      {% endfor %}
+    </div>
+    <label class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="hot-search" type="search" placeholder="搜标题 / 品种 / 公司" autocomplete="off">
+    </label>
+  </section>
+
+  <section class="board" id="board">
+    <article class="card card--top" data-card="top10">
+      <header class="card-head">
+        <span class="card-dot" style="background:#e5484d"></span>
+        <h2>今天大家在聊</h2>
+        <span class="card-count">TOP 10</span>
+        <span class="card-note">自媒体 + 社交讨论</span>
+      </header>
+      {% if top10 %}
+      <ol class="top-list">
+        {% for item in top10 %}
+        <li class="top-item" data-category="{{ item.category }}" data-platform="{{ item.platform }}">
+          <span class="top-rank top-{{ loop.index }}">{{ loop.index }}</span>
+          <div class="top-body">
+            <a class="top-title" href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+            {% if item.summary %}<p class="top-summary">{{ item.summary|truncate(88, True, '…') }}</p>{% endif %}
+            <div class="item-meta">
+              <span class="item-source">{{ item.source_name }}</span>
+              <span class="item-time">{{ item.time_label }}</span>
+              {% if item.category %}<span class="tag-cat">{{ item.category }}</span>{% endif %}
+              {% if item.cross_count and item.cross_count > 1 %}<span class="tag-cross">{{ item.cross_count }} 源转载</span>{% endif %}
+            </div>
+          </div>
+          <div class="heat-box" title="本站编辑热度">
+            <b>{{ item.heat_score }}</b><span>热度</span>
+            <i><em style="width:{{ item.heat_score }}%"></em></i>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="card-empty">今天还没有抓取到矿业热点，下一次更新会自动补齐。</p>
+      {% endif %}
+    </article>
+
+    {% macro meta(item) -%}
+      <span class="item-source">{{ item.source_name }}</span>
+      <span class="item-time">{{ item.time_label }}</span>
+      {% if item.author %}<span class="item-author">{{ item.author }}</span>{% endif %}
+      {% if item.cross_count and item.cross_count > 1 %}<span class="tag-cross">{{ item.cross_count }} 源</span>{% endif %}
+      {% if item.archive %}<span class="tag-archive">资料</span>{% endif %}
+    {%- endmacro %}
+
+    {% macro rows(items, limit=16) -%}
+      <ol class="hot-list">
+        {% for item in items[:limit] %}
+        <li class="hot-item" data-category="{{ item.category }}" data-platform="{{ item.platform }}">
+          <span class="rank {{ 'rank-hot' if loop.index <= 3 }}">{{ loop.index }}</span>
+          <div class="item-body">
+            <a class="item-title" href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+            <div class="item-meta">{{ meta(item) }}</div>
+          </div>
+          <span class="heat {{ item.heat_label }}">{{ item.heat_score }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+    {%- endmacro %}
+
+    {% macro source_card(key, title, note, items, color, limit=16, empty='今日榜单暂无矿业相关条目') -%}
+    <article class="card" data-card="{{ key }}">
+      <header class="card-head">
+        <span class="card-dot" style="background:{{ color }}"></span>
+        <h2>{{ title }}</h2>
+        <span class="card-count">{{ items|length }}</span>
+        {% if note %}<span class="card-note">{{ note }}</span>{% endif %}
+      </header>
+      {% if items %}
+        {{ rows(items, limit) }}
+      {% else %}
+        <p class="card-empty">{{ empty }}</p>
+      {% endif %}
+    </article>
+    {%- endmacro %}
+
+    <div class="columns">
+    {{ source_card('wechat', '微信公众号', '搜狗微信 · 自媒体讨论', wechat, platform_meta.wechat.color, 12, '搜狗暂未返回矿业关键词结果，稍后重试') }}
+    {{ source_card('baidu_news', '百度资讯', '近 7 天 · 按时间', baidu_news, platform_meta.baidu_news.color, 14, '百度资讯暂未返回结果，可能触发安全验证') }}
+
+    <article class="card" data-card="social">
+      <header class="card-head">
+        <span class="card-dot" style="background:#e6162d"></span>
+        <h2>社交热榜</h2>
+        <span class="card-count">{{ social|length }}</span>
+        <span class="card-note">微博 / 抖音 / 头条 / 百度 / 知乎</span>
+      </header>
+      {% if social %}
+        {{ rows(social, 16) }}
+      {% else %}
+        <p class="card-empty">今天各平台热搜里还没有矿业相关话题。金价、铜价、稀土这类话题上榜时会自动收进来。</p>
+      {% endif %}
+    </article>
+
+    <article class="card" data-card="topics" data-keep>
+      <header class="card-head">
+        <span class="card-dot" style="background:#c026d3"></span>
+        <h2>热议话题</h2>
+        <span class="card-count">{{ topics|length }}</span>
+        <span class="card-note">按平台在聊数</span>
+      </header>
+      {% if topics %}
+      <ul class="topic-list">
+        {% for t in topics %}
+        <li class="topic-item">
+          <div class="topic-head">
+            <button class="topic-word" type="button" data-word="{{ t.word }}" title="点它筛选">{{ t.word }}</button>
+            <span class="topic-meta">{{ t.count }} 条<i>·</i>{{ t.platform_count }} 平台在聊</span>
+            <span class="heat {{ '爆' if t.heat >= 85 else '热' if t.heat >= 75 else '新' }}">{{ t.heat }}</span>
+          </div>
+          <div class="topic-plats">
+            {% for p in t.platforms %}<span class="plat plat-{{ p }}">{{ platform_meta[p].short if p in platform_meta else p }}</span>{% endfor %}
+          </div>
+          {% if t.sample %}
+          <a class="topic-sample" href="{{ t.sample[0].url }}" target="_blank" rel="noopener">{{ t.sample[0].title }}</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="card-empty">今天还没有形成集中的话题。</p>
+      {% endif %}
+    </article>
+
+    {{ source_card('bilibili', 'B站 / 视频讨论', 'UP 主 · 近 7 天', bilibili, platform_meta.bilibili.color, 12, '近 7 天没有矿业相关视频') }}
+
+    <article class="card" data-card="prices">
+      <header class="card-head">
+        <span class="card-dot" style="background:#e5484d"></span>
+        <h2>矿价异动</h2>
+        <span class="card-count">{{ prices|length }}</span>
+        <span class="card-note">按涨跌幅排序</span>
+      </header>
+      {% if prices %}
+      <ul class="price-list">
+        {% for p in prices %}
+        <li class="hot-item price-row" data-category="市场行情" data-platform="prices">
+          <div class="price-name">
+            <b>{{ p.commodity }}</b>
+            <span>{{ p.price_type }}{% if p.market %} · {{ p.market }}{% endif %}{% if p.spec %} · {{ p.spec }}{% endif %}</span>
+          </div>
+          <div class="price-value">
+            <b>{{ p.value }}</b><span>{{ p.unit }}</span>
+          </div>
+          <span class="pct {{ 'up' if p.up else 'down' }}">{{ p.pct_label }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <a class="card-more" href="/KuangYeZIXUN/prices.html">查看全部矿价 →</a>
+      {% else %}
+      <p class="card-empty">今天没有可用的涨跌幅数据。</p>
+      {% endif %}
+    </article>
+
+    {{ source_card('industry', '行业媒体', '仅作补充 · 不进今日热议', industry, platform_meta.industry.color, 8) }}
+
+    <article class="card about-card" id="about" data-card="about">
+      <header class="card-head">
+        <span class="card-dot" style="background:#289048"></span>
+        <h2>关于「选矿热榜」</h2>
+      </header>
+      <div class="about-body">
+        <p>这个页面只回答一件事：<b>矿业圈今天大家在聊什么</b>。来源是公众号、B站UP主、微博、抖音、头条、百度、知乎这些自媒体和社交平台，官媒通知、招标公告、会议报道不进榜；想看这些，去隔壁资讯站。</p>
+        <h3>热度怎么算</h3>
+        <p class="formula"><b>榜单排名 25%</b> + <b>时效 25%</b> + <b>矿业相关度 15%</b> + <b>来源权重 15%</b> + <b>多源转载 20%</b>，映射到 55–99 分。</p>
+        <p class="fine">热度是本站编辑分，不是微博阅读量、抖音播放量或微信阅读数。同一话题被越多平台讨论，分数越高。微信结果来自搜狗，日期可能偏旧；超过 45 天的技术文章会标「资料」，不进今日热议。</p>
+      </div>
+    </article>
+
+    <article class="card about-card" data-card="status">
+      <header class="card-head">
+        <span class="card-dot" style="background:#8a9690"></span>
+        <h2>抓取状态</h2>
+        <span class="card-count">{{ source_status|length }}</span>
+      </header>
+      <ul class="status-list">
+        {% for s in source_status %}
+        <li>
+          <span class="status-dot {{ s.status }}"></span>
+          <b>{{ s.name }}</b>
+          <span class="status-text">
+            {% if s.status == 'ok' %}今日 {{ s.found }} 条{% elif s.status == 'error' %}抓取失败{% else %}未运行{% endif %}
+          </span>
+          <span class="status-time">{{ s.finished_at }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    </div>
+  </section>
+
+  <div class="empty" id="empty" hidden>
+    <b>没有匹配的条目</b>
+    <span>换个分类或关键词试试。</span>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>仅存标题与摘要 · 点击标题跳转原文 · 构建于 {{ build_time }}</span>
+    <span>© 2026 像素智能 · 数据来自公开榜单与媒体</span>
+  </div>
+</footer>
+
+<script src="hot.js?v={{ cache_bust }}"></script>
+</body>
+</html>
