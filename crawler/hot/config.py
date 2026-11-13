@@ -25,6 +25,8 @@ class HotConfig:
     search_keywords: dict
     block_terms: tuple
     competitors: tuple
+    vertical_terms: tuple
+    strict_vertical: bool
 
 
 DEFAULTS = {
@@ -63,6 +65,8 @@ def load_hot_config(path=None) -> HotConfig:
         search_keywords={str(k): [str(x) for x in (v or [])] for k, v in search.items()},
         block_terms=tuple(str(x) for x in (values.get("block_terms") or [])),
         competitors=tuple(str(x) for x in (values.get("competitors") or [])),
+        vertical_terms=tuple(str(x) for x in (values.get("vertical_terms") or [])),
+        strict_vertical=bool(values.get("strict_vertical", False)),
     )
 
 

@@ -63,6 +63,8 @@ def _mapper_to_item(row, platform, source_name):
                       "like_count", "favorite_count")
     return {
         "title": title[:MAX_TITLE],
+        # 保留完整原文，用来做垂直判定（标题清洗后话题标签会丢）
+        "summary": title[:600],
         "url": str(url),
         "author": str(author),
         "published_at": _pub(row),
@@ -90,8 +92,17 @@ def ingest(platform: str, path: str, db_path: str) -> dict:
     for row in rows:
         item = _mapper_to_item(row, platform_key, source_name)
         title = item["title"]
-        if not title or len(title) < 6 or title in seen or is_noise(title):
+        full = f"{title} {item['summary']}"
+        if not title or len(title) < 6 or title in seen:
             continue
+        # 入库就卡垂直：全文（含话题标签）不含选矿术语的直接不要
+        if is_noise(full):
+            continue
+        if any(w and w in full for w in cfg.block_terms):
+            continue
+        if cfg.strict_vertical and cfg.vertical_terms:
+            if not any(w and w in full for w in cfg.vertical_terms):
+                continue
         seen.add(title)
         mapped.append(item)
 
@@ -105,12 +116,13 @@ def ingest(platform: str, path: str, db_path: str) -> dict:
 
     items = []
     for i, m in enumerate(mapped):
+        text = f"{m['title']} {m['summary']}"
         it = {
             "platform": platform_key,
             "source_name": source_name,
             "title": m["title"],
             "url": m["url"],
-            "summary": "",
+            "summary": m["summary"],
             "author": m["author"],
             "published_at": m["published_at"] or hot_store.now_iso(),
             "rank": i + 1,
@@ -118,7 +130,10 @@ def ingest(platform: str, path: str, db_path: str) -> dict:
             "raw_heat": m["raw_heat"],
         }
         it["category"] = classify_category(it["title"], cfg)
-        it["keywords"] = [w for w, _ in mining_hits(it["title"], cfg)]
+        # 垂直词优先，其次才是通用矿业词
+        vhits = [w for w in cfg.vertical_terms if w in text]
+        it["keywords"] = list(dict.fromkeys(
+            vhits + [w for w, _ in mining_hits(text, cfg)]))
         it["heat_score"] = compute_heat(it, cfg, source_weight=weight)
         items.append(it)
 

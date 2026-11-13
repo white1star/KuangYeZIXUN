@@ -56,8 +56,6 @@ GENERIC_WORDS = {"矿业", "矿山", "矿石", "资源", "价格", "行情", "�
                  "上涨", "下跌", "涨", "跌"}
 
 WEEKDAYS = "一二三四五六日"
-# 只保留一周内的内容：超过 7 天的条目不进任何卡片（原先 45 天归档改为一周）
-ARCHIVE_DAYS = 7
 
 
 def _fmt_heat(n) -> str:
@@ -102,6 +100,34 @@ def _heat_key(item: dict):
     return (raw > 0, raw, item.get("heat_score") or 0)
 
 
+# 标题级核心词：页面标题里必须出现，才算"选矿垂直内容"。
+# 只认工艺/装备词，不认"分选/筛分/破碎"这类泛词，避免再生铝、砂石、水果分拣混进来。
+CORE_VERTICAL = (
+    "选矿", "选煤", "洗煤", "洗选", "干选", "智能干选", "矿石分选", "矿物分选",
+    "光电分选", "射线分选", "XRT", "TDS", "预抛废", "抛废", "排矸", "煤矸石",
+    "矸石", "浮选", "磁选", "重选", "电选", "重介", "跳汰", "摇床", "磨矿",
+    "球磨", "旋流器", "尾矿", "矿浆", "捕收剂", "起泡剂", "絮凝剂",
+    "选矿厂", "选煤厂", "洗选厂", "选厂", "矿物加工", "选矿设备", "选煤设备",
+    "分选机", "干选机", "破碎机", "破碎筛分", "振动筛", "磁选机", "浮选机", "渣浆泵",
+    "压滤机", "浓缩机", "煤泥", "尾煤", "选矿技术", "选煤技术",
+    "智能选矿", "智能选煤", "选矿自动化", "磁化焙烧", "难选铁矿",
+)
+
+
+def _is_vertical(item: dict, cfg) -> bool:
+    """选矿垂直门槛：标题必须出现选矿工艺/装备核心词（竞品动态卡不受限）。
+
+    标题是用户唯一看到的内容，标题不垂直就不进榜，宁可少而准。
+    """
+    if item.get("platform") == "competitor":
+        return True
+    title = item.get("title") or ""
+    # 同名不同行（水果分选机、LED 分选机、再生铝破碎）先当噪音排掉
+    if is_noise(title):
+        return False
+    return any(term in title for term in CORE_VERTICAL)
+
+
 def _decorate(item: dict, cfg, now: datetime, cross: int = 1) -> dict:
     weight = float(source_conf(cfg, item.get("platform", "")).get("weight", 0.85))
     item["heat_score"] = compute_heat(
@@ -111,7 +137,7 @@ def _decorate(item: dict, cfg, now: datetime, cross: int = 1) -> dict:
     item["cross_count"] = cross
     age = _age_days(item.get("published_at", ""), now)
     item["age_days"] = age
-    item["archive"] = bool(age is not None and age > ARCHIVE_DAYS)
+    item["archive"] = bool(age is not None and age > cfg.max_age_days)
     item["title"] = clean_title(item.get("title") or "")
     item["summary"] = clean_summary(item.get("summary") or "")
     item["heat_value"] = _fmt_heat(item.get("raw_heat"))
@@ -265,6 +291,8 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
         and not any(word and word in (item.get("title") or "") for word in blocked)
         and not is_noise(item.get("title") or "")
     ]
+    if cfg.strict_vertical and cfg.vertical_terms:
+        raw_items = [item for item in raw_items if _is_vertical(item, cfg)]
 
     groups: dict = {}
     for item in raw_items:
