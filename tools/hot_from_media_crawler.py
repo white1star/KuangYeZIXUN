@@ -37,20 +37,34 @@ def _first(row, *keys):
     return ""
 
 
+def _timestamp(value) -> str:
+    """把 10/13 位 Unix 时间戳转成可读时间；普通日期字符串返回空。"""
+    try:
+        n = int(str(value).strip())
+    except (TypeError, ValueError):
+        return ""
+    if n > 10_000_000_000:
+        n //= 1000
+    if n < 1_000_000_000:   # 2001 年之前的秒级数字，不像发布时间
+        return ""
+    try:
+        return datetime.fromtimestamp(n).strftime("%Y-%m-%d %H:%M")
+    except (OSError, ValueError):
+        return ""
+
+
 def _pub(row):
     d = _first(row, "create_date_time", "created_time", "create_time_str")
     if d:
-        s = str(d)
+        # 知乎的 created_time 是 Unix 时间戳，不能直接当日期字符串截断
+        converted = _timestamp(d)
+        if converted:
+            return converted
+        s = str(d).strip()
         return s[:16] if len(s) >= 16 else s
     ts = _first(row, "create_time", "created_at", "publish_time")
     if ts:
-        try:
-            n = int(ts)
-            if n > 10_000_000_000:
-                n //= 1000
-            return datetime.fromtimestamp(n).strftime("%Y-%m-%d %H:%M")
-        except (ValueError, OSError):
-            pass
+        return _timestamp(ts)
     return ""
 
 

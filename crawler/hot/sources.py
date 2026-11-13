@@ -328,32 +328,33 @@ def fetch_wechat(sess, cfg) -> list:
     seen = set()
     raw = []
     for kw in keywords:
-        url = (f"https://weixin.sogou.com/weixin?type=2&query={quote(kw)}"
-               f"&ie=utf8&s_from=input")
-        try:
-            r = _get(sess, url, referer="https://weixin.sogou.com/",
-                     timeout=cfg.request_timeout, retries=1)
-        except Exception:
-            continue
-        rows = _parse_sogou(r.text)[:8]
-        for i, row in enumerate(rows):
-            title = row["title"]
-            if not title or title in seen:
+        for page in (1, 2):
+            url = (f"https://weixin.sogou.com/weixin?type=2&query={quote(kw)}"
+                   f"&ie=utf8&s_from=input&page={page}")
+            try:
+                r = _get(sess, url, referer="https://weixin.sogou.com/",
+                         timeout=cfg.request_timeout, retries=1)
+            except Exception:
                 continue
-            seen.add(title)
-            published = row["published_at"]
-            if published:
-                try:
-                    dt = datetime.strptime(published, "%Y-%m-%d %H:%M")
-                    if dt < cutoff:
-                        continue
-                except ValueError:
-                    pass
-            row.update({"platform": "wechat", "source_name": "微信公众号",
-                        "rank": i + 1, "rank_total": len(rows)})
-            row["published_at"] = published or now_iso()
-            raw.append(row)
-        time.sleep(cfg.request_interval)
+            rows = _parse_sogou(r.text)[:8]
+            for i, row in enumerate(rows):
+                title = row["title"]
+                if not title or title in seen:
+                    continue
+                seen.add(title)
+                published = row["published_at"]
+                if published:
+                    try:
+                        dt = datetime.strptime(published, "%Y-%m-%d %H:%M")
+                        if dt < cutoff:
+                            continue
+                    except ValueError:
+                        pass
+                row.update({"platform": "wechat", "source_name": "微信公众号",
+                            "rank": i + 1, "rank_total": len(rows)})
+                row["published_at"] = published or now_iso()
+                raw.append(row)
+            time.sleep(cfg.request_interval)
     # 新的排前面；搜狗默认按相关度，时间只用于展示和热度
     raw.sort(key=lambda x: x.get("published_at") or "", reverse=True)
     items = []
@@ -436,33 +437,35 @@ def fetch_baidu_news(sess, cfg) -> list:
     raw = []
     captcha = 0
     for kw in keywords:
-        url = ("https://www.baidu.com/s?tn=news&rtt=4&bsst=1&cl=2&wd="
-               + quote(kw))
-        try:
-            r = _get(sess, url, referer="https://news.baidu.com/",
-                     timeout=cfg.request_timeout, retries=1)
-        except Exception:
-            continue
-        if "百度安全验证" in r.text or "wappass.baidu.com" in str(r.url):
-            captcha += 1
-            if captcha >= 2:
-                raise RuntimeError("百度安全验证拦截，稍后重试")
-            time.sleep(cfg.request_interval * 2)
-            continue
-        for i, row in enumerate(_parse_baidu_news(r.text, kw)):
-            title = row["title"]
-            if not title or title in seen:
+        for pn in (0, 10):   # 前两页，翻页能多拿一倍资讯
+            url = ("https://www.baidu.com/s?tn=news&rtt=4&bsst=1&cl=2&wd="
+                   + quote(kw) + f"&pn={pn}")
+            try:
+                r = _get(sess, url, referer="https://news.baidu.com/",
+                         timeout=cfg.request_timeout, retries=1)
+            except Exception:
                 continue
-            seen.add(title)
-            dt = _parse_news_date(row.get("date_text", ""), now=now)
-            if dt is not None and (dt < cutoff or dt > now + timedelta(days=1)):
-                continue
-            published = dt.strftime("%Y-%m-%d %H:%M") if dt else now_iso()
-            raw.append({
-                "title": title, "url": row["url"], "summary": row["summary"],
-                "author": row["author"], "published_at": published, "rank": i + 1,
-            })
-        time.sleep(cfg.request_interval)
+            if "百度安全验证" in r.text or "wappass.baidu.com" in str(r.url):
+                captcha += 1
+                if captcha >= 3:
+                    raise RuntimeError("百度安全验证拦截，稍后重试")
+                time.sleep(cfg.request_interval * 2)
+                break
+            for i, row in enumerate(_parse_baidu_news(r.text, kw)):
+                title = row["title"]
+                if not title or title in seen:
+                    continue
+                seen.add(title)
+                dt = _parse_news_date(row.get("date_text", ""), now=now)
+                if dt is not None and (dt < cutoff or dt > now + timedelta(days=1)):
+                    continue
+                published = dt.strftime("%Y-%m-%d %H:%M") if dt else now_iso()
+                raw.append({
+                    "title": title, "url": row["url"], "summary": row["summary"],
+                    "author": row["author"], "published_at": published,
+                    "rank": i + 1 + pn,
+                })
+            time.sleep(cfg.request_interval)
     raw.sort(key=lambda x: x.get("published_at") or "", reverse=True)
     items = []
     for i, row in enumerate(raw):
@@ -482,36 +485,38 @@ def fetch_bilibili_search(sess, cfg) -> list:
     seen = set()
     raw = []
     for kw in keywords:
-        url = ("https://api.bilibili.com/x/web-interface/search/type"
-               f"?search_type=video&order=totalrank&page=1&keyword={quote(kw)}")
-        try:
-            r = _get(sess, url, referer="https://search.bilibili.com/",
-                     timeout=cfg.request_timeout)
-            rows = ((r.json().get("data") or {}).get("result") or [])
-        except Exception:
-            continue
-        for row in rows:
-            title = _clean(row.get("title") or "")
-            if not title or title in seen:
+        for page in (1, 2):   # B站搜索前两页，每页 20 条
+            url = ("https://api.bilibili.com/x/web-interface/search/type"
+                   f"?search_type=video&order=totalrank&page={page}"
+                   f"&keyword={quote(kw)}")
+            try:
+                r = _get(sess, url, referer="https://search.bilibili.com/",
+                         timeout=cfg.request_timeout)
+                rows = ((r.json().get("data") or {}).get("result") or [])
+            except Exception:
                 continue
-            pub_ts = int(row.get("pubdate") or 0)
-            published = ""
-            if pub_ts:
-                dt = datetime.fromtimestamp(pub_ts)
-                if dt < cutoff:
+            for row in rows:
+                title = _clean(row.get("title") or "")
+                if not title or title in seen:
                     continue
-                published = dt.strftime("%Y-%m-%d %H:%M")
-            seen.add(title)
-            bvid = row.get("bvid") or ""
-            stat = row.get("stat") or {}
-            raw.append(_make(
-                "bilibili_search", "B站视频", title,
-                f"https://www.bilibili.com/video/{bvid}" if bvid else "",
-                summary=row.get("description") or "", author=row.get("author") or "",
-                published_at=published or now_iso(),
-                raw_heat=_num(row.get("play") or stat.get("view")),
-            ))
-        time.sleep(cfg.request_interval)
+                pub_ts = int(row.get("pubdate") or 0)
+                published = ""
+                if pub_ts:
+                    dt = datetime.fromtimestamp(pub_ts)
+                    if dt < cutoff:
+                        continue
+                    published = dt.strftime("%Y-%m-%d %H:%M")
+                seen.add(title)
+                bvid = row.get("bvid") or ""
+                stat = row.get("stat") or {}
+                raw.append(_make(
+                    "bilibili_search", "B站视频", title,
+                    f"https://www.bilibili.com/video/{bvid}" if bvid else "",
+                    summary=row.get("description") or "", author=row.get("author") or "",
+                    published_at=published or now_iso(),
+                    raw_heat=_num(row.get("play") or stat.get("view")),
+                ))
+            time.sleep(cfg.request_interval)
     # 近 7 天里按播放量排序，播放越高越像"正在被讨论"；标题严格匹配，剔除游戏/小说蹭词
     raw.sort(key=lambda x: (x.get("raw_heat") or 0), reverse=True)
     for i, item in enumerate(raw):

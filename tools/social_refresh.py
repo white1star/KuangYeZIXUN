@@ -59,6 +59,24 @@ def _load_cookies() -> dict:
         return {}
 
 
+BATCH_SIZE = 4          # 每个浏览器会话只跑几个词，避免跑到一半被限流后整批丢失
+MAX_NOTES = 20          # 每个词抓多少条
+
+
+def _chunks(items: list, size: int):
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
+
+
+def _run_once(cli: str, cookie: str, keywords: str, timeout: int = 1200):
+    cmd = [_mc_python(), "main.py", "--platform", cli, "--lt", "cookie",
+           "--cookies", cookie, "--type", "search", "--keywords", keywords,
+           "--save_data_option", "jsonl", "--headless", "true",
+           "--crawler_max_notes_count", str(MAX_NOTES)]
+    return subprocess.run(cmd, cwd=str(MC_DIR), capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", timeout=timeout)
+
+
 def run_platform(cli: str, cookies: dict) -> dict:
     data_dir, name = PLATFORMS[cli]
     cookie = (cookies.get(cli) or "").strip()
@@ -67,30 +85,43 @@ def run_platform(cli: str, cookies: dict) -> dict:
     if cli == "dy" and "LOGIN_STATUS=1" not in cookie:
         cookie += "; LOGIN_STATUS=1"
 
-    before = _now = __import__("time").time()
-    cmd = [_mc_python(), "main.py", "--platform", cli, "--lt", "cookie",
-           "--cookies", cookie, "--type", "search", "--keywords", KEYWORDS,
-           "--save_data_option", "jsonl", "--headless", "true",
-           "--crawler_max_notes_count", "30"]
-    try:
-        proc = subprocess.run(cmd, cwd=str(MC_DIR), capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", timeout=1800)
-    except subprocess.TimeoutExpired:
-        return {"platform": cli, "name": name, "status": "timeout"}
+    before = __import__("time").time()
+    words = [w.strip() for w in KEYWORDS.split(",") if w.strip()]
+    errors = []
+    batches = 0
+    for chunk in _chunks(words, BATCH_SIZE):
+        batches += 1
+        proc = None
+        for attempt in (1, 2):
+            try:
+                proc = _run_once(cli, cookie, ",".join(chunk))
+            except subprocess.TimeoutExpired:
+                errors.append({"kw": chunk, "error": "timeout"})
+                proc = None
+                continue
+            if proc.returncode == 0:
+                break
+            tail = ((proc.stdout or "") + (proc.stderr or ""))[-200:].replace("\n", " ")
+            errors.append({"kw": chunk, "code": proc.returncode, "tail": tail})
+            __import__("time").sleep(10)
+        if proc is None:
+            continue
 
     f = _latest_jsonl(data_dir)
     # 文件没更新 → 多半是 Cookie 过期/登录失败
     if not f or f.stat().st_mtime < before - 10:
-        tail = ((proc.stdout or "") + (proc.stderr or ""))[-160:].replace("\n", " ")
+        tail = (errors[-1].get("tail", "") if errors else "") or "可能是 Cookie 过期"
         return {"platform": cli, "name": name, "status": "no_data",
-                "hint": tail or "可能是 Cookie 过期"}
+                "batches": batches, "errors": errors[-2:], "hint": tail}
 
     bridge = subprocess.run(
         [sys.executable, "-m", "tools.hot_from_media_crawler",
          "--platform", cli, "--file", str(f)],
         cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return {"platform": cli, "name": name, "status": "ok",
-            "file": str(f), "ingest": (bridge.stdout or bridge.stderr or "").strip()[-160:]}
+    status = "ok" if not errors else "partial"
+    return {"platform": cli, "name": name, "status": status, "batches": batches,
+            "errors": errors[-2:], "file": str(f),
+            "ingest": (bridge.stdout or bridge.stderr or "").strip()[-160:]}
 
 
 def main(argv=None):
