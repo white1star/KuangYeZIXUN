@@ -2,7 +2,7 @@ name: 构建并部署静态站
 
 on:
   push:
-    branches: [data]
+    branches: [data, master]
   workflow_dispatch:
 
 concurrency:

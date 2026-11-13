@@ -16,7 +16,9 @@ from crawler.hot.keywords import (
     clean_summary,
     clean_title,
     compute_heat,
+    engagement_score,
     heat_label,
+    is_noise,
     mining_hits,
     time_label,
 )
@@ -54,7 +56,8 @@ GENERIC_WORDS = {"矿业", "矿山", "矿石", "资源", "价格", "行情", "�
                  "上涨", "下跌", "涨", "跌"}
 
 WEEKDAYS = "一二三四五六日"
-ARCHIVE_DAYS = 45
+# 只保留一周内的内容：超过 7 天的条目不进任何卡片（原先 45 天归档改为一周）
+ARCHIVE_DAYS = 7
 
 
 def _fmt_heat(n) -> str:
@@ -84,6 +87,19 @@ def _age_days(published_at: str, now: datetime):
     if dt is None:
         return None
     return max(0, (now - dt).days)
+
+
+def _heat_key(item: dict):
+    """统一排序口径：有互动热度的按互动量降序，没有的排在后面按编辑分降序。
+
+    页面右侧显示的正是这个口径（有互动显示赞/播放，没有显示编辑分），
+    列表顺序和显示数字保持一致，避免"767万排第3、12万排第8"的错位感。
+    """
+    try:
+        raw = float(item.get("raw_heat") or 0)
+    except (TypeError, ValueError):
+        raw = 0.0
+    return (raw > 0, raw, item.get("heat_score") or 0)
 
 
 def _decorate(item: dict, cfg, now: datetime, cross: int = 1) -> dict:
@@ -202,8 +218,7 @@ def _topic_clusters(items: list, cfg, limit: int = 8) -> list:
 
     out = []
     for entry in topics.values():
-        ranked = sorted(entry["items"],
-                        key=lambda x: x.get("heat_score") or 0, reverse=True)
+        ranked = sorted(entry["items"], key=_heat_key, reverse=True)
         # 代表条目：每个平台最多 1 条，直观呈现"多平台在聊同一件事"
         sample, seen_plat = [], set()
         for it in ranked:
@@ -222,7 +237,8 @@ def _topic_clusters(items: list, cfg, limit: int = 8) -> list:
             "sample": sample,
             "heat": max(i.get("heat_score") or 0 for i in entry["items"]),
         })
-    out.sort(key=lambda t: (t["platform_count"], t["count"], t["heat"]), reverse=True)
+    # 统一按热度排序：热度相同再比覆盖平台数、讨论条数
+    out.sort(key=lambda t: (t["heat"], t["platform_count"], t["count"]), reverse=True)
     return out[:limit]
 
 
@@ -247,6 +263,7 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
         item for item in raw_items
         if (item.get("category") or "行业动态") not in DROP_CATEGORIES
         and not any(word and word in (item.get("title") or "") for word in blocked)
+        and not is_noise(item.get("title") or "")
     ]
 
     groups: dict = {}
@@ -270,10 +287,10 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
     for item in raw_items:
         by_platform.setdefault(item.get("platform"), []).append(item)
 
-    # 微信搜狗结果偏旧：新的排前面，旧文标"资料"仍保留，作为技术文库
+    # 微信搜狗结果偏旧：只留一周内，统一按热度排序
     wechat = sorted(
-        by_platform.get("wechat", []),
-        key=lambda x: (not x["archive"], x["heat_score"], x.get("published_at") or ""),
+        [i for i in by_platform.get("wechat", []) if not i["archive"]],
+        key=_heat_key,
         reverse=True,
     )
 
@@ -286,10 +303,8 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
 
     discussion = [i for i in fresh if i.get("platform") in DISCUSSION_PLATFORMS]
 
-    # 今日热议：只来自自媒体/社交讨论，不用行业媒体/政策补位
-    pool = sorted(discussion,
-                  key=lambda x: (x["heat_score"], x.get("published_at") or ""),
-                  reverse=True)
+    # 今日热议：只来自自媒体/社交讨论，按热度（显示口径）排序
+    pool = sorted(discussion, key=_heat_key, reverse=True)
     top10 = []
     seen_titles = set()
     plat_count = {}
@@ -309,21 +324,18 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
     social = []
     for key in ("weibo", "douyin", "toutiao", "baidu_hot", "zhihu"):
         social.extend(by_platform.get(key, []))
-    social.sort(key=lambda x: (x["heat_score"], x.get("published_at") or ""),
-                reverse=True)
+    social.sort(key=_heat_key, reverse=True)
 
     def _plat(key, limit=10, keep_archive=False):
         rows = [i for i in by_platform.get(key, [])
                 if keep_archive or not i["archive"]]
-        rows.sort(key=lambda x: (x["heat_score"], x.get("published_at") or ""),
-                  reverse=True)
+        rows.sort(key=_heat_key, reverse=True)
         return _dedupe(rows)[:limit]
 
     bilibili = [i for i in (by_platform.get("bilibili", [])
                             + by_platform.get("bilibili_search", []))
                 if not i["archive"]]
-    bilibili.sort(key=lambda x: (x["heat_score"], x.get("published_at") or ""),
-                  reverse=True)
+    bilibili.sort(key=_heat_key, reverse=True)
 
     movers = _price_movers(prices)
 
@@ -357,10 +369,11 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
         "updated_at": (build_time or "")[11:16],
         "top10": top10,
         "wechat": _dedupe(wechat[:80])[:50],
-        "baidu_news": _dedupe([i for i in by_platform.get("baidu_news", [])
-                               if not i["archive"]][:80])[:50],
+        "baidu_news": _dedupe(sorted(
+            (i for i in by_platform.get("baidu_news", []) if not i["archive"]),
+            key=_heat_key, reverse=True))[:50],
         "bilibili": _dedupe(bilibili[:80])[:50],
-        "competitor": _plat("competitor", 20, keep_archive=True),
+        "competitor": _plat("competitor", 20),
         "weibo": _plat("weibo", 50),
         "douyin": _plat("douyin", 50),
         "toutiao": _plat("toutiao", 50),
