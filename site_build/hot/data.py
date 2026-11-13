@@ -57,6 +57,23 @@ WEEKDAYS = "一二三四五六日"
 ARCHIVE_DAYS = 45
 
 
+def _fmt_heat(n) -> str:
+    """把互动量格式化成 tophub 式热度：7670785→767万，28038→2.8万，5751→5751。"""
+    try:
+        n = float(n or 0)
+    except (TypeError, ValueError):
+        return ""
+    if n <= 0:
+        return ""
+    if n >= 1e8:
+        return f"{n / 1e8:.1f}亿"
+    if n >= 1e5:
+        return f"{n / 1e4:.0f}万"
+    if n >= 1e4:
+        return f"{n / 1e4:.1f}万"
+    return str(int(n))
+
+
 def _norm_title(title: str) -> str:
     text = re.sub(r"[^\w\u4e00-\u9fff]+", "", title or "").lower()
     return text[:26]
@@ -81,6 +98,7 @@ def _decorate(item: dict, cfg, now: datetime, cross: int = 1) -> dict:
     item["archive"] = bool(age is not None and age > ARCHIVE_DAYS)
     item["title"] = clean_title(item.get("title") or "")
     item["summary"] = clean_summary(item.get("summary") or "")
+    item["heat_value"] = _fmt_heat(item.get("raw_heat"))
     item["author"] = item.get("author") or ""
     item["url"] = item.get("url") or ""
     if item.get("platform") == "competitor":
@@ -274,11 +292,16 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
                   reverse=True)
     top10 = []
     seen_titles = set()
+    plat_count = {}
     for item in pool:
         key = _norm_title(item.get("title", ""))[:18]
         if not key or key in seen_titles:
             continue
+        plat = item.get("platform")
+        if plat_count.get(plat, 0) >= 3:   # 每个平台最多 3 条，避免单一来源刷屏
+            continue
         seen_titles.add(key)
+        plat_count[plat] = plat_count.get(plat, 0) + 1
         top10.append(item)
         if len(top10) >= 10:
             break

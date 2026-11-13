@@ -67,7 +67,7 @@
           <a class="ttitle" href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
           <div class="tmeta"><span>{{ item.source_name }}</span><i class="dot"></i><span>{{ item.time_label }}</span>{% if item.cross_count and item.cross_count > 1 %}<i class="dot"></i><span class="cross">{{ item.cross_count }} 源转载</span>{% endif %}</div>
         </div>
-        <span class="rheat">{{ item.heat_score }}</span>
+        <span class="rheat{{ ' raw' if item.heat_value else '' }}" title="{{ '实时热度' if item.heat_value else '编辑热度' }}">{{ item.heat_value or item.heat_score }}</span>
       </li>
       {% endfor %}
     </ol>
@@ -122,7 +122,7 @@
             <a class="rtitle" href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
             <div class="rmeta"><span>{{ item.author or item.source_name }}</span><i class="dot"></i><span>{{ item.time_label }}</span>{% if item.competitor_tag %}<span class="ctag">{{ item.competitor_tag }}</span>{% endif %}</div>
           </div>
-          <span class="rheat">{{ item.heat_score }}</span>
+        <span class="rheat{{ ' raw' if item.heat_value else '' }}" title="{{ '实时热度' if item.heat_value else '编辑热度' }}">{{ item.heat_value or item.heat_score }}</span>
         </li>
         {% endfor %}
       </ol>

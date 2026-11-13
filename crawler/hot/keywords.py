@@ -1,7 +1,8 @@
 """矿业关键词过滤、分类与热度计算。
 
 热榜的"热度"是本站编辑热度，不是平台阅读量：
-  时效 25% + 榜单排名 25% + 矿业相关度 15% + 来源权重 15% + 多源转载 20%
+  互动量 24% + 时效 20% + 榜单排名 18% + 多源转载 15% + 矿业相关度 13% + 来源权重 10%
+互动量按各平台的赞/播放做对数归一化，让"真正在被讨论"的内容优先。
 """
 import math
 import re
@@ -212,6 +213,18 @@ def specificity_score(hits: list) -> float:
     return min(1.0, total / 14.0)
 
 
+def engagement_score(raw_heat) -> float:
+    """互动量（赞/播放/投票）对数归一化到 0-1；无互动量的新闻类返回 0。"""
+    try:
+        n = float(raw_heat or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    if n <= 0:
+        return 0.0
+    # 10→0.17, 100→0.33, 1000→0.5, 1万→0.67, 10万→0.83, 100万+→1.0
+    return min(1.0, math.log10(n) / 6.0)
+
+
 def compute_heat(item: dict, cfg: HotConfig, source_weight: float = 0.85,
                  cross_count: int = 1, now=None) -> int:
     title = item.get("title", "")
@@ -221,8 +234,9 @@ def compute_heat(item: dict, cfg: HotConfig, source_weight: float = 0.85,
     rec = recency_score(item.get("published_at", ""), now=now)
     spec = specificity_score(hits)
     cross = min(1.0, max(1, cross_count) / 3.0)
-    base = (0.25 * rank + 0.25 * rec + 0.15 * spec + 0.15 * source_weight
-            + 0.20 * cross)
+    eng = engagement_score(item.get("raw_heat"))
+    base = (0.24 * eng + 0.20 * rec + 0.18 * rank + 0.15 * cross
+            + 0.13 * spec + 0.10 * source_weight)
     # 映射到 55-99，避免满屏 20 分的"冷榜"
     return max(1, min(99, round(55 + base * 44)))
 
