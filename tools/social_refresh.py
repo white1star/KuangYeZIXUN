@@ -59,7 +59,7 @@ def _load_cookies() -> dict:
         return {}
 
 
-BATCH_SIZE = 4          # 每个浏览器会话只跑几个词，避免跑到一半被限流后整批丢失
+BATCH_SIZE = 3          # 每个浏览器会话只跑几个词，避免跑到一半被限流后整批丢失
 MAX_NOTES = 20          # 每个词抓多少条
 
 
@@ -77,6 +77,39 @@ def _run_once(cli: str, cookie: str, keywords: str, timeout: int = 1200):
                           encoding="utf-8", errors="replace", timeout=timeout)
 
 
+def _read_new_rows(state: dict, data_dir: str) -> list:
+    """只读本轮新增的 jsonl 行，避免把历史关键词当成这次抓到了。"""
+    latest = _latest_jsonl(data_dir)
+    if latest is None:
+        return []
+    if state.get("file") != latest:
+        state["file"] = latest
+        state["offset"] = 0
+    offset = state.get("offset") or 0
+    try:
+        with open(latest, "rb") as fh:
+            fh.seek(offset)
+            chunk = fh.read()
+        state["offset"] = latest.stat().st_size
+    except OSError:
+        return []
+    rows = []
+    for line in chunk.decode("utf-8", "replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rows.append(json.loads(line))
+        except ValueError:
+            continue
+    return rows
+
+
+def _new_keywords(rows: list) -> set:
+    return {str(r.get("source_keyword")).strip() for r in rows
+            if r.get("source_keyword")}
+
+
 def run_platform(cli: str, cookies: dict) -> dict:
     data_dir, name = PLATFORMS[cli]
     cookie = (cookies.get(cli) or "").strip()
@@ -85,42 +118,65 @@ def run_platform(cli: str, cookies: dict) -> dict:
     if cli == "dy" and "LOGIN_STATUS=1" not in cookie:
         cookie += "; LOGIN_STATUS=1"
 
-    before = __import__("time").time()
     words = [w.strip() for w in KEYWORDS.split(",") if w.strip()]
+    state = {}
+    _read_new_rows(state, data_dir)   # 以当前文件末尾为起点
+    covered = set()
     errors = []
     batches = 0
-    for chunk in _chunks(words, BATCH_SIZE):
-        batches += 1
-        proc = None
-        for attempt in (1, 2):
-            try:
-                proc = _run_once(cli, cookie, ",".join(chunk))
-            except subprocess.TimeoutExpired:
-                errors.append({"kw": chunk, "error": "timeout"})
-                proc = None
-                continue
-            if proc.returncode == 0:
-                break
-            tail = ((proc.stdout or "") + (proc.stderr or ""))[-200:].replace("\n", " ")
-            errors.append({"kw": chunk, "code": proc.returncode, "tail": tail})
-            __import__("time").sleep(10)
-        if proc is None:
-            continue
+    tail = ""
 
-    f = _latest_jsonl(data_dir)
-    # 文件没更新 → 多半是 Cookie 过期/登录失败
-    if not f or f.stat().st_mtime < before - 10:
-        tail = (errors[-1].get("tail", "") if errors else "") or "可能是 Cookie 过期"
+    def attempt(kws: list) -> None:
+        nonlocal batches, tail
+        batches += 1
+        for _ in (1, 2):
+            try:
+                proc = _run_once(cli, cookie, ",".join(kws))
+            except subprocess.TimeoutExpired:
+                errors.append({"kw": kws, "error": "timeout"})
+                continue
+            tail = ((proc.stdout or "") + (proc.stderr or ""))[-300:].replace("\n", " ")
+            covered.update(_new_keywords(_read_new_rows(state, data_dir)))
+            if proc.returncode == 0:
+                return
+            errors.append({"kw": kws, "code": proc.returncode, "tail": tail})
+            __import__("time").sleep(10)
+
+    # 第一轮：按小批跑；跑完核对哪些词真的产出了数据
+    for chunk in _chunks(words, BATCH_SIZE):
+        attempt(chunk)
+
+    # 一个词都没产出 → 整平台被风控/登录失效，不再逐词空跑
+    if not covered:
+        hint = ("搜索返回空列表，多半是平台风控/限流，稍后重试" if cli == "dy"
+                else "没有新增数据，可能是 Cookie 失效或平台限流")
         return {"platform": cli, "name": name, "status": "no_data",
-                "batches": batches, "errors": errors[-2:], "hint": tail}
+                "batches": batches, "covered": 0, "total": len(words),
+                "errors": errors[-4:], "hint": hint, "tail": tail[-160:]}
+
+    # 第二轮：对没有产出的词逐个补跑一轮（平台限流时继续空跑没有意义）
+    missing = [w for w in words if w not in covered]
+    for word in missing:
+        __import__("time").sleep(8)
+        attempt([word])
+
+    missing = [w for w in words if w not in covered]
+    f = _latest_jsonl(data_dir)
+    if not covered:
+        hint = ("搜索返回空列表，多半是平台风控/限流，稍后重试" if cli == "dy"
+                else "没有新增数据，可能是 Cookie 失效或平台限流")
+        return {"platform": cli, "name": name, "status": "no_data",
+                "batches": batches, "covered": 0, "total": len(words),
+                "errors": errors[-4:], "hint": hint, "tail": tail[-160:]}
 
     bridge = subprocess.run(
         [sys.executable, "-m", "tools.hot_from_media_crawler",
          "--platform", cli, "--file", str(f)],
         cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
-    status = "ok" if not errors else "partial"
+    status = "ok" if not missing else "partial"
     return {"platform": cli, "name": name, "status": status, "batches": batches,
-            "errors": errors[-2:], "file": str(f),
+            "covered": len(covered), "total": len(words), "missing": missing,
+            "errors": errors[-4:], "file": str(f),
             "ingest": (bridge.stdout or bridge.stderr or "").strip()[-160:]}
 
 

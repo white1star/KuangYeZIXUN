@@ -86,6 +86,14 @@ def test_news_date_rolls_back_when_month_day_is_in_future():
     assert _parse_news_date("2小时前", now=NOW) == datetime(2026, 11, 12, 12, 0)
 
 
+def test_toutiao_relative_time_always_returns_string():
+    from crawler.hot.sources import _toutiao_rel
+
+    assert _toutiao_rel("3小时前", NOW) == "2026-11-12 11:00"
+    assert _toutiao_rel("2026年11月10日", NOW) == "2026-11-10 00:00"
+    assert isinstance(_toutiao_rel("2026-11-10 08:30", NOW), str)
+
+
 def test_parse_baidu_news_separates_source_and_date():
     html = """
     <html><body>

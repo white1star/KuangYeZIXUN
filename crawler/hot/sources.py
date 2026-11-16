@@ -594,7 +594,8 @@ def _toutiao_rel(text: str, now):
         return (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M")
     if "前天" in t:
         return (now - timedelta(days=2)).strftime("%Y-%m-%d %H:%M")
-    return parse_cn_time(t, now=now)
+    dt = parse_cn_time(t, now=now)
+    return dt.strftime("%Y-%m-%d %H:%M") if dt else ""
 
 
 def fetch_toutiao_search(sess, cfg) -> list:
