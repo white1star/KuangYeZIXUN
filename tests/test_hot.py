@@ -176,6 +176,16 @@ def test_vertical_gate_rejects_homonym_sorting():
     assert _is_vertical(item("XRT 智能干选机分选铜矿石"), CFG)
 
 
+def test_vertical_gate_rejects_market_price_titles():
+    from site_build.hot.data import _is_vertical
+
+    # 带"选矿设备"但主体是金价行情，也不收
+    assert not _is_vertical(
+        item("沙金开采正当时金价年底新高宜速备选矿设备"), CFG)
+    assert not _is_vertical(item("铜价大涨，选矿厂如何应对"), CFG)
+    assert not _is_vertical(item("美联储降息对选矿设备采购的影响"), CFG)
+
+
 def test_noise_words_cover_social_homonyms():
     from crawler.hot.keywords import is_noise
 

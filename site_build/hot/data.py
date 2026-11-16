@@ -114,6 +114,12 @@ CORE_VERTICAL = (
 )
 
 
+# 泛矿业行情词：标题即使带了"选矿设备"，只要在聊金价/铜价/美联储，也不进选矿热榜。
+MARKET_NOISE = (
+    "金价", "银价", "铜价", "锂价", "碳酸锂", "美联储", "稀土出口", "金店",
+)
+
+
 def _is_vertical(item: dict, cfg) -> bool:
     """选矿垂直门槛：标题必须出现选矿工艺/装备核心词（竞品动态卡不受限）。
 
@@ -122,6 +128,9 @@ def _is_vertical(item: dict, cfg) -> bool:
     if item.get("platform") == "competitor":
         return True
     title = item.get("title") or ""
+    # 金价/铜价/美联储这类行情内容，哪怕顺带提了选矿设备也不要
+    if any(term in title for term in MARKET_NOISE):
+        return False
     # 同名不同行（水果分选机、LED 分选机、再生铝破碎）先当噪音排掉
     if is_noise(title):
         return False
