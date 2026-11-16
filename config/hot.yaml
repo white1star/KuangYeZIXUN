@@ -311,6 +311,8 @@ block_terms:
   - "研讨会"
   # 企业公告不是讨论
   - "公告"
+  - "征订"
+  - "订阅"
 
 # 分类优先级：从上到下，先命中先归类
 # 市场行情放最前：价格讨论是热榜主角，避免"AI监管吓跌铜价"被归到政策
@@ -555,6 +557,41 @@ competitors:
   - 同方威视
   - 吉瑞
 
+# 企业/行业公众号：按账号名搜狗检索，单独成「企业公众号」卡，补公司动态/产品发布
+wechat_accounts:
+  - 煤炭加工与综合利用
+  - 中国煤炭报
+  - 矿机优选
+  - 约翰芬雷
+  - 美腾科技
+  - 泰禾智能
+  - 中科光电
+  - 霍里思特
+  - 好朋友科技
+  - 唐山神州机械
+  - 天地奔牛
+  - 华特磁电
+  - 沈阳隆基
+  - 中信重工
+  - 矿业界
+  - 洲际矿山
+  - 选矿技术网
+  - 中国矿业报
+  - 矿业汇
+  - 矿道网
+
+# 百度贴吧：移动端列表，每页 30 条；tl_top 置顶帖会自动跳过
+tieba_forums:
+  - 选矿
+  - 尾矿
+  - 浮选
+  - 煤矸石
+  - 选煤
+  - 矿山
+  - 煤矿
+  - 煤炭
+tieba_pages: 2
+
 # 抓取哪些来源；weight 影响热度分
 sources:
   wechat:
@@ -562,6 +599,11 @@ sources:
     enabled: true
     weight: 1.00
     note: 搜狗微信 · 自媒体讨论
+  wechat_accounts:
+    name: 企业公众号
+    enabled: true
+    weight: 1.00
+    note: 企业/行业公众号 · 近 7 天
   baidu_news:
     name: 百度资讯
     enabled: true
@@ -602,6 +644,11 @@ sources:
     enabled: true
     weight: 0.90
     note: 全网讨论 · 矿业相关上榜
+  tieba:
+    name: 百度贴吧
+    enabled: true
+    weight: 0.90
+    note: 选矿/尾矿/浮选/煤矸石吧 · 近 7 天
   bilibili:
     name: B站热门
     enabled: true

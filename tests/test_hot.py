@@ -186,6 +186,60 @@ def test_vertical_gate_rejects_market_price_titles():
     assert not _is_vertical(item("美联储降息对选矿设备采购的影响"), CFG)
 
 
+def test_enterprise_accounts_bypass_title_gate_but_not_market_noise():
+    from site_build.hot.data import _is_vertical
+
+    # 企业公众号卡允许公司动态标题，不强制带工艺词
+    assert _is_vertical(item("美腾科技荣获省级绿色工厂称号",
+                             platform="wechat_accounts"), CFG)
+    # 但金价类行情仍要拦掉
+    assert not _is_vertical(item("金价创新高，企业发布选矿设备",
+                                 platform="wechat_accounts"), CFG)
+
+
+def test_tieba_time_formats():
+    from crawler.hot.sources import _tieba_time
+
+    assert _tieba_time("10:05", NOW) == datetime(2026, 11, 12, 10, 5)
+    assert _tieba_time("11-12", NOW) == datetime(2026, 11, 12)
+    assert _tieba_time("2025-5-6", NOW) == datetime(2025, 5, 6)
+    # 跨年：1 月看到的 12-30 属于上一年
+    assert _tieba_time("12-30", datetime(2026, 1, 2)) == datetime(2025, 12, 30)
+
+
+def test_parse_tieba_skips_pinned_and_reads_reply_count():
+    from crawler.hot.sources import _parse_tieba
+
+    html = """
+    <ul>
+      <li class="tl_top"><a class="j_common" href="/p/1">
+        <div class="ti_title"><span>置顶：吧规与招募</span></div></a></li>
+      <li class="tl_shadow" data-tid="123">
+        <div class="ti_infos"><span class="ti_author">矿友老张</span>
+          <span class="ti_time">10:05</span></div>
+        <a class="j_common" href="/p/123?lp=5028">
+          <div class="ti_title"><span>尾矿干排工艺现场讨论</span></div>
+          <div class="ti_zan_reply"><div class="ti_func_btn">
+            <span class="btn_icon">7</span></div></div>
+        </a>
+      </li>
+    </ul>
+    """
+    rows = _parse_tieba(html, NOW)
+    assert len(rows) == 1
+    assert rows[0]["title"] == "尾矿干排工艺现场讨论"
+    assert rows[0]["url"] == "https://tieba.baidu.com/p/123"
+    assert rows[0]["author"] == "矿友老张"
+    assert rows[0]["reply"] == 7
+    assert rows[0]["published_at"] == "2026-11-12 10:05"
+
+
+def test_new_sources_are_configured():
+    assert "选矿" in CFG.tieba_forums
+    assert CFG.tieba_pages >= 1
+    assert "美腾科技" in CFG.wechat_accounts
+
+
 def test_noise_words_cover_social_homonyms():
     from crawler.hot.keywords import is_noise
 

@@ -27,6 +27,9 @@ class HotConfig:
     competitors: tuple
     vertical_terms: tuple
     strict_vertical: bool
+    tieba_forums: tuple
+    tieba_pages: int
+    wechat_accounts: tuple
 
 
 DEFAULTS = {
@@ -67,6 +70,9 @@ def load_hot_config(path=None) -> HotConfig:
         competitors=tuple(str(x) for x in (values.get("competitors") or [])),
         vertical_terms=tuple(str(x) for x in (values.get("vertical_terms") or [])),
         strict_vertical=bool(values.get("strict_vertical", False)),
+        tieba_forums=tuple(str(x) for x in (values.get("tieba_forums") or [])),
+        tieba_pages=int(values.get("tieba_pages") or 2),
+        wechat_accounts=tuple(str(x) for x in (values.get("wechat_accounts") or [])),
     )
 
 

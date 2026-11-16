@@ -25,12 +25,13 @@ from crawler.hot.keywords import (
 from crawler.hot.store import latest_status, load_items
 
 # 卡片顺序：自媒体/社交在前，行业媒体收尾
-PLATFORM_ORDER = ["wechat", "baidu_news", "bilibili_search", "competitor", "weibo",
-                  "douyin", "toutiao", "baidu_hot", "zhihu", "bilibili", "industry",
-                  "prices"]
+PLATFORM_ORDER = ["wechat", "wechat_accounts", "baidu_news", "bilibili_search",
+                  "competitor", "weibo", "douyin", "toutiao", "baidu_hot", "zhihu",
+                  "tieba", "bilibili", "industry", "prices"]
 
 PLATFORM_META = {
     "wechat": {"color": "#07c160", "short": "微信"},
+    "wechat_accounts": {"color": "#2f9e6e", "short": "企业号"},
     "baidu_news": {"color": "#2b6cff", "short": "百度资讯"},
     "bilibili_search": {"color": "#fb7299", "short": "B站视频"},
     "competitor": {"color": "#c2410c", "short": "竞品"},
@@ -39,6 +40,7 @@ PLATFORM_META = {
     "toutiao": {"color": "#f04142", "short": "头条"},
     "baidu_hot": {"color": "#2932e1", "short": "百度热搜"},
     "zhihu": {"color": "#0066ff", "short": "知乎"},
+    "tieba": {"color": "#4e6ef2", "short": "贴吧"},
     "bilibili": {"color": "#fb7299", "short": "B站热门"},
     "industry": {"color": "#289048", "short": "行业媒体"},
     "prices": {"color": "#e5484d", "short": "矿价"},
@@ -46,7 +48,8 @@ PLATFORM_META = {
 
 # 只有这些平台的内容能进"今日热议"
 DISCUSSION_PLATFORMS = {"wechat", "baidu_news", "bilibili_search", "competitor",
-                        "weibo", "douyin", "toutiao", "baidu_hot", "zhihu", "bilibili"}
+                        "weibo", "douyin", "toutiao", "baidu_hot", "zhihu",
+                        "tieba", "bilibili"}
 # 官媒通知类分类，不进热榜页
 DROP_CATEGORIES = {"政策法规", "行业会议"}
 
@@ -121,11 +124,13 @@ MARKET_NOISE = (
 
 
 def _is_vertical(item: dict, cfg) -> bool:
-    """选矿垂直门槛：标题必须出现选矿工艺/装备核心词（竞品动态卡不受限）。
+    """选矿垂直门槛：标题必须出现选矿工艺/装备核心词。
 
-    标题是用户唯一看到的内容，标题不垂直就不进榜，宁可少而准。
+    竞品动态、企业公众号是人工整理的账号，标题可以是公司动态，不强制带工艺词；
+    但仍要排掉行情词和同名噪音。
     """
-    if item.get("platform") == "competitor":
+    platform = item.get("platform")
+    if platform == "competitor":
         return True
     title = item.get("title") or ""
     # 金价/铜价/美联储这类行情内容，哪怕顺带提了选矿设备也不要
@@ -134,6 +139,8 @@ def _is_vertical(item: dict, cfg) -> bool:
     # 同名不同行（水果分选机、LED 分选机、再生铝破碎）先当噪音排掉
     if is_noise(title):
         return False
+    if platform == "wechat_accounts":
+        return True
     return any(term in title for term in CORE_VERTICAL)
 
 
@@ -359,7 +366,7 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
             break
 
     social = []
-    for key in ("weibo", "douyin", "toutiao", "baidu_hot", "zhihu"):
+    for key in ("weibo", "douyin", "toutiao", "baidu_hot", "zhihu", "tieba"):
         social.extend(by_platform.get(key, []))
     social.sort(key=_heat_key, reverse=True)
 
@@ -406,6 +413,7 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
         "updated_at": (build_time or "")[11:16],
         "top10": top10,
         "wechat": _dedupe(wechat[:80])[:50],
+        "wechat_accounts": _plat("wechat_accounts", 20),
         "baidu_news": _dedupe(sorted(
             (i for i in by_platform.get("baidu_news", []) if not i["archive"]),
             key=_heat_key, reverse=True))[:50],
@@ -416,6 +424,7 @@ def build_payload(conn, articles: list, prices: dict, build_time: str, now=None)
         "toutiao": _plat("toutiao", 50),
         "baidu_hot": _plat("baidu_hot", 50),
         "zhihu": _plat("zhihu", 50),
+        "tieba": _plat("tieba", 50),
         "social": _dedupe(social[:32])[:16],
         "industry": industry,
         "prices": movers,

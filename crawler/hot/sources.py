@@ -322,6 +322,61 @@ def _parse_sogou(page: str) -> list:
     return out
 
 
+def fetch_wechat_accounts(sess, cfg) -> list:
+    """企业/行业公众号：按账号名搜 Sogou，只留近一周文章。
+
+    关键词搜索覆盖不到“公司动态/产品发布”这类不含工艺词的标题，
+    所以单独成卡，并在展示层不受标题级选矿词门槛限制。
+    """
+    accounts = [a for a in (cfg.wechat_accounts or ()) if a]
+    if not accounts:
+        return []
+    now = datetime.now()
+    cutoff = now - timedelta(days=cfg.max_age_days)
+    seen = set()
+    raw = []
+    for acc in accounts:
+        url = (f"https://weixin.sogou.com/weixin?type=2&query={quote(acc)}"
+               f"&ie=utf8&s_from=input")
+        try:
+            r = _get(sess, url, referer="https://weixin.sogou.com/",
+                     timeout=cfg.request_timeout, retries=1)
+        except Exception:
+            time.sleep(cfg.request_interval)
+            continue
+        for row in _parse_sogou(r.text)[:10]:
+            title = row["title"]
+            if not title or title in seen or _blocked(title, cfg):
+                continue
+            text = f"{row.get('author', '')} {title} {row.get('summary', '')}"
+            # Sogou 会混入只是“提到这个名字”的无关文章，账号名必须在正文里
+            if acc not in text and acc[:4] not in text:
+                continue
+            try:
+                dt = datetime.strptime(row["published_at"], "%Y-%m-%d %H:%M")
+            except (TypeError, ValueError):
+                continue
+            if dt < cutoff:
+                continue
+            seen.add(title)
+            raw.append({**row, "account": acc, "dt": dt})
+        time.sleep(cfg.request_interval)
+
+    raw.sort(key=lambda x: x["dt"], reverse=True)
+    items = []
+    for i, row in enumerate(raw):
+        item = _make("wechat_accounts", "企业公众号", row["title"], row["url"],
+                     summary=row["summary"], author=row["author"] or row["account"],
+                     published_at=row["dt"].strftime("%Y-%m-%d %H:%M"),
+                     rank=i + 1, rank_total=len(raw))
+        item["category"] = classify_category(row["title"], cfg, row["summary"])
+        item["keywords"] = [w for w, _ in mining_hits(
+            f"{row['title']} {row['summary']}", cfg)]
+        item["heat_score"] = compute_heat(item, cfg)
+        items.append(item)
+    return items
+
+
 def fetch_wechat(sess, cfg) -> list:
     keywords = cfg.search_keywords.get("wechat") or ["选矿"]
     cutoff = datetime.now() - timedelta(days=cfg.wechat_max_age_days)
@@ -525,6 +580,124 @@ def fetch_bilibili_search(sess, cfg) -> list:
     return _keep(raw, cfg, strict=True)
 
 
+# ---------- 百度贴吧（选矿/尾矿/浮选等吧，移动端列表） ----------
+
+TIEBA_MOBILE_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                   "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+                   "Mobile/15E148 Safari/604.1")
+
+
+def _tieba_time(text: str, now):
+    """贴吧移动端时间：10:05（今天）/ 11-12 / 2025-5-6。"""
+    t = (text or "").strip()
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})", t)
+    if m:
+        return now.replace(hour=int(m.group(1)), minute=int(m.group(2)),
+                           second=0, microsecond=0)
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", t)
+    if m:
+        try:
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            return None
+    m = re.fullmatch(r"(\d{1,2})-(\d{1,2})", t)
+    if m:
+        try:
+            dt = datetime(now.year, int(m.group(1)), int(m.group(2)))
+        except ValueError:
+            return None
+        if dt > now + timedelta(days=1):   # 跨年：12-30 在 1 月看到
+            dt = dt.replace(year=now.year - 1)
+        return dt
+    return None
+
+
+def _parse_tieba(page: str, now) -> list:
+    soup = BeautifulSoup(page or "", "lxml")
+    rows = []
+    for li in soup.select("li.tl_shadow"):   # tl_top 是置顶/招募，跳过
+        a = li.select_one("a[href*='/p/']")
+        if not a:
+            continue
+        title_node = li.select_one(".ti_title span")
+        title = _clean(title_node.get_text(" ", strip=True)) if title_node else ""
+        if not title or len(title) < 4:
+            continue
+        m = re.search(r"/p/(\d+)", a.get("href") or "")
+        if not m:
+            continue
+        time_node = li.select_one(".ti_time")
+        dt = _tieba_time(time_node.get_text(strip=True) if time_node else "", now)
+        if dt is None:
+            continue
+        author = li.select_one(".ti_author")
+        reply_node = li.select_one(".ti_zan_reply .btn_icon")
+        try:
+            reply = int(re.sub(r"\D", "", reply_node.get_text()) or 0)
+        except (AttributeError, ValueError):
+            reply = 0
+        rows.append({
+            "tid": m.group(1),
+            "title": title,
+            "url": f"https://tieba.baidu.com/p/{m.group(1)}",
+            "author": _clean(author.get_text(" ", strip=True)) if author else "",
+            "published_at": dt.strftime("%Y-%m-%d %H:%M"),
+            "reply": reply,
+        })
+    return rows
+
+
+def fetch_tieba(sess, cfg) -> list:
+    forums = [f.strip() for f in (cfg.tieba_forums or ()) if f.strip()]
+    if not forums:
+        return []
+    now = datetime.now()
+    cutoff = now - timedelta(days=cfg.max_age_days)
+    # 贴吧桌面版经常 403，移动端列表页可用；独立 Session 避免污染其他源
+    mobile = _session()
+    mobile.headers["User-Agent"] = TIEBA_MOBILE_UA
+    try:
+        mobile.get("https://www.baidu.com/", timeout=cfg.request_timeout)
+        mobile.get("https://tieba.baidu.com/", timeout=cfg.request_timeout)
+    except Exception:
+        pass
+
+    seen = set()
+    raw = []
+    for forum in forums:
+        for page_no in range(max(1, int(cfg.tieba_pages))):
+            url = (f"https://tieba.baidu.com/mo/q/m?kw={quote(forum)}"
+                   f"&pn={page_no * 30}")
+            try:
+                r = _get(mobile, url, referer="https://tieba.baidu.com/",
+                         timeout=cfg.request_timeout, retries=1)
+            except Exception:
+                time.sleep(cfg.request_interval)
+                continue
+            for row in _parse_tieba(r.text, now):
+                dt = datetime.strptime(row["published_at"], "%Y-%m-%d %H:%M")
+                if dt < cutoff:
+                    continue
+                key = row["tid"] or row["title"]
+                if key in seen or row["title"] in seen:
+                    continue
+                seen.add(key)
+                seen.add(row["title"])
+                row["forum"] = forum
+                raw.append(row)
+            time.sleep(cfg.request_interval)
+
+    raw.sort(key=lambda x: x["published_at"], reverse=True)
+    items = []
+    for i, row in enumerate(raw):
+        item = _make("tieba", "百度贴吧", row["title"], row["url"],
+                     summary="", author=row["author"] or f"{row['forum']}吧",
+                     published_at=row["published_at"], rank=i + 1,
+                     rank_total=len(raw), raw_heat=row["reply"])
+        items.append(item)
+    return _keep(items, cfg)
+
+
 # ---------- 竞品动态（按竞品名搜公众号发文） ----------
 
 def fetch_competitor(sess, cfg) -> list:
@@ -666,6 +839,7 @@ def fetch_toutiao_search(sess, cfg) -> list:
 
 FETCHERS = {
     "wechat": fetch_wechat,
+    "wechat_accounts": fetch_wechat_accounts,
     "baidu_news": fetch_baidu_news,
     "bilibili_search": fetch_bilibili_search,
     "competitor": fetch_competitor,
@@ -674,5 +848,6 @@ FETCHERS = {
     "toutiao": fetch_toutiao_search,
     "baidu_hot": fetch_baidu_hot,
     "zhihu": fetch_zhihu,
+    "tieba": fetch_tieba,
     "bilibili": fetch_bilibili,
 }
